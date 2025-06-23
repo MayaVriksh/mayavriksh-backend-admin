@@ -1,3 +1,8 @@
+const ERROR_MESSAGES = require("../../../constants/errorMessages.constant");
+const {
+    RESPONSE_FLAGS,
+    RESPONSE_CODES
+} = require("../../../constants/responseCodes.constant");
 const {
     authenticate
 } = require("../../../middlewares/authenticate.middleware");
@@ -16,14 +21,15 @@ module.exports = [
             validate: {
                 ...AuthValidator.registerUserValidation,
                 failAction: (_, h, err) => {
-                    // const customErrorMessages = err.details.map(
-                    //     detail => detail.message
-                    // );
-                    // console.log("Validation Error: ", customErrorMessages);
+                    const customErrorMessages = err.details.map(
+                        detail => detail.message
+                    );
+                    console.log("Validation Error: ", customErrorMessages);
                     return h
                         .response({
                             success: RESPONSE_FLAGS.FAILURE,
-                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST
+                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
+                            message: customErrorMessages
                         })
                         .code(RESPONSE_CODES.BAD_REQUEST)
                         .takeover();
@@ -63,14 +69,15 @@ module.exports = [
             validate: {
                 ...AuthValidator.loginUserValidation,
                 failAction: (_, h, err) => {
-                    // const customErrorMessages = err.details.map(
-                    //     detail => detail.message
-                    // );
-                    // console.log("Validation Error: ", customErrorMessages);
+                    const customErrorMessages = err.details.map(
+                        detail => detail.message
+                    );
+                    console.log("Validation Error: ", customErrorMessages);
                     return h
                         .response({
                             success: RESPONSE_FLAGS.FAILURE,
-                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST
+                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
+                            message: customErrorMessages
                         })
                         .code(RESPONSE_CODES.BAD_REQUEST)
                         .takeover();
@@ -135,14 +142,15 @@ module.exports = [
             validate: {
                 ...AuthValidator.deactivateProfileValidation,
                 failAction: (_, h, err) => {
-                    // const customErrorMessages = err.details.map(
-                    //     detail => detail.message
-                    // );
+                    const customErrorMessages = err.details.map(
+                        detail => detail.message
+                    );
                     console.log("Validation Error: ", customErrorMessages);
                     return h
                         .response({
                             success: RESPONSE_FLAGS.FAILURE,
-                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST
+                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
+                            message: customErrorMessages
                         })
                         .code(RESPONSE_CODES.BAD_REQUEST)
                         .takeover();
@@ -156,6 +164,50 @@ module.exports = [
                         },
                         500: {
                             description: "Internal server error"
+                        }
+                    }
+                }
+            }
+        }
+    },
+
+    {
+        method: "PUT",
+        path: "/auth/change-password",
+        options: {
+            tags: ["api", "Auth"],
+            description: "Change Password",
+            notes: "Allows logged-in users to change their password.",
+            handler: AuthController.changePassword,
+            pre: [authenticate],
+            validate: {
+                ...AuthValidator.changePasswordValidation,
+                failAction: (_, h, err) => {
+                    const customErrorMessages = err.details.map(
+                        detail => detail.message
+                    );
+                    console.log("Validation Error: ", customErrorMessages);
+                    return h
+                        .response({
+                            success: RESPONSE_FLAGS.FAILURE,
+                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
+                            message: customErrorMessages
+                        })
+                        .code(RESPONSE_CODES.BAD_REQUEST)
+                        .takeover();
+                }
+            },
+            plugins: {
+                "hapi-swagger": {
+                    responses: {
+                        200: {
+                            description: "Password updated successfully"
+                        },
+                        400: {
+                            description: "Validation or logical error"
+                        },
+                        500: {
+                            description: "Server error"
                         }
                     }
                 }

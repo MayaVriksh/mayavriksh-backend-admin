@@ -1,5 +1,3 @@
-const fs = require("fs");
-const path = require("path");
 const ERROR_MESSAGES = require("../../../../constants/errorMessages.constant.js");
 const {
     RESPONSE_CODES,
@@ -8,7 +6,6 @@ const {
 const SUCCESS_MESSAGES = require("../../../../constants/successMessages.constant.js.js");
 const SupplierService = require("../services/supplier.service.js");
 const uploadBufferToCloudinary = require("../../../../utils/mediaUpload.util.js");
-// const { uploadFile } = require("../../utils/cloudinary.service");
 const { getMediaType } = require("../../../../utils/file.utils.js");
 
 const showSupplierProfile = async (req, h) => {

@@ -164,6 +164,8 @@ const SUCCESS_MESSAGES = {
         ACTION_SUCCESS:
             "All done! That went as smooth as a breeze through leaves 🌸",
         PROFILE_FETCH_SUCCESS: "Here’s your lovely profile, freshly loaded 🍀",
+        PASSWORD_CHANGED:
+            "Your password has been successfully updated 🌿 Please use your new password next time!",
         PROFILE_UPDATED:
             "Your profile has been refreshed and looks wonderful 🌼",
         PROFILE_RESTORED: "Welcome back! Your profile is blooming again 🌱",

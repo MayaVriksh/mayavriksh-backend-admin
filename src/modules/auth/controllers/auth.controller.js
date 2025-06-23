@@ -138,9 +138,40 @@ const deactivateProfile = async (req, h) => {
     }
 };
 
+const changePassword = async (req, h) => {
+    try {
+        const { oldPassword, newPassword } = req.payload;
+        const userId = req.auth.userId;
+
+        const result = await AuthService.changePassword(
+            userId,
+            oldPassword,
+            newPassword
+        );
+        // console.log("changePassword: ", result);
+
+        return h
+            .response({
+                success: result.success,
+                message: result.message
+            })
+            .code(result.code);
+    } catch (error) {
+        console.error("Change Password Error:", error);
+        return h
+            .response({
+                success: error.success || RESPONSE_FLAGS.FAILURE,
+                message:
+                    error.message || ERROR_MESSAGES.AUTH.PASSWORD_CHANGE_FAILED
+            })
+            .code(error.code || RESPONSE_CODES.INTERNAL_SERVER_ERROR);
+    }
+};
+
 module.exports = {
     signup,
     signin,
     deactivateProfile,
-    logout
+    logout,
+    changePassword
 };

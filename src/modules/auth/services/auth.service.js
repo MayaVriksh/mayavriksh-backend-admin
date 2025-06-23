@@ -5,6 +5,11 @@ const generateCustomId = require("../../../utils/generateCustomId");
 
 const { ROLES } = require("../../../constants/roles.constant");
 const ERROR_MESSAGES = require("../../../constants/errorMessages.constant");
+const {
+    RESPONSE_FLAGS,
+    RESPONSE_CODES
+} = require("../../../constants/responseCodes.constant");
+const SUCCESS_MESSAGES = require("../../../constants/successMessages.constant.js");
 
 const register = async data => {
     const { firstName, lastName, email, password, role } = data;
@@ -199,4 +204,54 @@ const deactivateProfile = async userId => {
     });
 };
 
-module.exports = { login, register, deactivateProfile };
+const changePassword = async (userId, oldPassword, newPassword) => {
+    const user = await prisma.user.findUnique({
+        where: { userId },
+        select: {
+            password: true,
+            isActive: true,
+            deletedAt: true
+        }
+    });
+
+    if (!user) {
+        throw {
+            success: RESPONSE_FLAGS.FAILURE,
+            code: RESPONSE_CODES.UNAUTHORIZED,
+            message: ERROR_MESSAGES.AUTH.LOGIN_FAILED
+        };
+    }
+
+    if (!user.isActive || user.deletedAt) {
+        throw {
+            success: RESPONSE_FLAGS.FAILURE,
+            code: RESPONSE_CODES.BAD_REQUEST,
+            message: ERROR_MESSAGES.AUTH.ACCOUNT_ALREADY_DEACTIVATED
+        };
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+        throw {
+            success: RESPONSE_FLAGS.FAILURE,
+            code: RESPONSE_CODES.UNAUTHORIZED,
+            message: ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS
+        };
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+        where: { userId },
+        data: {
+            password: hashedPassword
+        }
+    });
+
+    return {
+        success: RESPONSE_FLAGS.SUCCESS,
+        code: RESPONSE_CODES.SUCCESS,
+        message: SUCCESS_MESSAGES.AUTH.PASSWORD_CHANGED
+    };
+};
+
+module.exports = { login, register, deactivateProfile, changePassword };

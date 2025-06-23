@@ -32,9 +32,9 @@ const createServer = async () => {
     server.state("mv_auth_token", {
         ttl: 24 * 60 * 60 * 1000, // 1 day
         isSecure: process.env.NODE_ENV === "production",
-        httpOnly: true,
-        sameSite: "Lax",
-        encoding: "iron", // Encrypt cookie
+        // httpOnly: false,
+        // sameSite: "Lax",
+        encoding: "iron",
         password: process.env.COOKIE_SECRET
     });
 
@@ -42,8 +42,8 @@ const createServer = async () => {
     server.state("mv_user_token", {
         ttl: 24 * 60 * 60 * 1000,
         isSecure: process.env.NODE_ENV === "production",
-        httpOnly: false,
-        sameSite: "Lax",
+        // httpOnly: false,
+        // sameSite: "Lax",
         encoding: "iron",
         password: process.env.COOKIE_SECRET
     });

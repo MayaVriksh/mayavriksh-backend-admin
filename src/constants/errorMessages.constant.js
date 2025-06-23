@@ -14,6 +14,8 @@ const ERROR_MESSAGES = {
             "Hmm… we couldn't log you in just yet 🌥️ Please check your details and try again.",
         LOGOUT_FAILED:
             "Oops… logging out didn't go as planned 🌾 Let's try that again in a moment.",
+        PASSWORD_CHANGE_FAILED:
+            "We couldn’t update your password right now 🌧️ Please try again later.",
         INVALID_CREDENTIALS:
             "These credentials don’t match our garden records 🌿 Double-check and try again.",
         ACCOUNT_LOCKED:

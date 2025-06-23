@@ -42,7 +42,8 @@ module.exports = [
                     return h
                         .response({
                             success: RESPONSE_FLAGS.FAILURE,
-                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST
+                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
+                            message: customErrorMessages
                         })
                         .code(RESPONSE_CODES.BAD_REQUEST)
                         .takeover();
@@ -89,7 +90,8 @@ module.exports = [
                     return h
                         .response({
                             success: RESPONSE_FLAGS.FAILURE,
-                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST
+                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
+                            message: customErrorMessages
                         })
                         .code(RESPONSE_CODES.BAD_REQUEST)
                         .takeover();

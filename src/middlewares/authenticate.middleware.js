@@ -39,7 +39,7 @@ const authenticate = async (req, h) => {
         }
 
         const user = await prisma.user.findUnique({
-            where: { usersId: decoded.userId },
+            where: { userId: decoded.userId },
             select: {
                 userId: true,
                 isActive: true,
