@@ -1,0 +1,28 @@
+const APPROVED = "APPROVED";
+const PENDING = "PENDING";
+const CONFIRMED = "CONFIRMED";
+const SHIPPED = "SHIPPED";
+const DELIVERED = "DELIVERED";
+const CANCELLED = "CANCELLED";
+const RETURNED = "RETURNED";
+
+const ORDER_STATUSES = [
+    APPROVED,
+    PENDING,
+    CONFIRMED,
+    SHIPPED,
+    DELIVERED,
+    CANCELLED,
+    RETURNED
+];
+
+module.exports = {
+    APPROVED,
+    PENDING,
+    CONFIRMED,
+    SHIPPED,
+    DELIVERED,
+    CANCELLED,
+    RETURNED,
+    ORDER_STATUSES
+};

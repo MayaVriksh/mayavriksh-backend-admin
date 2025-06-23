@@ -1,0 +1,1048 @@
+1. createCustomer → Customer Registration
+
+{
+  "message": "Customer registered successfully"
+}
+
+2. signInCustomer → Login
+
+{
+  "message": "Login successful"
+}
+
+3. getCustomerProfile → Fetch Profile
+
+{
+  "customerId": "b56f92e1-8a4f-4e09-85cf-df235f9d85a1",
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "phone": "9876543210",
+  "createdAt": "2025-06-06T12:00:00Z",
+  "addresses": [
+    {
+      "addressId": "b2b2cdaf-5e44-47e7-a8de-9275deec134e",
+      "street": "123 Main Street",
+      "city": "New York",
+      "state": "NY",
+      "postalCode": "10001",
+      "country": "USA",
+      "isPrimary": true
+    },
+    {
+      "addressId": "b6c9e1f1-1c74-4f5a-8f10-746e4db4b099",
+      "street": "456 Second Ave",
+      "city": "Los Angeles",
+      "state": "CA",
+      "postalCode": "90001",
+      "country": "USA",
+      "isPrimary": false
+    }
+  ]
+}
+
+4. changePassword → Change Password
+
+{
+  "message": "Password changed successfully"
+}
+
+5. createCustomerAddress → Add Address
+
+{
+  "message": "Address added successfully"
+}
+
+6. getAddressesByCustomerId → View Addresses
+
+{
+  "customerId": "b56f92e1-8a4f-4e09-85cf-df235f9d85a1",
+  "addresses": [
+    {
+      "addressId": "2c8fa66f-2b5a-45ad-934f-7c5d07d39c90",
+      "street": "123 Main Street",
+      "city": "New York",
+      "state": "NY",
+      "postalCode": "10001",
+      "country": "USA",
+      "isPrimary": true
+    },
+    {
+      "addressId": "5d44cbbb-0a4a-4d23-9b9e-f493334b8a0d",
+      "street": "456 Second Ave",
+      "city": "Los Angeles",
+      "state": "CA",
+      "postalCode": "90001",
+      "country": "USA",
+      "isPrimary": false
+    }
+  ]
+}
+
+7. updateAddressById → Update Address
+
+{
+  "message": "Address updated successfully"
+}
+
+8. deleteAddressById → Delete Address
+
+{
+  "message": "Address deleted successfully"
+}
+
+9. getAllProducts → Browse Products (includes categories)
+
+{
+  "products": [
+    {
+      "productId": "8a2c1234-1b2c-4d5e-91a7-c123efg78901",
+      "name": "Ficus Elastica",
+      "description": "A popular indoor plant with glossy leaves.",
+      "category": {
+        "categoryId": "cat-plant-001",
+        "name": "Indoor Plants",
+        "description": "Plants that are perfect for indoors."
+      },
+      "price": 299.99,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+    "isAvailable": true
+    },
+    {
+      "productId": "9b3d5678-2c3d-4f6e-82b1-h567ijk01234",
+      "name": "Monstera Deliciosa",
+      "description": "Large leaves with natural holes, very popular.",
+      "category": {
+        "categoryId": "cat-plant-001",
+        "name": "Indoor Plants",
+        "description": "Plants that are perfect for indoors."
+      },
+      "price": 349.99,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+    "isAvailable": false
+    }
+  ]
+}
+
+10. getProductById → Single product details (includes categories)
+
+{
+  "productId": "8a2c1234-1b2c-4d5e-91a7-c123efg78901",
+  "name": "Ficus Elastica",
+  "description": "A popular indoor plant with glossy leaves.",
+  "category": {
+    "categoryId": "cat-plant-001",
+    "name": "Indoor Plants",
+    "description": "Plants that are perfect for indoors."
+  },
+  "price": 299.99,
+    "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+    "isAvailable": true
+}
+
+11. getTopSellingProducts → Popular products
+
+{
+  "products": [
+    {
+      "productId": "8a2c1234-1b2c-4d5e-91a7-c123efg78901",
+      "name": "Ficus Elastica",
+      "description": "A popular indoor plant with glossy leaves.",
+      "category": {
+        "categoryId": "cat-plant-001",
+        "name": "Indoor Plants"
+      },
+      "price": 299.99,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+    "isAvailable": true,
+      "totalSold": 150
+    },
+    {
+      "productId": "9b3d5678-2c3d-4f6e-82b1-h567ijk01234",
+      "name": "Monstera Deliciosa",
+      "description": "Large leaves with natural holes, very popular.",
+      "category": {
+        "categoryId": "cat-plant-001",
+        "name": "Indoor Plants"
+      },
+      "price": 349.99,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+    "isAvailable": false,
+      "totalSold": 120
+    }
+  ]
+}
+
+12. getVariantsByProductId → Available variants (e.g. sizes/colors)
+
+{
+  "productId": "8a2c1234-1b2c-4d5e-91a7-c123efg78901",
+  "variants": [
+    {
+      "variantId": "var-001",
+      "plantSize": "Medium",
+      "height": 25.0,
+      "weight": 1.5,
+      "unitPrice": 299.99,
+      "stockQuantity": 20,
+      "isAvailable": true,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+},
+    {
+      "variantId": "var-002",
+      "plantSize": "Large",
+      "height": 40.0,
+      "weight": 2.5,
+      "unitPrice": 399.99,
+      "stockQuantity": 10,
+      "isAvailable": true,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+ }
+  ]
+}
+
+13. getAvailableVariantOptions → Variant options with stock
+
+{
+  "productId": "8a2c1234-1b2c-4d5e-91a7-c123efg78901",
+  "availableOptions": [
+    {
+      "plantSize": "Medium",
+      "unitPrice": 299.99,
+      "stockQuantity": 20,
+      "isAvailable": true,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+},
+    {
+      "plantSize": "Large",
+      "unitPrice": 399.99,
+      "stockQuantity": 10,
+      "isAvailable": true,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+ }
+  ]
+}
+
+14. getAllTags → Product tags (like Air Purifier, etc.)
+
+{
+  "tags": [
+    {
+      "id": "tag-001",
+      "name": "Air Purifier",
+      "description": "Plants that help purify indoor air."
+    },
+    {
+      "id": "tag-002",
+      "name": "Low Maintenance",
+      "description": "Plants that require minimal care."
+    },
+    {
+      "id": "tag-003",
+      "name": "Pet Friendly",
+      "description": "Safe for homes with pets."
+    }
+  ]
+}
+
+15. getAllPots → Browse pots
+
+{
+  "pots": [
+    {
+      "id": "pot-001",
+      "name": "Clay Pot",
+      "description": "Traditional terracotta pot.",
+      "categoryId": "cat-pot-001",
+      "colorId": "color-001",
+      "materialId": "mat-001",
+      "size": "Medium",
+      "price": 99.99,
+      "isAvailable": true,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+},
+    {
+      "id": "pot-002",
+      "name": "Ceramic Pot",
+      "description": "Stylish ceramic pot for indoor plants.",
+      "categoryId": "cat-pot-001",
+      "colorId": "color-002",
+      "materialId": "mat-002",
+      "size": "Large",
+      "price": 149.99,
+      "isAvailable": true,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+ }
+  ]
+}
+
+16. getPotById → Single pot details (includes categories)
+
+{
+  "id": "pot-001",
+  "name": "Clay Pot",
+  "description": "Traditional terracotta pot.",
+  "category": {
+    "categoryId": "cat-pot-001",
+    "name": "Terracotta",
+    "description": "Rustic pots made from clay."
+  },
+  "color": {
+    "id": "color-001",
+    "name": "Natural Clay"
+  },
+  "material": {
+    "materialId": "mat-001",
+    "name": "Terracotta"
+  },
+  "size": "Medium",
+  "price": 99.99,
+  "variantUnits": 50,
+  "isAvailable": true,
+  "images": [
+    {
+      "id": "img-001",
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+    "type": "image",
+      "isPrimary": true
+    }
+  ]
+}
+
+17. getTopSellingPots → Popular pots
+
+{
+  "topSellingPots": [
+    {
+      "id": "pot-001",
+      "name": "Clay Pot",
+      "size": "Medium",
+      "price": 99.99,
+      "variantUnits": 50,
+      "isAvailable": true,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+},
+    {
+      "id": "pot-002",
+      "name": "Ceramic Pot",
+      "size": "Large",
+      "price": 149.99,
+      "variantUnits": 30,
+      "isAvailable": true,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+ }
+  ]
+}
+
+18. getVariantsByPotId → Available pot variants (e.g., sizes/colors)
+
+{
+  "potId": "pot-001",
+  "variants": [
+    {
+      "id": "var-001",
+      "size": "Medium",
+      "price": 99.99,
+      "variantUnits": 50,
+      "isAvailable": true,
+      "images": [
+        {
+          "id": "img-001",
+            "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+    "type": "image",
+          "isPrimary": true
+        }
+      ],
+      "color": {
+        "id": "color-001",
+        "name": "Natural Clay"
+      },
+      "material": {
+        "materialId": "mat-001",
+        "name": "Terracotta"
+      }
+    }
+  ]
+}
+
+19. getAvailableVariantOptions (Pots) → Variant options with stock
+
+{
+  "potId": "pot-001",
+  "availableOptions": [
+    {
+      "size": "Medium",
+      "price": 99.99,
+      "variantUnits": 50,
+      "isAvailable": true,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+},
+    {
+      "size": "Large",
+      "price": 149.99,
+      "variantUnits": 30,
+      "isAvailable": true,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+ }
+  ]
+}
+
+20. getFertilizersByProductId → Fertilizers linked to a product
+
+{
+  "productId": "product-001",
+  "fertilizers": [
+    {
+      "id": "fert-001",
+      "name": "Organic Compost",
+      "description": "100% organic compost to boost growth.",
+      "price": 49.99,
+      "isAvailable": true
+    },
+    {
+      "id": "fert-002",
+      "name": "Liquid Fertilizer",
+      "description": "Easy-to-use liquid fertilizer.",
+      "price": 29.99,
+      "isAvailable": true
+    }
+  ]
+}
+
+21. getCartItemsForLater → Fetch cart items
+
+{
+  "customerId": "cust-001",
+  "cartItems": [
+    {
+      "cartItemId": "cart-001",
+      "productId": "product-001",
+      "productName": "Aloe Vera",
+      "productVariantId": "variant-001",
+      "variantDetails": {
+        "plantSize": "Small",
+        "height": 15.0,
+        "weight": 1.0,
+        "unitPrice": 99.99,
+        "isAvailable": true,
+          "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+},
+      "quantity": 2,
+      "priceAtAdd": 199.98,
+      "coupon": {
+        "promoId": "promo-001",
+        "code": "SUMMER25",
+        "description": "25% off on summer plants",
+        "discountType": "percentage",
+        "discountValue": 25,
+        "minOrderAmount": 200,
+        "maxDiscountAmount": 100,
+        "startDate": "2025-06-01T00:00:00Z",
+        "endDate": "2025-07-01T00:00:00Z",
+        "isActive": true
+      }
+    },
+    {
+      "cartItemId": "cart-002",
+      "productId": "pot-001",
+      "productName": "Clay Pot",
+      "productVariantId": "var-001",
+      "variantDetails": {
+        "size": "Medium",
+        "height": 20.0,
+        "weight": 2.0,
+        "price": 49.99,
+        "isAvailable": true,
+          "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+},
+      "quantity": 1,
+      "priceAtAdd": 49.99,
+      "coupon": null
+    }
+  ]
+}
+
+22. saveItemForLater → Save item from cart to "checkout later"
+
+{
+  "message": "Item successfully saved for later.",
+  "savedItem": {
+    "cartItemId": "saved-001",
+    "productId": "product-001",
+    "productName": "Aloe Vera",
+    "productVariantId": "variant-001",
+    "variantDetails": {
+      "plantSize": "Small",
+      "height": 15.0,
+      "weight": 1.0,
+      "unitPrice": 99.99,
+      "isAvailable": true,
+        "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+},
+    "quantity": 1,
+    "priceAtAdd": 99.99,
+    "coupon": {
+      "promoId": "promo-001",
+      "code": "SUMMER25",
+      "description": "25% off on summer plants",
+      "discountType": "percentage",
+      "discountValue": 25,
+      "minOrderAmount": 200,
+      "maxDiscountAmount": 100,
+      "startDate": "2025-06-01T00:00:00Z",
+      "endDate": "2025-07-01T00:00:00Z",
+      "isActive": true
+    },
+    "savedAt": "2025-06-06T10:30:00Z"
+  }
+}
+
+23. getSavedItemsForLater → Fetch saved items
+
+{
+  "customerId": "cust-001",
+  "savedItems": [
+    {
+      "cartItemId": "saved-001",
+      "productId": "product-001",
+      "productName": "Aloe Vera",
+      "productVariantId": "variant-001",
+      "variantDetails": {
+        "plantSize": "Small",
+        "height": 15.0,
+        "weight": 1.0,
+        "unitPrice": 99.99,
+        "isAvailable": true,
+          "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+},
+      "quantity": 1,
+      "priceAtAdd": 99.99,
+      "coupon": {
+        "promoId": "promo-001",
+        "code": "SUMMER25",
+        "description": "25% off on summer plants",
+        "discountType": "percentage",
+        "discountValue": 25,
+        "minOrderAmount": 200,
+        "maxDiscountAmount": 100,
+        "startDate": "2025-06-01T00:00:00Z",
+        "endDate": "2025-07-01T00:00:00Z",
+        "isActive": true
+      },
+      "savedAt": "2025-06-06T10:30:00Z"
+    },
+    {
+      "cartItemId": "saved-002",
+      "productId": "pot-001",
+      "productName": "Clay Pot",
+      "productVariantId": "var-001",
+      "variantDetails": {
+        "size": "Medium",
+        "height": 20.0,
+        "weight": 2.0,
+        "price": 49.99,
+        "isAvailable": true,
+          "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+},
+      "quantity": 2,
+      "priceAtAdd": 99.98,
+      "coupon": null,
+      "savedAt": "2025-06-06T10:45:00Z"
+    }
+  ]
+}
+
+24. removeSavedItem → Remove from saved items
+
+{
+  "message": "Saved item removed successfully.",
+  "removedItemId": "saved-001"
+}
+
+25. createOrder → Place order
+
+{
+  "orderId": "order-001",
+  "customerId": "cust-001",
+  "totalAmount": 399.99,
+  "status": "Pending",
+  "orderDate": "2025-06-06T12:00:00Z",
+  "paymentStatus": "Unpaid",
+  "promoCode": {
+    "promoId": "promo-001",
+    "code": "SUMMER25",
+    "description": "25% off on summer plants",
+    "discountType": "percentage",
+    "discountValue": 25,
+    "minOrderAmount": 200,
+    "maxDiscountAmount": 100,
+    "startDate": "2025-06-01T00:00:00Z",
+    "endDate": "2025-07-01T00:00:00Z",
+    "isActive": true
+  },
+  "shippingDetails": {
+    "addressId": "address-001",
+    "recipientName": "John Doe",
+    "phoneNumber": "+91-9876543210",
+    "fullAddress": "123 Green Street, Garden City, IN"
+  }
+}
+
+26. getOrdersByCustomerId → View order history
+
+{
+  "customerId": "cust-001",
+  "orders": [
+    {
+      "orderId": "order-001",
+      "totalAmount": 399.99,
+      "status": "Pending",
+      "orderDate": "2025-06-06T12:00:00Z",
+      "paymentStatus": "Unpaid",
+      "promoCode": {
+        "promoId": "promo-001",
+        "code": "SUMMER25"
+      },
+      "shippingDetails": {
+        "addressId": "address-001",
+        "recipientName": "John Doe",
+        "phoneNumber": "+91-9876543210",
+        "fullAddress": "123 Green Street, Garden City, IN"
+      }
+    },
+    {
+      "orderId": "order-002",
+      "totalAmount": 199.99,
+      "status": "Delivered",
+      "orderDate": "2025-05-25T09:30:00Z",
+      "paymentStatus": "Paid",
+      "promoCode": null,
+      "shippingDetails": {
+        "addressId": "address-002",
+        "recipientName": "Jane Smith",
+        "phoneNumber": "+91-9876543211",
+        "fullAddress": "456 Bloom Avenue, Flora City, IN"
+      }
+    }
+  ]
+}
+
+27. getOrderItemsByOrderId → View items in an order
+
+{
+  "orderId": "order-001",
+  "items": [
+    {
+      "orderItemId": "item-001",
+      "productId": "product-001",
+      "productName": "Aloe Vera",
+      "variantId": "variant-001",
+      "variantDetails": {
+        "plantSize": "Small",
+        "height": 15.0,
+        "weight": 1.0,
+        "unitPrice": 99.99,
+        "isAvailable": true,
+          "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+},
+      "quantity": 2,
+      "unitPrice": 99.99,
+      "subtotal": 199.98
+    },
+    {
+      "orderItemId": "item-002",
+      "productId": "pot-001",
+      "productName": "Clay Pot",
+      "variantId": "var-001",
+      "variantDetails": {
+        "size": "Medium",
+        "height": 20.0,
+        "weight": 2.0,
+        "price": 49.99,
+        "isAvailable": true,
+          "images": [
+    {
+      "id": "img-001",
+      "imageUrl": "https://example.com/images/clay-pot.jpg",
+      "type": "image",
+      "isPrimary": true
+    }
+  ],
+},
+      "quantity": 4,
+      "unitPrice": 49.99,
+      "subtotal": 199.96
+    }
+  ]
+}
+
+28. calculateOrderCostByOrderId → Order cost breakdown
+
+{
+  "orderId": "order-001",
+  "subtotal": 399.94,
+  "promoDiscount": 99.98,
+  "tax": 19.99,
+  "shippingCost": 20.00,
+  "grandTotal": 339.95,
+  "promoCode": {
+    "promoId": "promo-001",
+    "code": "SUMMER25"
+  }
+}
+
+29. createPayment → Make a payment
+
+{
+  "paymentId": "pay-001",
+  "orderId": "order-001",
+  "customerId": "cust-001",
+  "amountPaid": 339.95,
+  "paymentMethod": "Credit Card",
+  "paymentStatus": "Success",
+  "transactionId": "txn-789456123",
+  "paidAt": "2025-06-06T12:15:00Z"
+}
+
+30. getPaymentsByOrderId → Payment status
+
+{
+  "orderId": "order-001",
+  "payments": [
+    {
+      "paymentId": "pay-001",
+      "amountPaid": 339.95,
+      "paymentMethod": "Credit Card",
+      "paymentStatus": "Success",
+      "transactionId": "txn-789456123",
+      "paidAt": "2025-06-06T12:15:00Z"
+    }
+  ]
+}
+
+31. getShippingDetailsByOrder → Track shipping status
+
+{
+  "orderId": "order-001",
+  "shippingStatus": "In Transit",
+  "carrier": "FedEx",
+  "trackingNumber": "FDX123456789",
+  "estimatedDelivery": "2025-06-10T18:00:00Z",
+  "shippingAddress": {
+    "addressId": "address-001",
+    "recipientName": "John Doe",
+    "phoneNumber": "+91-9876543210",
+    "fullAddress": "123 Green Street, Garden City, IN"
+  }
+}
+
+32. createReturnRequest → Request return
+
+{
+  "returnRequestId": "return-001",
+  "orderId": "order-001",
+  "customerId": "cust-001",
+  "items": [
+    {
+      "orderItemId": "item-002",
+      "productId": "pot-001",
+      "productName": "Clay Pot",
+      "quantity": 1,
+      "reason": "Damaged on arrival"
+    }
+  ],
+  "requestDate": "2025-06-07T10:00:00Z",
+  "status": "Pending",
+  "comments": "Please arrange pickup"
+}
+
+33. getReturnsByOrderId → View returns
+
+{
+  "orderId": "order-001",
+  "returnRequests": [
+    {
+      "returnRequestId": "return-001",
+      "items": [
+        {
+          "orderItemId": "item-002",
+          "productId": "pot-001",
+          "productName": "Clay Pot",
+          "quantity": 1,
+          "reason": "Damaged on arrival"
+        }
+      ],
+      "requestDate": "2025-06-07T10:00:00Z",
+      "status": "Pending",
+      "comments": "Please arrange pickup"
+    }
+  ]
+}
+
+34. createExchangeRequest → Request exchange
+
+{
+  "exchangeRequestId": "exchange-001",
+  "orderId": "order-001",
+  "customerId": "cust-001",
+  "items": [
+    {
+      "orderItemId": "item-003",
+      "productId": "plant-001",
+      "productName": "Ficus Plant",
+      "quantity": 1,
+      "exchangeReason": "Wrong variant delivered",
+      "requestedVariantId": "variant-002"
+    }
+  ],
+  "requestDate": "2025-06-07T11:00:00Z",
+  "status": "Under Review",
+  "comments": "Please send the correct variant"
+}
+
+35. submitReview → Leave a review
+
+{
+  "reviewId": "review-001",
+  "productId": "plant-001",
+  "customerId": "cust-001",
+  "rating": 4,
+  "reviewText": "Healthy plant and good packaging.",
+  "reviewDate": "2025-06-05T15:00:00Z"
+}
+
+36. getReviewsByProduct → View reviews
+
+{
+  "productId": "plant-001",
+  "reviews": [
+    {
+      "reviewId": "review-001",
+      "customerId": "cust-001",
+      "rating": 4,
+      "reviewText": "Healthy plant and good packaging.",
+      "reviewDate": "2025-06-05T15:00:00Z"
+    },
+    {
+      "reviewId": "review-002",
+      "customerId": "cust-002",
+      "rating": 5,
+      "reviewText": "Thriving nicely, very happy with purchase!",
+      "reviewDate": "2025-06-04T10:00:00Z"
+    }
+  ]
+}
+
+37. getAverageRating → Average product rating
+
+{
+  "productId": "plant-001",
+  "averageRating": 4.5,
+  "totalReviews": 20
+}
+
+38. applyPromotionToCustomer → Apply promo code
+
+{
+  "customerId": "cust-001",
+  "promoCode": "SUMMER25",
+  "discountType": "percentage",
+  "discountValue": 25.0,
+  "minOrderAmount": 1000,
+  "maxDiscountAmount": 200,
+  "appliedAt": "2025-06-07T12:00:00Z",
+  "validTill": "2025-07-01T23:59:59Z",
+  "status": "Applied"
+}
+
+39. applyReferralCode → Apply referral code
+
+{
+  "customerId": "cust-001",
+  "referralCode": "REF12345",
+  "rewardPointsAdded": 100,
+  "appliedAt": "2025-06-07T12:30:00Z",
+  "status": "Success"
+}
+
+40. getReferralRewardsStatus → Check rewards
+
+{
+  "customerId": "cust-001",
+  "totalReferralRewards": 350,
+  "rewardsRedeemed": 200,
+  "availableRewards": 150,
+  "referrals": [
+    {
+      "referredCustomerId": "cust-010",
+      "rewardPointsEarned": 100,
+      "date": "2025-05-20"
+    },
+    {
+      "referredCustomerId": "cust-015",
+      "rewardPointsEarned": 250,
+      "date": "2025-06-01"
+    }
+  ]
+}
+

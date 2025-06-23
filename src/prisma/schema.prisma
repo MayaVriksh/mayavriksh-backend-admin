@@ -1,0 +1,1936 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuditAction {
+  ADDED
+  REVOKED
+  MODIFIED // promotion or demotion from current role
+}
+
+enum AddedByType {
+  SYSTEM
+  ADMIN
+  SUPERADMIN
+}
+
+enum PaymentMethod {
+  CASH
+  ONLINE
+  UPI
+  NEFT
+  BANK_TRANSFER
+}
+
+// ---------------------- User & Role Management ----------------------
+
+model User {
+  userId String @id
+  roleId String
+
+  fullName        Json
+  phoneNumber     String? @unique
+  email           String  @unique
+  password        String
+  isActive        Boolean @default(true)
+  profileImageUrl String?
+  phoneVerified   Boolean @default(false)
+  emailVerified   Boolean @default(false)
+  address         Json?
+  deactivationReason String? 
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  role                            Role                      @relation(name: "UserToRole", fields: [roleId], references: [roleId])
+  superAdmin                      SuperAdmin?               @relation(name: "UserToSuperAdmin")
+  admin                           Admin?                    @relation(name: "UserToAdmin")
+  customer                        Customer?                 @relation(name: "UserToCustomer")
+  Supplier                        Supplier?                 @relation(name: "UserToSupplier")
+  addedUserPermissions            UserPermission[]          @relation(name: "PermissionAddedByUser")
+  addedRolePermissions            RolePermission[]          @relation(name: "RolePermissionAddedByUser")
+  RoleAdded                       Role[]                    @relation(name: "RoleToRoleCreator")
+  RoleCreationAuditLog            RoleCreationAuditLog[]    @relation(name: "RoleCreationAuditByUser")
+  RolePermissionAuditLog          RolePermissionAuditLog[]  @relation(name: "RolePermissionAuditByUser")
+  userPermissions                 UserPermission[]          @relation(name: "UserToUserPermission")
+  userPermissionAuditLogsAsActor  UserPermissionAuditLog[]  @relation(name: "UserPermissionAuditByUser")
+  userPermissionAuditLogsAsTarget UserPermissionAuditLog[]  @relation(name: "UserPermissionAuditForUser")
+  UserGroup                       UserGroup[]               @relation(name: "UserToUserGroup")
+  GroupPermissionAuditLog         GroupPermissionAuditLog[] @relation(name: "UserToAuditLog")
+  actionsAdded                    Action[]                  @relation(name: "ActionAddedByUser")
+  modulesAdded                    Module[]                  @relation(name: "ModuleAddedByUser")
+  resourcesAdded                  Resource[]                @relation(name: "ResourceAddedByUser")
+  permissionsAdded                Permission[]              @relation(name: "PermissionAddedByUser")
+  employees                       Employee[]                @relation(name: "UserToEmployee")
+  EmailVerification               EmailVerification[]       @relation(name: "UserEmailVerifications")
+  PhoneVerification               PhoneVerification[]       @relation(name: "UserPhoneVerifications")
+  WarehouseEmployee               WarehouseEmployee[]       @relation(name: "WarehouseEmployeeAssignedBy")
+
+  @@index([phoneNumber, email])
+}
+
+model Role {
+  roleId String @id
+  role   String @unique
+
+  addedByUserId String? // null if system
+  addedByType   AddedByType @default(SYSTEM)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  addedBy                User?                    @relation(name: "RoleToRoleCreator", fields: [addedByUserId], references: [userId])
+  rolePermissions        RolePermission[]         @relation(name: "RoleToRolePermission")
+  roleCreationAuditLog   RoleCreationAuditLog[]   @relation(name: "RoleCreationAuditForRole")
+  rolePermissionAuditLog RolePermissionAuditLog[] @relation(name: "RoleAudit")
+  groupRole              GroupRole[]              @relation(name: "RoleToGroupRole")
+  users                  User[]                   @relation(name: "UserToRole")
+}
+
+model RoleCreationAuditLog {
+  logId       String  @id
+  roleId      String
+  createdById String? // null if system
+
+  createdByType AddedByType @default(SYSTEM) // ADMIN | SUPERADMIN | SYSTEM
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  role      Role  @relation(name: "RoleCreationAuditForRole", fields: [roleId], references: [roleId])
+  createdBy User? @relation(name: "RoleCreationAuditByUser", fields: [createdById], references: [userId])
+}
+
+model Action {
+  actionId      String      @id
+  addedByUserId String?
+  addedByType   AddedByType @default(SYSTEM)
+
+  name        String  @unique // e.g. CREATE, READ, UPDATE
+  displayName String?
+  description String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  addedBy                 User?                     @relation(name: "ActionAddedByUser", fields: [addedByUserId], references: [userId])
+  Permission              Permission[]              @relation(name: "ActionToPermission")
+  GroupPermission         GroupPermission[]         @relation(name: "ActionToGroupPermission")
+  GroupPermissionAuditLog GroupPermissionAuditLog[] @relation(name: "AuditLogToAction")
+}
+
+model Module {
+  moduleId      String      @id
+  addedByUserId String?
+  addedByType   AddedByType @default(SYSTEM)
+
+  name        String  @unique
+  description String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  addedBy                 User?                     @relation(name: "ModuleAddedByUser", fields: [addedByUserId], references: [userId])
+  Permission              Permission[]              @relation(name: "PermissionToModule")
+  Resource                Resource[]                @relation(name: "ModuleToResource")
+  GroupPermission         GroupPermission[]         @relation(name: "ModuleToGroupPermission")
+  GroupPermissionAuditLog GroupPermissionAuditLog[] @relation(name: "AuditLogToModule")
+}
+
+model Resource {
+  resourceId    String      @id
+  moduleId      String
+  addedByUserId String?
+  addedByType   AddedByType @default(SYSTEM)
+
+  name        String
+  description String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  module                  Module                    @relation(name: "ModuleToResource", fields: [moduleId], references: [moduleId], onDelete: Cascade)
+  addedBy                 User?                     @relation(name: "ResourceAddedByUser", fields: [addedByUserId], references: [userId])
+  Permission              Permission[]              @relation(name: "ResourceToPermission")
+  GroupPermission         GroupPermission[]         @relation(name: "ResourceToGroupPermission")
+  GroupPermissionAuditLog GroupPermissionAuditLog[] @relation(name: "AuditLogToResource")
+
+  @@unique([name, moduleId])
+}
+
+model Permission {
+  permissionId  String      @id
+  actionId      String // The type of action allowed (e.g., read, write, modify)
+  resourceId    String // The resource the permission applies to (e.g., order, payment, customer)
+  moduleId      String // The high-level module grouping this permission (e.g., Inventory, Order, User Management)
+  addedByUserId String? // Optional: The user who added this permission, if added manually
+  addedByType   AddedByType @default(SYSTEM) // Enum to identify if permission was added by SYSTEM or a USER
+
+  description String? // Optional description of the permission, e.g., "order:read → can view customer orders"
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  action                 Action                   @relation(name: "ActionToPermission", fields: [actionId], references: [actionId], onDelete: Cascade)
+  resource               Resource                 @relation(name: "ResourceToPermission", fields: [resourceId], references: [resourceId], onDelete: Cascade)
+  module                 Module                   @relation(name: "PermissionToModule", fields: [moduleId], references: [moduleId], onDelete: Cascade)
+  addedBy                User?                    @relation(name: "PermissionAddedByUser", fields: [addedByUserId], references: [userId])
+  rolePermissions        RolePermission[]         @relation(name: "PermissionToRolePermission")
+  userPermissions        UserPermission[]         @relation(name: "PermissionToUserPermission")
+  RolePermissionAuditLog RolePermissionAuditLog[] @relation(name: "RolePermissionAuditForPermission")
+  UserPermissionAuditLog UserPermissionAuditLog[] @relation(name: "UserPermissionAuditForPermission")
+
+  @@unique([actionId, resourceId, moduleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  addedByUserId String?
+  addedByType   AddedByType @default(SYSTEM)
+  reason        String? // optional reason for assignment
+
+  role       Role       @relation(name: "RoleToRolePermission", fields: [roleId], references: [roleId])
+  permission Permission @relation(name: "PermissionToRolePermission", fields: [permissionId], references: [permissionId])
+  addedBy    User?      @relation(name: "RolePermissionAddedByUser", fields: [addedByUserId], references: [userId])
+
+  @@id([roleId, permissionId])
+}
+
+model RolePermissionAuditLog {
+  logId        String @id
+  roleId       String
+  permissionId String
+
+  action        AuditAction
+  reason        String?
+  addedByUserId String?
+  addedByType   AddedByType @default(SYSTEM)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  role       Role       @relation(name: "RoleAudit", fields: [roleId], references: [roleId])
+  permission Permission @relation(name: "RolePermissionAuditForPermission", fields: [permissionId], references: [permissionId])
+  addedBy    User?      @relation(name: "RolePermissionAuditByUser", fields: [addedByUserId], references: [userId])
+}
+
+model UserPermission {
+  userId       String
+  permissionId String
+  allowed      Boolean
+
+  addedByUserId String?
+  addedByType   AddedByType @default(SYSTEM)
+  reason        String? // optional reason for manual allow/deny
+
+  user       User       @relation(name: "UserToUserPermission", fields: [userId], references: [userId])
+  permission Permission @relation(name: "PermissionToUserPermission", fields: [permissionId], references: [permissionId])
+  addedBy    User?      @relation(name: "PermissionAddedByUser", fields: [addedByUserId], references: [userId])
+
+  @@id([userId, permissionId])
+}
+
+model UserPermissionAuditLog {
+  logId        String @id
+  userId       String
+  permissionId String
+
+  action          AuditAction
+  previousAllowed Boolean?
+  newAllowed      Boolean?
+  reason          String?
+  addedByUserId   String?
+  addedByType     AddedByType @default(SYSTEM)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User       @relation(name: "UserPermissionAuditForUser", fields: [userId], references: [userId])
+  permission Permission @relation(name: "UserPermissionAuditForPermission", fields: [permissionId], references: [permissionId])
+  addedBy    User?      @relation(name: "UserPermissionAuditByUser", fields: [addedByUserId], references: [userId])
+}
+
+model Group {
+  groupId String @id
+  name    String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  userGroups       UserGroup[]               @relation(name: "GroupToUserGroup")
+  groupRoles       GroupRole[]               @relation(name: "GroupToGroupRole")
+  groupPermissions GroupPermission[]         @relation(name: "GroupToGroupPermission")
+  auditLogs        GroupPermissionAuditLog[] @relation(name: "GroupToAuditLog")
+}
+
+model UserGroup {
+  userId  String
+  groupId String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user  User  @relation(name: "UserToUserGroup", fields: [userId], references: [userId])
+  group Group @relation(name: "GroupToUserGroup", fields: [groupId], references: [groupId])
+
+  @@id([userId, groupId])
+  @@index([groupId])
+}
+
+model GroupRole {
+  groupId String
+  roleId  String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  group Group @relation(name: "GroupToGroupRole", fields: [groupId], references: [groupId])
+  role  Role  @relation(name: "RoleToGroupRole", fields: [roleId], references: [roleId])
+
+  @@id([groupId, roleId])
+}
+
+model GroupPermission {
+  id         String @id
+  groupId    String
+  actionId   String
+  resourceId String
+  moduleId   String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  group    Group    @relation(name: "GroupToGroupPermission", fields: [groupId], references: [groupId])
+  action   Action   @relation(name: "ActionToGroupPermission", fields: [actionId], references: [actionId])
+  resource Resource @relation(name: "ResourceToGroupPermission", fields: [resourceId], references: [resourceId])
+  module   Module   @relation(name: "ModuleToGroupPermission", fields: [moduleId], references: [moduleId])
+
+  @@unique([groupId, actionId, resourceId, moduleId])
+}
+
+model GroupPermissionAuditLog {
+  logId      String @id
+  groupId    String
+  actionId   String
+  resourceId String
+  moduleId   String
+
+  action        AuditAction
+  reason        String?
+  addedByUserId String?
+  addedByType   AddedByType @default(SYSTEM)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  group       Group    @relation(name: "GroupToAuditLog", fields: [groupId], references: [groupId])
+  addedBy     User?    @relation(name: "UserToAuditLog", fields: [addedByUserId], references: [userId])
+  actionRef   Action   @relation(name: "AuditLogToAction", fields: [actionId], references: [actionId])
+  resourceRef Resource @relation(name: "AuditLogToResource", fields: [resourceId], references: [resourceId])
+  moduleRef   Module   @relation(name: "AuditLogToModule", fields: [moduleId], references: [moduleId])
+}
+
+model Customer {
+  customerId String @id
+  userId     String @unique
+
+  loyaltyPoints     Int       @default(0)
+  loyaltyTier       String?
+  preferredPayment  String?
+  totalSpent        Decimal   @default(0.0)
+  orderCount        Int       @default(0)
+  avgOrderValue     Decimal   @default(0.0)
+  daysBetweenOrders Int?
+  orderFrequency    Decimal?
+  predictedSpend    Decimal?
+  spendTier         String?
+  isActive          Boolean   @default(true)
+  firstOrderAt      DateTime?
+  lastOrderAt       DateTime?
+  lastLogin         DateTime?
+  accountCreatedAt  DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  user                 User                   @relation(name: "UserToCustomer", fields: [userId], references: [userId])
+  addresses            CustomerAddress[]      @relation(name: "CustomerToAddress")
+  sessions             CustomerSessions[]     @relation(name: "CustomerToSession")
+  orders               Order[]                @relation(name: "CustomerToOrder")
+  reviews              Review[]               @relation(name: "CustomerToReview")
+  websiteAnalytics     WebsiteAnalytics[]     @relation(name: "CustomerToAnalytics")
+  returnsRefunds       ReturnsRefunds[]       @relation(name: "CustomerToReturns")
+  referralCode         ReferralCode?          @relation(name: "CustomerToReferralCode")
+  ReferralUsage        ReferralUsage[]        @relation(name: "CustomerToReferralUsage")
+  NotifyMeSubscription NotifyMeSubscription[] @relation(name: "NotifyMeSubscriptionToCustomer")
+  PlantCartItem        PlantCartItem[]        @relation(name: "CustomerToPlantCartItem")
+  PotCartItem          PotCartItem[]          @relation(name: "CustomerToPotCartItem")
+  PlantCheckoutLater   PlantCheckoutLater[]   @relation(name: "PlantCheckoutLaterToCustomer")
+  PotCheckoutLater     PotCheckoutLater[]     @relation(name: "PotCheckoutLaterToCustomer")
+}
+
+model Admin {
+  adminId String @id
+  userId  String @unique
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user User @relation(name: "UserToAdmin", fields: [userId], references: [userId])
+}
+
+model SuperAdmin {
+  superAdminId String @id
+  userId       String @unique
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user User @relation(name: "UserToSuperAdmin", fields: [userId], references: [userId])
+}
+
+model Employee {
+  employeeId String @id
+  userId     String @unique
+
+  designation String?
+  department  String?
+  joiningDate DateTime @default(now())
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user           User                @relation(name: "UserToEmployee", fields: [userId], references: [userId])
+  warehouseLinks WarehouseEmployee[] @relation(name: "EmployeeToWarehouse")
+}
+
+model WarehouseEmployee {
+  warehouseEmployeeId String @id
+  warehouseId         String
+  employeeId          String
+
+  assignedByUserId String
+  assignedAt       DateTime @default(now())
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  warehouse  Warehouse @relation(name: "WarehouseToEmployee", fields: [warehouseId], references: [warehouseId])
+  employee   Employee  @relation(name: "EmployeeToWarehouse", fields: [employeeId], references: [employeeId])
+  assignedBy User      @relation(name: "WarehouseEmployeeAssignedBy", fields: [assignedByUserId], references: [userId])
+}
+
+model Supplier {
+  supplierId  String  @id
+  userId      String  @unique
+  warehouseId String?
+
+  nurseryName      String?
+  businessCategory String?
+  gstin            String?
+  tradeLicenseUrl  String?
+  status           String  @default("REGISTERED")
+  isVerified       Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  contactPerson                 User                            @relation(name: "UserToSupplier", fields: [userId], references: [userId])
+  warehouse                     Warehouse?                      @relation(name: "SupplierToWareHouse", fields: [warehouseId], references: [warehouseId])
+  mediaAssets                   NurseryMediaAsset[]             @relation(name: "SupplierToNurseryMedia")
+  SupplierToMayaVrikshInventory SupplierToMayaVrikshInventory[] @relation(name: "SupplierToMayaVrikshInventory")
+  PlantRestockEventLog          PlantRestockEventLog[]          @relation(name: "SupplierToPlantRestockEvent")
+  PotRestockEventLog            PotRestockEventLog[]            @relation(name: "SupplierToPotRestockEvent")
+  PlantSupplierInventory        PlantSupplierInventory[]        @relation(name: "SupplierToPlantInventory")
+  PotSupplierInventory          PotSupplierInventory[]          @relation(name: "SupplierToPotInventory")
+  PurchaseOrder                 PurchaseOrder[]                 @relation(name: "SupplierToPurchaseOrder")
+
+  @@unique([userId, warehouseId])
+}
+
+model NurseryMediaAsset {
+  id         String @id
+  supplierId String
+
+  publicId     String
+  mediaUrl     String
+  mediaType    String? // IMAGE, VIDEO
+  resourceType String?
+  isPrimary    Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  supplier Supplier @relation(name: "SupplierToNurseryMedia", fields: [supplierId], references: [supplierId])
+
+  @@index([supplierId])
+}
+
+model CustomerSessions {
+  sessionId  String @id
+  customerId String
+
+  deviceId         String?
+  ipAddress        String?
+  deviceInfo       String?
+  locationCity     String?
+  locationDistrict String?
+  locationState    String?
+  loginStatus      String?
+  pagesVisited     Int?
+  firstPage        String?
+  lastPage         String?
+  sessionStart     DateTime
+  sessionEnd       DateTime
+  totalTimeSpent   Int?
+  isMobile         Boolean?
+  browserName      String?
+  osName           String?
+  sessionStatus    String?
+
+  customer Customer @relation(name: "CustomerToSession", fields: [customerId], references: [customerId])
+}
+
+// -------------------- Customer Data & Preferences --------------------
+
+model NotifyMeSubscription {
+  subscriptionId String  @id
+  customerId     String?
+  plantId        String?
+  plantVariantId String?
+  potCategoryId  String?
+  potVariantId   String?
+
+  email      String
+  notified   Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  notifiedAt DateTime?
+
+  customer     Customer?      @relation(name: "NotifyMeSubscriptionToCustomer", fields: [customerId], references: [customerId])
+  plant        Plants?        @relation(name: "NotifyMeSubscriptionToPlants", fields: [plantId], references: [plantId])
+  plantVariant PlantVariants? @relation(name: "NotifyMeSubscriptionToPlantVariants", fields: [plantVariantId], references: [variantId])
+  potCategory  PotCategory?   @relation(name: "NotifyMeSubscriptionToPotCategory", fields: [potCategoryId], references: [categoryId])
+  potVariant   PotVariants?   @relation(name: "NotifyMeSubscriptionToPotVariants", fields: [potVariantId], references: [potVariantId])
+
+  @@index([customerId])
+  @@index([plantVariantId])
+  @@index([potVariantId])
+  @@index([notified])
+}
+
+model CustomerAddress {
+  addressId  String @id
+  customerId String
+
+  addressType String
+  address     Json
+  isDefault   Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  customer  Customer   @relation(name: "CustomerToAddress", fields: [customerId], references: [customerId])
+  shippings Shipping[] @relation(name: "AddressToShipping")
+}
+
+model PlantCartItem {
+  cartItemId     String  @id
+  customerId     String
+  plantId        String
+  plantVariantId String
+  couponId       String?
+
+  quantity   Int       @default(1)
+  priceAtAdd Decimal
+  addedAt    DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  customer     Customer      @relation(name: "CustomerToPlantCartItem", fields: [customerId], references: [customerId])
+  plant        Plants        @relation(name: "PlantCartItemToPlant", fields: [plantId], references: [plantId])
+  plantVariant PlantVariants @relation(name: "PlantCartItemToPlantVariant", fields: [plantVariantId], references: [variantId])
+  coupon       PromoCode?    @relation(name: "PlantCartItemToPromoCode", fields: [couponId], references: [promoCodeId])
+
+  @@unique([customerId, plantId, plantVariantId])
+}
+
+model PotCartItem {
+  cartItemId    String  @id
+  customerId    String
+  potCategoryId String
+  potVariantId  String
+  couponId      String?
+
+  quantity   Int       @default(1)
+  priceAtAdd Decimal
+  addedAt    DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  customer    Customer    @relation(name: "CustomerToPotCartItem", fields: [customerId], references: [customerId])
+  potCategory PotCategory @relation(name: "PotCartItemToPotCategory", fields: [potCategoryId], references: [categoryId])
+  potVariant  PotVariants @relation(name: "PotCartItemToPotVariant", fields: [potVariantId], references: [potVariantId])
+  coupon      PromoCode?  @relation(name: "PotCartItemToPromoCode", fields: [couponId], references: [promoCodeId])
+
+  @@unique([customerId, potCategoryId, potVariantId])
+}
+
+model PlantCheckoutLater {
+  checkOutLaterId String  @id
+  customerId      String  @db.Char(36)
+  plantId         String  @db.Char(36)
+  plantVariantId  String? @db.Char(36)
+  promoCodeId     String? @db.Char(36)
+
+  units Int
+
+  addedAt   DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  customer     Customer       @relation(name: "PlantCheckoutLaterToCustomer", fields: [customerId], references: [customerId])
+  plant        Plants         @relation(name: "PlantCheckoutLaterToPlant", fields: [plantId], references: [plantId])
+  plantVariant PlantVariants? @relation(name: "PlantCheckoutLaterToPlantVariant", fields: [plantVariantId], references: [variantId])
+  promoCode    PromoCode?     @relation(name: "PlantCheckoutLaterToPromoCode", fields: [promoCodeId], references: [promoCodeId])
+
+  @@unique([customerId, plantId, plantVariantId])
+}
+
+model PotCheckoutLater {
+  checkOutLaterId String  @id
+  customerId      String  @db.Char(36)
+  potCategoryId   String  @db.Char(36)
+  potVariantId    String? @db.Char(36)
+  promoCodeId     String? @db.Char(36)
+
+  units Int
+
+  addedAt   DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  customer    Customer     @relation(name: "PotCheckoutLaterToCustomer", fields: [customerId], references: [customerId])
+  potCategory PotCategory  @relation(name: "PotCheckoutLaterToPotCategory", fields: [potCategoryId], references: [categoryId])
+  potVariant  PotVariants? @relation(name: "PotCheckoutLaterToPotVariant", fields: [potVariantId], references: [potVariantId])
+  promoCode   PromoCode?   @relation(name: "PotCheckoutLaterToPromoCode", fields: [promoCodeId], references: [promoCodeId])
+
+  @@unique([customerId, potCategoryId, potVariantId])
+}
+
+// -------------------- Plants & Catalog Management --------------------
+
+model PotVariantImage {
+  id           String  @id
+  potVariantId String
+  publicId     String
+  mediaUrl     String
+  mediaType    String? // image or mp4 files
+  resourceType String?
+  isPrimary    Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  potVariant PotVariants @relation(name: "VariantToImages", fields: [potVariantId], references: [potVariantId], onDelete: Cascade)
+
+  @@index([potVariantId])
+}
+
+model PlantVariantImage {
+  id             String  @id
+  plantVariantId String
+  publicId       String
+  mediaUrl       String
+  mediaType      String? // image or mp4 files
+  resourceType   String?
+  isPrimary      Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plantVariant PlantVariants @relation(name: "VariantToImages", fields: [plantVariantId], references: [variantId], onDelete: Cascade)
+
+  @@index([plantVariantId])
+}
+
+model PlantCategory {
+  categoryId String @id
+
+  name        String
+  description String
+  publicId    String
+  mediaUrl    String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plants Plants[] @relation(name: "ProductCategories")
+}
+
+model Plants {
+  plantId String  @id
+  tagId   String?
+
+  name                String
+  description         String
+  dateAdded           DateTime
+  isProductActive     Boolean  @default(true)
+  isFeatured          Boolean
+  auraType            String?
+  bestForEmotion      String?
+  bestGiftFor         String?
+  biologicalName      String?
+  biodiversityBooster Boolean?
+  carbonAbsorber      Boolean?
+  funFacts            String?
+  godAligned          Boolean?
+  insideBox           String?
+  maintenance         String?
+  plantSeries         String?
+  plantSize           String?
+  placeOfOrigin       String?
+  repotting           String?
+  scientificName      String?
+  soil                String?
+  spiritualUseCase    String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plantCategories               PlantCategory[]                 @relation(name: "ProductCategories")
+  plantWarehouseInventory       PlantWarehouseInventory[]       @relation(name: "PlantToWarehouseInventory")
+  variants                      PlantVariants[]                 @relation(name: "ProductToVariant")
+  SupplierToMayaVrikshInventory SupplierToMayaVrikshInventory[] @relation(name: "ProductToSupplierMayaVrikshInventory")
+  returns                       ReturnsRefunds[]                @relation(name: "ProductToReturn")
+  exchanges                     ReturnsRefunds[]                @relation(name: "ProductToExchange")
+  restockEvents                 PlantRestockEventLog[]          @relation(name: "PlantToRestockEvent")
+  promotionProducts             PromotionProduct[]              @relation(name: "PromotionProductToPlant")
+  Review                        Review[]                        @relation(name: "PlantToReview")
+  PlantSupplierInventory        PlantSupplierInventory[]        @relation(name: "ProductToSupplierInventory")
+  PlantStockAuditLog            PlantStockAuditLog[]            @relation(name: "ProductToStockAudit")
+  PlantDamagedProduct           PlantDamagedProduct[]           @relation(name: "ProductToDamage")
+  NotifyMeSubscription          NotifyMeSubscription[]          @relation(name: "NotifyMeSubscriptionToPlants")
+  PlantSalesAnalytics           PlantSalesAnalytics[]           @relation(name: "PlantToAnalytics")
+  PlantCartItem                 PlantCartItem[]                 @relation(name: "PlantCartItemToPlant")
+  PlantCheckoutLater            PlantCheckoutLater[]            @relation(name: "PlantCheckoutLaterToPlant")
+  PlantOrderItem                PlantOrderItem[]                @relation(name: "PlantOrderItemToPlant")
+  PurchaseOrder                 PurchaseOrder[]                 @relation(name: "PlantToPurchaseOrder")
+}
+
+model PlantVariants {
+  variantId String @id
+  plantId   String
+  colorId   String
+
+  plantSize   String
+  height      Decimal
+  weight      Decimal
+  sku         String  @unique
+  mrp         Decimal @default(0.0)
+  isAvailable Boolean @default(true)
+  notes       String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plants                  Plants                    @relation(name: "ProductToVariant", fields: [plantId], references: [plantId])
+  color                   Color                     @relation(name: "ColorToPlantVariants", fields: [colorId], references: [id])
+  plantWarehouseInventory PlantWarehouseInventory[] @relation(name: "VariantToWarehouse")
+  promotionProducts       PromotionProduct[]        @relation(name: "PromotionProductToPlantVariant")
+  plantVariantImages      PlantVariantImage[]       @relation(name: "VariantToImages")
+  PlantCareGuidelines     PlantCareGuidelines[]     @relation(name: "ProductToCare")
+  PlantFertilizers        PlantFertilizers[]        @relation(name: "ProductToFertilizer")
+  Tags                    Tags[]                    @relation(name: "PlantVariantToTags")
+  PlantFertilizerSchedule PlantFertilizerSchedule[] @relation(name: "ProductToFertilizerSchedule")
+  PlantWarehouseInventory PlantWarehouseInventory[] @relation(name: "PlantVariantToWarehouse")
+  PlantRestockEventLog    PlantRestockEventLog[]    @relation(name: "PlantVariantToRestockEvent")
+  Review                  Review[]                  @relation(name: "PlantVariantToReview")
+  PlantSupplierInventory  PlantSupplierInventory[]  @relation(name: "PlantVariantToSupplierInventory")
+  PlantStockAuditLog      PlantStockAuditLog[]      @relation(name: "PlantVariantToStockAudit")
+  PlantDamagedProduct     PlantDamagedProduct[]     @relation(name: "PlantVariantToDamage")
+  NotifyMeSubscription    NotifyMeSubscription[]    @relation(name: "NotifyMeSubscriptionToPlantVariants")
+  PlantSalesAnalytics     PlantSalesAnalytics[]     @relation(name: "PlantVariantToAnalytics")
+  PlantCartItem           PlantCartItem[]           @relation(name: "PlantCartItemToPlantVariant")
+  PlantCheckoutLater      PlantCheckoutLater[]      @relation(name: "PlantCheckoutLaterToPlantVariant")
+  PlantOrderItem          PlantOrderItem[]          @relation(name: "PlantOrderItemToPlantVariant")
+  PurchaseOrder           PurchaseOrder[]           @relation(name: "PlantVariantToPurchaseOrder")
+}
+
+model PlantGenericCostComponent {
+  componentId                  String  @id
+  tagPrintingCost              Decimal @default(0.0)
+  marketingOverheadCost        Decimal @default(0.0)
+  paymentGatewayCostPercentage Decimal @default(0.0)
+  courierSubscriptionCost      Decimal @default(0.0)
+  taxPercentage                Decimal @default(0.0)
+  deliveryMaintenanceCost      Decimal @default(0.0)
+  returnLossPercentage         Decimal @default(0.0)
+  inventoryDamagePercentage    Decimal @default(0.0)
+  variableCost                 Decimal @default(0.0)
+  totalPlantGenericCost        Decimal @default(0.0)
+
+  plantSizeCosts PlantSizeCostComponent[] @relation(name: "PlantComponentToSizeCosts")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlantSizeCostComponent {
+  sizeCostComponentId         String  @id
+  plantSize                   String
+  plantCocopeatCost           Decimal @default(0.0)
+  plantPackagingCost          Decimal @default(0.0)
+  plantGitPackagingCost       Decimal @default(0.0)
+  plantProfitMarginPercentage Decimal @default(0.0)
+  plantFertilizersCost        Decimal @default(0.0)
+  totalPlantSizeCost          Decimal @default(0.0)
+
+  genericCostComponentId String
+  genericCostComponent   PlantGenericCostComponent @relation(name: "PlantComponentToSizeCosts", fields: [genericCostComponentId], references: [componentId])
+
+  @@unique([genericCostComponentId, plantSize])
+}
+
+model PotGenericCostComponent {
+  componentId                  String  @id
+  tagPrintingCost              Decimal @default(0.0)
+  marketingOverheadCost        Decimal @default(0.0)
+  paymentGatewayCostPercentage Decimal @default(0.0)
+  courierSubscriptionCost      Decimal @default(0.0)
+  taxPercentage                Decimal @default(0.0)
+  deliveryMaintenanceCost      Decimal @default(0.0)
+  returnLossPercentage         Decimal @default(0.0)
+  inventoryDamagePercentage    Decimal @default(0.0)
+  variableCost                 Decimal @default(0.0)
+  totalPotGenericCost          Decimal @default(0.0)
+
+  potSizeCosts PotSizeCostComponent[] @relation(name: "PotComponentToSizeCosts")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PotSizeCostComponent {
+  sizeCostComponentId       String  @id
+  potSize                   String
+  potPackagingCost          Decimal @default(0.0)
+  potGitPackagingCost       Decimal @default(0.0)
+  potProfitMarginPercentage Decimal @default(0.0)
+  totalPotSizeCost          Decimal @default(0.0)
+
+  genericCostComponentId String
+  genericCostComponent   PotGenericCostComponent @relation(name: "PotComponentToSizeCosts", fields: [genericCostComponentId], references: [componentId])
+
+  @@unique([genericCostComponentId, potSize])
+}
+
+model PotCategory {
+  categoryId String @id
+
+  name        String
+  description String?
+  publicId    String
+  mediaUrl    String?
+
+  potUnits Int     @default(0)
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  variants              PotVariants[]           @relation(name: "CategoryToVariants")
+  PromotionProduct      PromotionProduct[]      @relation(name: "PromotionProductToPotVariant")
+  PotWarehouseInventory PotWarehouseInventory[] @relation(name: "PotCategoryToPotInventory")
+  PotRestockEventLog    PotRestockEventLog[]    @relation(name: "PotCategoryToPotRestockEvent")
+  Review                Review[]                @relation(name: "PotCategoryToReview")
+  PotSupplierInventory  PotSupplierInventory[]  @relation(name: "PotCategoryToSupplierInventory")
+  PotStockAuditLog      PotStockAuditLog[]      @relation(name: "PotCategoryToStockAudit")
+  PotDamagedProduct     PotDamagedProduct[]     @relation(name: "PotCategoryToDamage")
+  NotifyMeSubscription  NotifyMeSubscription[]  @relation(name: "NotifyMeSubscriptionToPotCategory")
+  PotSalesAnalytics     PotSalesAnalytics[]     @relation(name: "PotCategoryToAnalytics")
+  PotCartItem           PotCartItem[]           @relation(name: "PotCartItemToPotCategory")
+  PotCheckoutLater      PotCheckoutLater[]      @relation(name: "PotCheckoutLaterToPotCategory")
+  PotOrderItem          PotOrderItem[]          @relation(name: "PotOrderItemToPotCategory")
+  PurchaseOrder         PurchaseOrder[]         @relation(name: "PotCategoryToPurchaseOrder")
+}
+
+model PotVariants {
+  potVariantId String @id
+  categoryId   String
+  colorId      String
+  materialId   String
+
+  size   String
+  height Decimal?
+  weight Decimal?
+  sku    String   @unique
+
+  mrp           Decimal @default(0.0)
+  variantUnits  Int     @default(0)
+  isEcoFriendly Boolean @default(false)
+  isPremium     Boolean @default(false)
+  isAvailable   Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  category              PotCategory             @relation(name: "CategoryToVariants", fields: [categoryId], references: [categoryId], onDelete: Cascade)
+  color                 Color                   @relation(name: "ColorToVariants", fields: [colorId], references: [id], onDelete: Restrict)
+  material              PotMaterial             @relation(name: "MaterialToVariants", fields: [materialId], references: [materialId], onDelete: Restrict)
+  images                PotVariantImage[]       @relation(name: "VariantToImages")
+  PromotionProduct      PromotionProduct[]      @relation(name: "PromotionProductToPotVariant")
+  PotWarehouseInventory PotWarehouseInventory[] @relation(name: "PotVariantToWarehouse")
+  PotRestockEventLog    PotRestockEventLog[]    @relation(name: "PotVariantToRestockEvent")
+  Review                Review[]                @relation(name: "PotVariantToReview")
+  PotSupplierInventory  PotSupplierInventory[]  @relation(name: "PotVariantToSupplierInventory")
+  PotStockAuditLog      PotStockAuditLog[]      @relation(name: "PotVariantToStockAudit")
+  PotDamagedProduct     PotDamagedProduct[]     @relation(name: "PotVariantToDamage")
+  NotifyMeSubscription  NotifyMeSubscription[]  @relation(name: "NotifyMeSubscriptionToPotVariants")
+  PotSalesAnalytics     PotSalesAnalytics[]     @relation(name: "PotVariantToAnalytics")
+  PotCartItem           PotCartItem[]           @relation(name: "PotCartItemToPotVariant")
+  PotCheckoutLater      PotCheckoutLater[]      @relation(name: "PotCheckoutLaterToPotVariant")
+  PotOrderItem          PotOrderItem[]          @relation(name: "PotOrderItemToPotVariant")
+  PurchaseOrder         PurchaseOrder[]         @relation(name: "PotVariantToPurchaseOrder")
+
+  @@unique([categoryId, size, colorId, materialId])
+  @@index([categoryId])
+  @@index([colorId])
+  @@index([materialId])
+}
+
+model PotMaterial {
+  materialId String @id
+
+  name String @unique
+
+  variants PotVariants[] @relation(name: "MaterialToVariants")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Color {
+  id      String @id
+  name    String @unique
+  hexCode String @default("#FFFFFF")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  variants      PotVariants[]   @relation(name: "ColorToVariants")
+  plantVariants PlantVariants[] @relation(name: "ColorToPlantVariants")
+}
+
+// ---------------------- Plant Care & Fertilizer Data -----------------------
+
+model SunlightTypes {
+  sunlightId String @id
+
+  typeName    String
+  icon        String
+  description String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plantCareGuidelines PlantCareGuidelines[] @relation(name: "SunlightToPlantCare")
+}
+
+model HumidityLevel {
+  humidityId String @id
+
+  level         String
+  description   String?
+  suitableZones String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plantCareGuidelines PlantCareGuidelines[] @relation(name: "HumidityToPlantCare")
+}
+
+model PlantCareGuidelines {
+  careId          String @id
+  plantVariantId  String
+  sunlightTypeId  String
+  humidityLevelId String
+
+  season            String
+  wateringFrequency String
+  amountMl          Decimal
+  wateringMethod    String
+  recommendedTime   String
+  soilTypes         String
+  preferredSeasons  String
+  careNotes         String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plantVariants PlantVariants @relation(name: "ProductToCare", fields: [plantVariantId], references: [variantId])
+  sunlightType  SunlightTypes @relation(name: "SunlightToPlantCare", fields: [sunlightTypeId], references: [sunlightId])
+  humidityLevel HumidityLevel @relation(name: "HumidityToPlantCare", fields: [humidityLevelId], references: [humidityId])
+}
+
+model Fertilizers {
+  fertilizerId String @id
+
+  name          String
+  type          String
+  composition   String
+  description   String?
+  caution       String?
+  isEcoFriendly Boolean
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  productFertilizers  PlantFertilizers[]        @relation(name: "FertilizerToProduct")
+  fertilizerSchedules PlantFertilizerSchedule[] @relation(name: "FertilizerToSchedule")
+}
+
+model PlantFertilizers {
+  id             String @id
+  plantVariantId String
+  fertilizerId   String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plants     PlantVariants @relation(name: "ProductToFertilizer", fields: [plantVariantId], references: [variantId])
+  fertilizer Fertilizers   @relation(name: "FertilizerToProduct", fields: [fertilizerId], references: [fertilizerId])
+
+  @@unique([plantVariantId, fertilizerId])
+}
+
+model PlantFertilizerSchedule {
+  fertilizerEntryId String @id
+  plantVariantId    String
+  fertilizerId      String
+
+  applicationFrequency String
+  applicationMethod    String
+  applicationSeason    String
+  applicationTime      String
+  benefits             String?
+  dosageAmount         Decimal
+  safetyNotes          String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plants     PlantVariants @relation(name: "ProductToFertilizerSchedule", fields: [plantVariantId], references: [variantId])
+  fertilizer Fertilizers   @relation(name: "FertilizerToSchedule", fields: [fertilizerId], references: [fertilizerId])
+}
+
+model TagGroups {
+  groupId String @id
+
+  groupName        String
+  groupDescription String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  Tags Tags[] @relation(name: "TagsToTagGroups")
+}
+
+model Tags {
+  tagId   String @id
+  groupId String
+
+  tagName String
+  tagDesc String
+  tagIcon String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  group         TagGroups       @relation(name: "TagsToTagGroups", fields: [groupId], references: [groupId])
+  PlantVariants PlantVariants[] @relation(name: "PlantVariantToTags")
+}
+
+// --------------------- Order & Transaction Flow ----------------------
+
+model Order {
+  orderId       String  @id
+  invoiceNumber String  @unique
+  customerId    String
+  promoCodeId   String?
+
+  orderDate             DateTime
+  shippingDate          DateTime?
+  deliveryDate          DateTime?
+  returnEligibilityDate DateTime
+
+  orderStatus     String
+  paymentStatus   String
+  paymentMethod   String
+  isExchangeOrder Boolean @default(false)
+
+  orderAmount        Decimal
+  discountApplied    Decimal
+  shippingCharges    Decimal
+  taxCollected       Decimal
+  finalPayableAmount Decimal
+  refundAmount       Decimal?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  customer         Customer           @relation(name: "CustomerToOrder", fields: [customerId], references: [customerId])
+  promoCode        PromoCode?         @relation(name: "PromoCodeToOrder", fields: [promoCodeId], references: [promoCodeId])
+  Payment          Payment[]          @relation(name: "PaymentToOrder")
+  shipping         Shipping?          @relation(name: "OrderToShipping")
+  returnsRefunds   ReturnsRefunds[]   @relation(name: "OrderToReturns")
+  OrderCostDetails OrderCostDetails[] @relation(name: "OrderToOrderCost")
+  PlantOrderItem   PlantOrderItem[]   @relation(name: "PlantOrderItemToOrder")
+  PotOrderItem     PotOrderItem[]     @relation(name: "PotOrderItemToOrder")
+}
+
+model PlantOrderItem {
+  orderItemId    String  @id
+  orderId        String
+  plantId        String
+  plantVariantId String
+  promoCodeId    String?
+
+  units             Int
+  unitSellingPrice  Decimal
+  totalSellingPrice Decimal
+  discountApplied   Decimal?
+  taxApplied        Decimal?
+  finalAmountPaid   Decimal?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plant        Plants        @relation(name: "PlantOrderItemToPlant", fields: [plantId], references: [plantId])
+  plantVariant PlantVariants @relation(name: "PlantOrderItemToPlantVariant", fields: [plantVariantId], references: [variantId])
+  order        Order         @relation(name: "PlantOrderItemToOrder", fields: [orderId], references: [orderId])
+  promoCode    PromoCode?    @relation(name: "PlantOrderItemToPromoCode", fields: [promoCodeId], references: [promoCodeId])
+
+  @@index([orderId])
+}
+
+model PotOrderItem {
+  orderItemId   String  @id
+  orderId       String
+  potCategoryId String
+  potVariantId  String
+  promoCodeId   String?
+
+  units             Int
+  unitSellingPrice  Decimal
+  totalSellingPrice Decimal
+  discountApplied   Decimal?
+  taxApplied        Decimal?
+  finalAmountPaid   Decimal?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  potCategory PotCategory @relation(name: "PotOrderItemToPotCategory", fields: [potCategoryId], references: [categoryId])
+  potVariant  PotVariants @relation(name: "PotOrderItemToPotVariant", fields: [potVariantId], references: [potVariantId])
+  order       Order       @relation(name: "PotOrderItemToOrder", fields: [orderId], references: [orderId])
+  promoCode   PromoCode?  @relation(name: "PotOrderItemToPromoCode", fields: [promoCodeId], references: [promoCodeId])
+
+  @@index([orderId])
+}
+
+model Payment {
+  paymentId     String @id
+  orderId       String
+  transactionId String
+
+  method      String
+  status      String
+  amount      Decimal
+  paymentDate DateTime
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  order Order @relation(name: "PaymentToOrder", fields: [orderId], references: [orderId])
+}
+
+model OrderCostDetails {
+  id      String @id
+  orderId String @unique
+
+  totalProductCost Decimal
+  totalGenericCost Decimal
+  totalSizeCost    Decimal
+  totalCost        Decimal // totalProductCost + totalGenericCost + totalSizeCost
+  sellingPrice     Decimal // from the order table or set here
+
+  profitMargin Decimal?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(name: "OrderToOrderCost", fields: [orderId], references: [orderId])
+}
+
+model Shipping {
+  shippingId String @id
+  orderId    String @unique
+  addressId  String
+
+  courierName        String
+  trackingNumber     String?
+  shippingStatus     String
+  shippingMethod     String
+  isExchangeShipment Boolean
+
+  estimatedDeliveryDate DateTime?
+  actualDeliveryDate    DateTime?
+  deliveredAt           DateTime?
+  shippingCharges       Decimal
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  address CustomerAddress  @relation(name: "AddressToShipping", fields: [addressId], references: [addressId])
+  order   Order            @relation(name: "OrderToShipping", fields: [orderId], references: [orderId])
+  returns ReturnsRefunds[] @relation(name: "ShippingToReturns")
+}
+
+model DeliveryCharge {
+  id        String   @id
+  pinCode   String
+  size      String
+  cost      Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pinCode, size])
+}
+
+model ReturnsRefunds {
+  returnId           String  @id
+  orderId            String
+  plantId            String
+  customerId         String
+  exchangeProductId  String?
+  exchangeShippingId String? @unique
+
+  reason                String
+  remarks               String?
+  returnStatus          String
+  refundStatus          String
+  refundAmount          Decimal
+  returnShippingCharges Decimal
+  returnCourier         String?
+  returnTrackingNo      String?
+
+  returnRequestDate      DateTime  @default(now())
+  actualReturnPickupDate DateTime?
+  updatedAt              DateTime  @updatedAt
+  deletedAt              DateTime?
+
+  plants           Plants    @relation(name: "ProductToReturn", fields: [plantId], references: [plantId])
+  exchangeProduct  Plants?   @relation(name: "ProductToExchange", fields: [exchangeProductId], references: [plantId])
+  order            Order     @relation(name: "OrderToReturns", fields: [orderId], references: [orderId])
+  customer         Customer  @relation(name: "CustomerToReturns", fields: [customerId], references: [customerId])
+  exchangeShipping Shipping? @relation(name: "ShippingToReturns", fields: [exchangeShippingId], references: [shippingId])
+}
+
+// --------------------- Promotions & Marketing ------------------------
+
+model Promotion {
+  promoId       String    @id
+  promoName     String
+  description   String?
+  discountType  String
+  discountValue Decimal
+  maxDiscount   Decimal?
+  validFrom     DateTime
+  validTo       DateTime
+  usageLimit    Int?
+  usageCount    Int       @default(0)
+  stackable     Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  deletedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  promotionProducts PromotionProduct[] @relation(name: "PromotionToPromotionProduct")
+}
+
+model PromotionProduct {
+  id             String  @id
+  promoId        String
+  plantId        String?
+  plantVariantId String?
+  potCategoryId  String?
+  potVariantId   String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  promotion    Promotion      @relation(name: "PromotionToPromotionProduct", fields: [promoId], references: [promoId])
+  plant        Plants?        @relation(name: "PromotionProductToPlant", fields: [plantId], references: [plantId])
+  plantVariant PlantVariants? @relation(name: "PromotionProductToPlantVariant", fields: [plantVariantId], references: [variantId])
+  potCategory  PotCategory?   @relation(name: "PromotionProductToPotVariant", fields: [potCategoryId], references: [categoryId])
+  potVariant   PotVariants?   @relation(name: "PromotionProductToPotVariant", fields: [potVariantId], references: [potVariantId])
+}
+
+model PromoCode {
+  promoCodeId       String   @id
+  code              String   @unique
+  description       String?
+  discountType      String
+  discountValue     Decimal
+  minOrderAmount    Decimal?
+  maxDiscountAmount Decimal?
+  startDate         DateTime
+  endDate           DateTime
+  isActive          Boolean  @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  promoOrders        Order[]              @relation(name: "PromoCodeToOrder")
+  PlantCartItem      PlantCartItem[]      @relation(name: "PlantCartItemToPromoCode")
+  PotCartItem        PotCartItem[]        @relation(name: "PotCartItemToPromoCode")
+  PlantCheckoutLater PlantCheckoutLater[] @relation(name: "PlantCheckoutLaterToPromoCode")
+  PotCheckoutLater   PotCheckoutLater[]   @relation(name: "PotCheckoutLaterToPromoCode")
+  PlantOrderItem     PlantOrderItem[]     @relation(name: "PlantOrderItemToPromoCode")
+  PotOrderItem       PotOrderItem[]       @relation(name: "PotOrderItemToPromoCode")
+}
+
+model ReferralCode {
+  referralId         String @id
+  referralCode       String @unique
+  referrerCustomerId String @unique
+
+  rewardType  String
+  rewardValue Decimal?
+  eligibility String?
+  isActive    Boolean   @default(true)
+  deletedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  referrer Customer        @relation(name: "CustomerToReferralCode", fields: [referrerCustomerId], references: [customerId])
+  usages   ReferralUsage[] @relation(name: "ReferralCodeToUsage")
+}
+
+model ReferralUsage {
+  usageId            String @id
+  referralId         String
+  referredCustomerId String
+
+  used          Boolean   @default(false)
+  referredAt    DateTime  @default(now())
+  usedAt        DateTime?
+  rewardGranted Boolean   @default(false)
+
+  referral         ReferralCode @relation(name: "ReferralCodeToUsage", fields: [referralId], references: [referralId])
+  referredCustomer Customer     @relation(name: "CustomerToReferralUsage", fields: [referredCustomerId], references: [customerId])
+
+  @@unique([referralId, referredCustomerId])
+}
+
+// ---------------------- Supplier & Inventory -------------------------
+
+model SupplierToMayaVrikshInventory {
+  id         String @id
+  supplierId String
+  plantId    String
+
+  units     Int
+  unitCost  Decimal
+  totalCost Decimal
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  supplier Supplier @relation(name: "SupplierToMayaVrikshInventory", fields: [supplierId], references: [supplierId])
+  plants   Plants   @relation(name: "ProductToSupplierMayaVrikshInventory", fields: [plantId], references: [plantId])
+}
+
+model PlantStockAuditLog {
+  auditId        String  @id
+  plantId        String
+  plantVariantId String?
+  warehouseId    String
+
+  eventType   String
+  stockDelta  Int
+  sourceTable String
+  sourceRefId String
+  userId      String
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  plants       Plants         @relation(name: "ProductToStockAudit", fields: [plantId], references: [plantId])
+  plantVariant PlantVariants? @relation(name: "PlantVariantToStockAudit", fields: [plantVariantId], references: [variantId])
+  warehouse    Warehouse      @relation(name: "WarehouseToStockAudit", fields: [warehouseId], references: [warehouseId])
+}
+
+model PlantDamagedProduct {
+  damageId       String    @id
+  plantId        String
+  plantVariantId String?
+  warehouseId    String
+  units          Int
+  reportDate     DateTime  @default(now())
+  price          Decimal
+  reason         String
+  handledBy      String
+  notes          String?
+  publicId       String
+  mediaUrl       String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  plants       Plants         @relation(name: "ProductToDamage", fields: [plantId], references: [plantId])
+  plantVariant PlantVariants? @relation(name: "PlantVariantToDamage", fields: [plantVariantId], references: [variantId])
+  warehouse    Warehouse      @relation(name: "WarehouseToDamage", fields: [warehouseId], references: [warehouseId])
+}
+
+model PotStockAuditLog {
+  auditId       String   @id
+  potCategoryId String
+  potVariantId  String?
+  warehouseId   String
+  eventType     String
+  stockDelta    Int
+  sourceTable   String
+  sourceRefId   String
+  userId        String
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  potCategory PotCategory  @relation(name: "PotCategoryToStockAudit", fields: [potCategoryId], references: [categoryId])
+  potVariant  PotVariants? @relation(name: "PotVariantToStockAudit", fields: [potVariantId], references: [potVariantId])
+  warehouse   Warehouse    @relation(name: "WarehouseToStockAuditPot", fields: [warehouseId], references: [warehouseId])
+}
+
+model PotDamagedProduct {
+  damageId      String    @id
+  potCategoryId String
+  potVariantId  String?
+  warehouseId   String
+  units         Int
+  reportDate    DateTime  @default(now())
+  price         Decimal
+  reason        String
+  handledBy     String
+  notes         String?
+  publicId      String
+  mediaUrl      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  potCategory PotCategory  @relation(name: "PotCategoryToDamage", fields: [potCategoryId], references: [categoryId])
+  potVariant  PotVariants? @relation(name: "PotVariantToDamage", fields: [potVariantId], references: [potVariantId])
+  warehouse   Warehouse    @relation(name: "WarehouseToDamagePot", fields: [warehouseId], references: [warehouseId])
+}
+
+// ------------------------ Reviews & Feedback -------------------------
+
+model Review {
+  reviewId           String    @id
+  plantId            String?
+  plantVariantId     String?
+  potCategoryId      String?
+  potVariantId       String?
+  customerId         String?
+  rating             Int
+  reviewText         String?
+  reviewDate         DateTime
+  isVerifiedCustomer Boolean
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+
+  customer     Customer?      @relation(name: "CustomerToReview", fields: [customerId], references: [customerId])
+  plants       Plants?        @relation(name: "PlantToReview", fields: [plantId], references: [plantId])
+  plantVariant PlantVariants? @relation(name: "PlantVariantToReview", fields: [plantVariantId], references: [variantId])
+  potCategory  PotCategory?   @relation(name: "PotCategoryToReview", fields: [potCategoryId], references: [categoryId])
+  potVariant   PotVariants?   @relation(name: "PotVariantToReview", fields: [potVariantId], references: [potVariantId])
+  reviewImages ReviewImage[]  @relation(name: "ReviewToImages")
+}
+
+model ReviewImage {
+  id       String @id
+  reviewId String
+
+  publicId     String
+  mediaUrl     String
+  mediaType    String?
+  resourceType String?
+  isPrimary    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  review Review @relation(name: "ReviewToImages", fields: [reviewId], references: [reviewId], onDelete: Cascade)
+
+  @@index([reviewId])
+}
+
+// ---------------------- Analytics & Reporting ------------------------
+
+model WebsiteAnalytics {
+  sessionId  String @id
+  customerId String
+
+  pageVisited    String
+  timeSpent      Decimal
+  bounceRate     Decimal
+  conversionRate Decimal
+  netSales       Decimal
+  costTotal      Decimal
+
+  createdAt DateTime @default(now())
+
+  customer Customer @relation(name: "CustomerToAnalytics", fields: [customerId], references: [customerId])
+}
+
+model GlobalOverheads {
+  overheadId String @id
+
+  name      String
+  category  String?
+  appliesTo String?
+  amount    Decimal
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model PlantSalesAnalytics {
+  analyticsId    String @id
+  plantId        String
+  plantVariantId String
+
+  totalUnitsSold      Int     @default(0)
+  totalUnitsReturned  Int     @default(0)
+  averageSellingPrice Decimal @default(0.0)
+  averageTrueCost     Decimal @default(0.0)
+  profitMargin        Decimal @default(0.0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plants       Plants        @relation(name: "PlantToAnalytics", fields: [plantId], references: [plantId])
+  plantVariant PlantVariants @relation(name: "PlantVariantToAnalytics", fields: [plantVariantId], references: [variantId])
+}
+
+model PotSalesAnalytics {
+  analyticsId   String @id
+  potCategoryId String
+  potVariantId  String
+
+  totalUnitsSold      Int     @default(0)
+  totalUnitsReturned  Int     @default(0)
+  averageSellingPrice Decimal @default(0.0)
+  averageTrueCost     Decimal @default(0.0)
+  profitMargin        Decimal @default(0.0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  potCategory PotCategory @relation(name: "PotCategoryToAnalytics", fields: [potCategoryId], references: [categoryId])
+  potVariant  PotVariants @relation(name: "PotVariantToAnalytics", fields: [potVariantId], references: [potVariantId])
+}
+
+// --------------------- Warehouse & Inventory -------------------------
+
+model Warehouse {
+  warehouseId   String   @id
+  name          String
+  capacityUnits Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  plantInventory      PlantWarehouseInventory[] @relation(name: "WarehouseToPlantInventory")
+  potInventory        PotWarehouseInventory[]   @relation(name: "WarehouseToPotInventory")
+  plantRestockEvents  PlantRestockEventLog[]    @relation(name: "WarehouseToPlantRestockEvent")
+  potRestockEvents    PotRestockEventLog[]      @relation(name: "WarehouseToPotRestockEvent")
+  warehouseEmployees  WarehouseEmployee[]       @relation(name: "WarehouseToEmployee")
+  supplier            Supplier[]                @relation(name: "SupplierToWareHouse")
+  PlantStockAuditLog  PlantStockAuditLog[]      @relation(name: "WarehouseToStockAudit")
+  PlantDamagedProduct PlantDamagedProduct[]     @relation(name: "WarehouseToDamage")
+  PotStockAuditLog    PotStockAuditLog[]        @relation(name: "WarehouseToStockAuditPot")
+  PotDamagedProduct   PotDamagedProduct[]       @relation(name: "WarehouseToDamagePot")
+  PurchaseOrder       PurchaseOrder[]           @relation(name: "WarehouseToPurchaseOrder")
+}
+
+model PlantWarehouseInventory {
+  id          String @id
+  plantId     String
+  variantId   String
+  warehouseId String
+
+  stockIn             Int
+  stockOut            Int
+  stockLossCount      Int
+  latestQuantityAdded Int
+  currentStock        Int
+  reservedUnit        Int
+  sellingPrice        Decimal
+  profitMargin        Decimal
+  totalCost           Decimal
+  trueCostPrice       Decimal
+  lastRestocked       DateTime
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+
+  plants         Plants          @relation(name: "PlantToWarehouseInventory", fields: [plantId], references: [plantId])
+  warehouse      Warehouse       @relation(name: "WarehouseToPlantInventory", fields: [warehouseId], references: [warehouseId])
+  productVariant PlantVariants   @relation(name: "PlantVariantToWarehouse", fields: [variantId], references: [variantId])
+  PlantVariants  PlantVariants[] @relation(name: "VariantToWarehouse")
+}
+
+model PotWarehouseInventory {
+  id            String @id
+  potVariantId  String
+  potCategoryId String
+  warehouseId   String
+  stockIn       Int
+
+  stockOut            Int
+  stockLossCount      Int
+  latestQuantityAdded Int
+  currentStock        Int
+  reservedUnit        Int
+  sellingPrice        Decimal
+  profitMargin        Decimal
+  totalCost           Decimal
+  trueCostPrice       Decimal
+  lastRestocked       DateTime
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+
+  potVariant  PotVariants @relation(name: "PotVariantToWarehouse", fields: [potVariantId], references: [potVariantId])
+  potCategory PotCategory @relation(name: "PotCategoryToPotInventory", fields: [potCategoryId], references: [categoryId])
+  warehouse   Warehouse   @relation(name: "WarehouseToPotInventory", fields: [warehouseId], references: [warehouseId])
+}
+
+model PlantRestockEventLog {
+  restockId       String @id
+  supplierId      String
+  plantId         String
+  plantVariantId  String
+  warehouseId     String
+  purchaseOrderId String
+
+  units         Int
+  unitCostPrice Decimal
+  totalCost     Decimal
+  restockDate   DateTime @default(now())
+
+  plants         Plants        @relation(name: "PlantToRestockEvent", fields: [plantId], references: [plantId])
+  productVariant PlantVariants @relation(name: "PlantVariantToRestockEvent", fields: [plantVariantId], references: [variantId])
+  supplier       Supplier      @relation(name: "SupplierToPlantRestockEvent", fields: [supplierId], references: [supplierId])
+  warehouse      Warehouse     @relation(name: "WarehouseToPlantRestockEvent", fields: [warehouseId], references: [warehouseId])
+  purchaseOrder  PurchaseOrder @relation(name: "PlantRestockToRequest", fields: [purchaseOrderId], references: [id])
+}
+
+model PotRestockEventLog {
+  restockId       String @id
+  supplierId      String
+  potVariantId    String
+  potCategoryId   String
+  warehouseId     String
+  purchaseOrderId String
+
+  units         Int
+  unitCostPrice Decimal
+  totalCost     Decimal
+  restockDate   DateTime @default(now())
+
+  potVariant    PotVariants   @relation(name: "PotVariantToRestockEvent", fields: [potVariantId], references: [potVariantId])
+  potCategory   PotCategory   @relation(name: "PotCategoryToPotRestockEvent", fields: [potCategoryId], references: [categoryId])
+  supplier      Supplier      @relation(name: "SupplierToPotRestockEvent", fields: [supplierId], references: [supplierId])
+  warehouse     Warehouse     @relation(name: "WarehouseToPotRestockEvent", fields: [warehouseId], references: [warehouseId])
+  purchaseOrder PurchaseOrder @relation(name: "PotRestockToRequest", fields: [purchaseOrderId], references: [id])
+}
+
+// model RestockRequest {
+//   requestId      String  @id 
+//   warehouseId    String
+//   supplierId     String
+//   productType    String
+//   plantId        String?
+//   plantVariantId String?
+//   potVariantId   String?
+//   potCategoryId  String?
+
+//   unitsRequested              Int
+//   unitCostPrice               Decimal?
+//   totalCost                   Decimal?
+//   status                      String    @default("PENDING")
+//   requestedAt                 DateTime  @default(now())
+//   reviewedAt                  DateTime?
+//   deliveredAt                 DateTime?
+//   updatedAt                   DateTime  @updatedAt
+//   supplierReviewNotes         String?
+//   warehouseManagerReviewNotes String?
+
+//   supplier             Supplier               @relation(name: "SupplierToRestockRequest", fields: [supplierId], references: [supplierId])
+//   warehouse            Warehouse              @relation(name: "WarehouseToRestockRequest", fields: [warehouseId], references: [warehouseId])
+//   plant                Plants?                @relation(name: "PlantToRestockRequest", fields: [plantId], references: [plantId])
+//   plantVariant         PlantVariants?         @relation(name: "PlantVariantToRestockRequest", fields: [plantVariantId], references: [variantId])
+//   potVariant           PotVariants?           @relation(name: "PotVariantToRestockRequest", fields: [potVariantId], references: [potVariantId])
+//   potCategory          PotCategory?           @relation(name: "PotCategoryToRestockRequest", fields: [potCategoryId], references: [categoryId])
+//   RestockRequestImage  RestockRequestImage[]  @relation(name: "RequestToImages")
+//   PlantRestockEventLog PlantRestockEventLog[] @relation(name: "PlantRestockToRequest")
+//   PotRestockEventLog   PotRestockEventLog[]   @relation(name: "PotRestockToRequest")
+// }
+
+model PurchaseOrderItems {
+  id             String   @id
+  productType    String // Plant || Pot
+  plantId        String?
+  plantVariantId String?
+  potCategoryId  String?
+  potVariantId   String?
+  unitsRequested Int
+  unitCostPrice  Decimal?
+}
+
+model PurchaseOrder {
+  id             String  @id
+  warehouseId    String
+  supplierId     String
+  productType    String // Plant || Pot
+  plantId        String?
+  plantVariantId String?
+  potCategoryId  String?
+  potVariantId   String?
+
+  // snake plant --> 4 variants, 50 plants 
+  // 1 single row
+
+  // 1 plant --> 4 varaints, 50 plants x 4 = 200 rows
+  // 33 fields x 1 = 33, 200 x 33 = 6600 fields
+
+  // 7 * 200 = 1400 + 26 = 1426 fields
+
+  unitsRequested    Int
+  unitCostPrice     Decimal? // set by admin only
+  deliveryCharges   Decimal? // optional
+  totalCost         Decimal? // units * negotiated price + delivery charge
+  paymentPercentage Int      @default(0)
+  status            String   @default("PENDING")
+  isAccepted        Boolean  @default(false)
+  invoiceUrl        String? // uploaded by warehouse manager only
+
+  expectedDateOfArrival DateTime
+  requestedAt           DateTime  @default(now())
+  acceptedAt            DateTime?
+  deliveredAt           DateTime?
+  updatedAt             DateTime  @updatedAt
+
+  supplierReviewNotes         String?
+  warehouseManagerReviewNotes String?
+
+  supplier           Supplier               @relation(name: "SupplierToPurchaseOrder", fields: [supplierId], references: [supplierId])
+  warehouse          Warehouse              @relation(name: "WarehouseToPurchaseOrder", fields: [warehouseId], references: [warehouseId])
+  plant              Plants?                @relation(name: "PlantToPurchaseOrder", fields: [plantId], references: [plantId])
+  plantVariant       PlantVariants?         @relation(name: "PlantVariantToPurchaseOrder", fields: [plantVariantId], references: [variantId])
+  potCategory        PotCategory?           @relation(name: "PotCategoryToPurchaseOrder", fields: [potCategoryId], references: [categoryId])
+  potVariant         PotVariants?           @relation(name: "PotVariantToPurchaseOrder", fields: [potVariantId], references: [potVariantId])
+  media              PurchaseOrderMedia[]   @relation(name: "PurchaseOrderToMedia")
+  plantRestockEvents PlantRestockEventLog[] @relation(name: "PlantRestockToRequest")
+  potRestockEvents   PotRestockEventLog[]   @relation(name: "PotRestockToRequest")
+  payments           PurchaseOrderPayment[] @relation(name: "PurchaseOrderPaymentToPurchaseOrder")
+  // cartitems []
+}
+
+model PurchaseOrderPayment {
+  paymentId String  @id
+  orderId   String
+  paidBy    String // "ADMIN" or "SYSTEM"
+  amount    Decimal
+  status    String  @default("PENDING") // PENDING | PAID | REJECTED
+
+  paymentMethod String // "CASH", "ONLINE", "UPI", "NEFT", etc.
+  transactionId String? // for online payments (optional)
+  remarks       String? // Initial Payment || Final Payment
+  receiptUrl    String?
+
+  requestedAt DateTime  @default(now())
+  paidAt      DateTime?
+
+  purchaseOrder PurchaseOrder @relation(name: "PurchaseOrderPaymentToPurchaseOrder", fields: [orderId], references: [id])
+}
+
+model PurchaseOrderMedia {
+  id              String @id
+  purchaseOrderId String
+
+  uploadedBy   String // "SUPPLIER" or "WAREHOUSE"
+  publicId     String
+  mediaUrl     String // actual file/image/video/doc URL
+  mediaType    String // "IMAGE", "VIDEO", "DOCUMENT", etc.
+  resourceType String?
+  isPrimary    Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  purchaseOrder PurchaseOrder @relation(name: "PurchaseOrderToMedia", fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+}
+
+model PlantSupplierInventory {
+  supplierInventoryId String    @id
+  supplierId          String
+  plantId             String
+  plantVariantId      String?
+  stockIn             Int
+  stockOut            Int
+  stockAdjustment     Int
+  currentStock        Int
+  reorderLevel        Int
+  lastRestocked       DateTime
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+
+  supplier     Supplier       @relation(name: "SupplierToPlantInventory", fields: [supplierId], references: [supplierId])
+  plants       Plants         @relation(name: "ProductToSupplierInventory", fields: [plantId], references: [plantId])
+  plantVariant PlantVariants? @relation(name: "PlantVariantToSupplierInventory", fields: [plantVariantId], references: [variantId])
+}
+
+model PotSupplierInventory {
+  supplierInventoryId String  @id
+  supplierId          String
+  potCategoryId       String
+  potVariantId        String?
+
+  stockIn         Int
+  stockOut        Int
+  stockAdjustment Int
+  currentStock    Int
+  reorderLevel    Int
+  lastRestocked   DateTime
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  supplier    Supplier     @relation(name: "SupplierToPotInventory", fields: [supplierId], references: [supplierId])
+  potCategory PotCategory  @relation(name: "PotCategoryToSupplierInventory", fields: [potCategoryId], references: [categoryId])
+  potVariant  PotVariants? @relation(name: "PotVariantToSupplierInventory", fields: [potVariantId], references: [potVariantId])
+}
+
+model EmailVerification {
+  id     String @id
+  userId String
+
+  email     String
+  token     String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+
+  verifiedAt DateTime?
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(name: "UserEmailVerifications", fields: [userId], references: [userId])
+
+  @@unique([userId, email, deletedAt])
+  @@index([email])
+}
+
+model PhoneVerification {
+  id     String @id
+  userId String
+
+  phoneNumber String
+  otp         String
+  expiresAt   DateTime
+  verified    Boolean  @default(false)
+
+  verifiedAt DateTime?
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(name: "UserPhoneVerifications", fields: [userId], references: [userId])
+
+  @@unique([userId, phoneNumber, deletedAt])
+  @@index([phoneNumber])
+}
+
+model SerialTracker {
+  id Int @id @default(autoincrement())
+
+  entityCode String
+  year       Int
+  lastSerial Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([entityCode, year])
+}
