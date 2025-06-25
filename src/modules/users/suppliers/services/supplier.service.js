@@ -18,7 +18,8 @@ const showSupplierProfile = async userId => {
                     phoneNumber: true,
                     address: true,
                     profileImageUrl: true,
-                    isActive: true
+                    isActive: true,
+                    deletedAt: true
                 }
             },
             warehouse: {
@@ -32,7 +33,18 @@ const showSupplierProfile = async userId => {
 
     // console.log("Supplier Profile: ", profile);
 
-    if (!profile || !profile?.contactPerson?.isActive) {
+    if (!profile) {
+        throw {
+            success: RESPONSE_FLAGS.FAILURE,
+            code: RESPONSE_CODES.BAD_REQUEST,
+            message: ERROR_MESSAGES.USERS.PROFILE_NOT_FOUND
+        };
+    }
+
+    if (
+        !profile.contactPerson?.isActive ||
+        profile.contactPerson?.deletedAt !== null
+    ) {
         throw {
             success: RESPONSE_FLAGS.FAILURE,
             code: RESPONSE_CODES.BAD_REQUEST,

@@ -55,8 +55,7 @@ async function seedPlants() {
                                 height: variant.height,
                                 weight: variant.weight,
                                 sku: variant.sku,
-                                mrp: variant.mrp,
-                                isAvailable: variant.isAvailable
+                                mrp: variant.mrp
                             }
                         });
                     }

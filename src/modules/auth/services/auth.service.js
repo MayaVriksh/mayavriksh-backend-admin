@@ -218,7 +218,7 @@ const changePassword = async (userId, oldPassword, newPassword) => {
         throw {
             success: RESPONSE_FLAGS.FAILURE,
             code: RESPONSE_CODES.UNAUTHORIZED,
-            message: ERROR_MESSAGES.AUTH.LOGIN_FAILED
+            message: ERROR_MESSAGES.USERS.PROFILE_NOT_FOUND
         };
     }
 
@@ -226,7 +226,7 @@ const changePassword = async (userId, oldPassword, newPassword) => {
         throw {
             success: RESPONSE_FLAGS.FAILURE,
             code: RESPONSE_CODES.BAD_REQUEST,
-            message: ERROR_MESSAGES.AUTH.ACCOUNT_ALREADY_DEACTIVATED
+            message: ERROR_MESSAGES.AUTH.ACCOUNT_INACTIVE
         };
     }
 

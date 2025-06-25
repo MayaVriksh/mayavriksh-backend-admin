@@ -17,8 +17,7 @@ module.exports = [
             height: 30 + i * 20,
             weight: 0.5 + i * 0.7,
             sku: `ARECA-${i + 1}`,
-            mrp: 349 + i * 100,
-            isAvailable: true
+            mrp: 349 + i * 100
         }))
     },
     {
@@ -37,8 +36,7 @@ module.exports = [
             height: 20 + i * 10,
             weight: 0.4 + i * 0.3,
             sku: `SNAKE-${i + 1}`,
-            mrp: 299 + i * 100,
-            isAvailable: true
+            mrp: 299 + i * 100
         }))
     },
     {
@@ -56,8 +54,7 @@ module.exports = [
             height: 25 + i * 10,
             weight: 0.5 + i * 0.4,
             sku: `ZZ-${i + 1}`,
-            mrp: 399 + i * 120,
-            isAvailable: true
+            mrp: 399 + i * 120
         }))
     },
     {
@@ -75,8 +72,7 @@ module.exports = [
             height: 20 + i * 12,
             weight: 0.4 + i * 0.5,
             sku: `LILY-${i + 1}`,
-            mrp: 499 + i * 110,
-            isAvailable: true
+            mrp: 499 + i * 110
         }))
     },
     {
@@ -100,8 +96,7 @@ module.exports = [
             height: 15 + i * 8,
             weight: 0.2 + i * 0.25,
             sku: `MONEY-${i + 1}`,
-            mrp: 199 + i * 90,
-            isAvailable: true
+            mrp: 199 + i * 90
         }))
     }
 ];
