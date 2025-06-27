@@ -48,6 +48,7 @@ model User {
   password           String
   isActive           Boolean @default(true)
   profileImageUrl    String?
+  publicId           String?
   phoneVerified      Boolean @default(false)
   emailVerified      Boolean @default(false)
   address            Json?
@@ -709,23 +710,21 @@ model Plants {
 
   name                String
   description         String
-  dateAdded           DateTime
+  scientificName      String?
   isProductActive     Boolean  @default(true)
   isFeatured          Boolean
   auraType            String?
   bestForEmotion      String?
   bestGiftFor         String?
-  biologicalName      String?
   biodiversityBooster Boolean?
   carbonAbsorber      Boolean?
   funFacts            String?
   godAligned          Boolean?
-  insideBox           String?
-  maintenance         String?
+  insideBox           String[] @default([])
+  maintenance         String? // Easy || Medium || Hard
   plantSeries         String?
   placeOfOrigin       String?
   repotting           String?
-  scientificName      String?
   soil                String?
   spiritualUseCase    String?
 
@@ -758,12 +757,13 @@ model PlantVariants {
   plantId   String
   colorId   String
 
-  plantSize String
-  height    Decimal
-  weight    Decimal
-  sku       String  @unique
-  mrp       Decimal @default(0.0)
-  notes     String?
+  plantSize       String
+  height          Decimal
+  weight          Decimal
+  sku             String  @unique
+  isProductActive Boolean @default(true)
+  mrp             Decimal @default(0.0)
+  notes           String?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -776,7 +776,6 @@ model PlantVariants {
   plantCareGuidelines     PlantCareGuidelines[]     @relation(name: "ProductToCare")
   plantFertilizers        PlantFertilizers[]        @relation(name: "ProductToFertilizer")
   tags                    Tags[]                    @relation(name: "PlantVariantToTags")
-  compatiblePots          PotVariants[]             @relation(name: "PlantVariantsToPotVariants")
   plantFertilizerSchedule PlantFertilizerSchedule[] @relation(name: "ProductToFertilizerSchedule")
   plantWarehouseInventory PlantWarehouseInventory?  @relation(name: "PlantVariantToWarehouse")
   Review                  Review[]                  @relation(name: "PlantVariantToReview")
@@ -790,6 +789,8 @@ model PlantVariants {
   PlantOrderItem          PlantOrderItem[]          @relation(name: "PlantOrderItemToPlantVariant")
   PurchaseOrder           PurchaseOrder[]           @relation(name: "PlantVariantToPurchaseOrder")
   PlantRestockEventLog    PlantRestockEventLog[]    @relation(name: "PlantVariantToRestockEvent")
+  compatiblePots          PotVariants[]
+  // compatiblePots          PotVariants[]             @relation(name: "PlantVariantsToPotVariants")
 }
 
 model PlantGenericCostComponent {
@@ -896,7 +897,7 @@ model PotVariants {
   categoryId   String
   colorId      String
   materialId   String
-  // Here, we have used colorId, materialId and categoryId instead of their array because we want to save the respective images/videos for a combination/variant
+  // We've used colorId, materialId, and categoryId individually (instead of arrays) to associate images/videos with a specific combination or variant
 
   potName String
   size    String
@@ -917,6 +918,7 @@ model PotVariants {
   color                 Color                   @relation(name: "ColorToVariants", fields: [colorId], references: [id], onDelete: Restrict)
   material              PotMaterial             @relation(name: "MaterialToVariants", fields: [materialId], references: [materialId], onDelete: Restrict)
   images                PotVariantImage[]       @relation(name: "VariantToImages")
+  tags                  Tags[]                  @relation(name: "PotVariantToTags")
   PromotionProduct      PromotionProduct[]      @relation(name: "PromotionProductToPotVariant")
   PotWarehouseInventory PotWarehouseInventory[] @relation(name: "PotVariantToWarehouse")
   PotRestockEventLog    PotRestockEventLog[]    @relation(name: "PotVariantToRestockEvent")
@@ -930,7 +932,8 @@ model PotVariants {
   PotCheckoutLater      PotCheckoutLater[]      @relation(name: "PotCheckoutLaterToPotVariant")
   PotOrderItem          PotOrderItem[]          @relation(name: "PotOrderItemToPotVariant")
   PurchaseOrder         PurchaseOrder[]         @relation(name: "PotVariantToPurchaseOrder")
-  PlantVariants         PlantVariants[]         @relation(name: "PlantVariantsToPotVariants")
+  PlantVariants         PlantVariants[]
+  // PlantVariants         PlantVariants[]         @relation(name: "PlantVariantsToPotVariants")
 
   @@unique([categoryId, size, colorId, materialId])
   @@index([categoryId])
@@ -944,11 +947,11 @@ model PotMaterial {
 
   name String @unique
 
-  variants PotVariants[] @relation(name: "MaterialToVariants")
-
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+
+  variants PotVariants[] @relation(name: "MaterialToVariants")
 }
 
 model Color {
@@ -1099,6 +1102,7 @@ model Tags {
 
   group         TagGroups       @relation(name: "TagsToTagGroups", fields: [groupId], references: [groupId])
   PlantVariants PlantVariants[] @relation(name: "PlantVariantToTags")
+  PotVaraints   PotVariants[]   @relation(name: "PotVariantToTags")
 }
 
 // --------------------- Order & Transaction Flow ----------------------

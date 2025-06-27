@@ -129,6 +129,7 @@ const login = async (email, password) => {
             password: true,
             isActive: true,
             profileImageUrl: true,
+            deletedAt: true,
             role: {
                 select: {
                     role: true
@@ -145,7 +146,7 @@ const login = async (email, password) => {
         };
     }
 
-    if (!user.isActive) {
+    if (!user.isActive || user.deletedAt) {
         throw {
             success: RESPONSE_FLAGS.FAILURE,
             code: RESPONSE_CODES.BAD_REQUEST,
@@ -162,16 +163,54 @@ const login = async (email, password) => {
         };
     }
 
-    const tokenPayload = {
-        fullName: user.fullName,
-        profileImageUrl: user.profileImageUrl,
-        role: user.role.role,
-        isActive: user.isActive
-    };
-    const userToken = generateToken({ ...tokenPayload });
+    const { password: _, deletedAt: __, ...userProfile } = user;
+
     const systemToken = generateToken({ userId: user.userId });
 
-    return { userToken, systemToken };
+    return { userProfile, systemToken };
+};
+
+const verifyUser = async userId => {
+    const user = await prisma.user.findUnique({
+        where: { userId },
+        select: {
+            userId: true,
+            fullName: true,
+            isActive: true,
+            profileImageUrl: true,
+            deletedAt: true,
+            role: {
+                select: {
+                    role: true
+                }
+            }
+        }
+    });
+
+    if (!user) {
+        throw {
+            success: RESPONSE_FLAGS.FAILURE,
+            code: RESPONSE_CODES.NOT_FOUND,
+            message: ERROR_MESSAGES.USERS.PROFILE_NOT_FOUND
+        };
+    }
+
+    if (!user.isActive || user.deletedAt) {
+        throw {
+            success: RESPONSE_FLAGS.FAILURE,
+            code: RESPONSE_CODES.BAD_REQUEST,
+            message: ERROR_MESSAGES.AUTH.ACCOUNT_INACTIVE
+        };
+    }
+
+    const { deletedAt: _, ...userProfile } = user;
+
+    return {
+        success: RESPONSE_FLAGS.SUCCESS,
+        code: RESPONSE_CODES.SUCCESS,
+        message: SUCCESS_MESSAGES.AUTH.PROFILE_FETCHED,
+        data: userProfile
+    };
 };
 
 const deactivateProfile = async userId => {
@@ -183,7 +222,7 @@ const deactivateProfile = async userId => {
         throw {
             success: RESPONSE_FLAGS.FAILURE,
             code: RESPONSE_CODES.NOT_FOUND,
-            message: ERROR_MESSAGES.AUTH.USER_NOT_FOUND
+            message: ERROR_MESSAGES.USERS.PROFILE_NOT_FOUND
         };
     }
 
@@ -254,4 +293,10 @@ const changePassword = async (userId, oldPassword, newPassword) => {
     };
 };
 
-module.exports = { login, register, deactivateProfile, changePassword };
+module.exports = {
+    login,
+    register,
+    verifyUser,
+    deactivateProfile,
+    changePassword
+};

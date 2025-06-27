@@ -2,7 +2,7 @@ const { v4: uuidv4 } = require("uuid");
 const prisma = require("../config/prisma.config");
 const ENTITY_PREFIX = require("../constants/prefix.constant");
 
-async function generateCustomId(entityKey) {
+async function generateCustomId(tx, entityKey) {
     const entityCode = ENTITY_PREFIX[entityKey];
     if (!entityCode) throw new Error(`Unknown entityKey: ${entityKey}`);
 
@@ -14,7 +14,7 @@ async function generateCustomId(entityKey) {
     const uuidLength = prefixLength === 4 ? 7 : 8;
     const uuidPart = uuid.slice(0, uuidLength);
 
-    const tracker = await prisma.serialTracker.upsert({
+    const tracker = await tx.serialTracker.upsert({
         where: {
             entityCode_year: {
                 entityCode,

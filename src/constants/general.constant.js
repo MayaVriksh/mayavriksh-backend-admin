@@ -27,7 +27,9 @@ const ADDRESS_FIELDS = [
 // Product Type Constants
 const PRODUCT_TYPES = {
     PLANT: "PLANT",
-    POT: "POT"
+    PLANT_VARIANT: "PLANT_VARIANT",
+    POT: "POT",
+    POT_VARIANT: "POT_VARIANT"
 };
 
 // Media Type Constants

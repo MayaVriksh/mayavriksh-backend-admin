@@ -55,15 +55,15 @@ const signin = async (req, h) => {
     try {
         const { email, password } = req.payload;
         const result = await AuthService.login(email, password);
-        console.log(result);
+        console.log("signin: ", result);
+
         return h
             .response({
                 success: RESPONSE_FLAGS.SUCCESS,
                 message: SUCCESS_MESSAGES.AUTH.LOGIN_SUCCESS,
-                data: result.systemToken
+                data: result.userProfile
             })
             .state("mv_auth_token", result.systemToken)
-            .state("mv_user_token", result.userToken)
             .code(RESPONSE_CODES.SUCCESS);
     } catch (error) {
         console.error("Signin Error:", error);
@@ -112,6 +112,31 @@ const logout = async (_, h) => {
                 message: ERROR_MESSAGES.AUTH.LOGOUT_FAILED
             })
             .code(RESPONSE_CODES.INTERNAL_SERVER_ERROR);
+    }
+};
+
+const verifyUser = async (req, h) => {
+    try {
+        const { userId } = req.auth;
+
+        const result = await AuthService.verifyUser(userId);
+        // console.log("verifyUser: ", result);
+
+        return h
+            .response({
+                success: result.success,
+                message: result.message,
+                data: result.data
+            })
+            .code(result.code);
+    } catch (error) {
+        console.error("Logout error:", error);
+        return h
+            .response({
+                success: error.success || RESPONSE_FLAGS.FAILURE,
+                message: error.message || ERROR_MESSAGES.AUTH.LOGOUT_FAILED
+            })
+            .code(error.code || RESPONSE_CODES.INTERNAL_SERVER_ERROR);
     }
 };
 
@@ -173,5 +198,6 @@ module.exports = {
     signin,
     deactivateProfile,
     logout,
+    verifyUser,
     changePassword
 };

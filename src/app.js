@@ -30,20 +30,12 @@ const createServer = async () => {
 
     // Cookie for system token
     server.state("mv_auth_token", {
-        ttl: 24 * 60 * 60 * 1000, // 1 day
+        ttl: 7 * 24 * 60 * 60 * 1000, // 7 days
         isSecure: process.env.NODE_ENV === "production",
         // httpOnly: false,
         // sameSite: "Lax",
         encoding: "iron",
         password: process.env.COOKIE_SECRET
-    });
-
-    // Cookie for user token
-    server.state("mv_user_token", {
-        ttl: 24 * 60 * 60 * 1000,
-        isSecure: process.env.NODE_ENV === "production"
-        // httpOnly: false,
-        // sameSite: "Lax",
     });
 
     await server.register([

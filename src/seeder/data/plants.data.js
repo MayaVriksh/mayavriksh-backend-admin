@@ -12,7 +12,6 @@ module.exports = [
         plantSize: "Medium",
         placeOfOrigin: "Madagascar",
         variants: Array.from({ length: 5 }).map((_, i) => ({
-            variantId: uuidv4(),
             plantSize: ["S", "M", "L", "XL", "XXL"][i],
             height: 30 + i * 20,
             weight: 0.5 + i * 0.7,
@@ -31,7 +30,6 @@ module.exports = [
         plantSize: "Small",
         placeOfOrigin: "West Africa",
         variants: Array.from({ length: 5 }).map((_, i) => ({
-            variantId: uuidv4(),
             plantSize: ["Small", "Medium", "Tall", "Compact", "Mini"][i],
             height: 20 + i * 10,
             weight: 0.4 + i * 0.3,
@@ -49,7 +47,6 @@ module.exports = [
         maintenance: "Low",
         placeOfOrigin: "East Africa",
         variants: Array.from({ length: 5 }).map((_, i) => ({
-            variantId: uuidv4(),
             plantSize: ["Compact", "Small", "Medium", "Tall", "XL"][i],
             height: 25 + i * 10,
             weight: 0.5 + i * 0.4,
@@ -67,7 +64,6 @@ module.exports = [
         maintenance: "Medium",
         placeOfOrigin: "Tropical Americas",
         variants: Array.from({ length: 5 }).map((_, i) => ({
-            variantId: uuidv4(),
             plantSize: ["Small", "Petite", "Blooming", "XL", "Decor"][i],
             height: 20 + i * 12,
             weight: 0.4 + i * 0.5,
@@ -85,7 +81,6 @@ module.exports = [
         maintenance: "Very Low",
         placeOfOrigin: "Southeast Asia",
         variants: Array.from({ length: 5 }).map((_, i) => ({
-            variantId: uuidv4(),
             plantSize: [
                 "Basic",
                 "Hanging",

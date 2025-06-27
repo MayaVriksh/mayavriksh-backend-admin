@@ -14,26 +14,33 @@ async function seedPlants() {
 
         console.log("🌱 Seeding Plants and Variants...");
 
-        for (const plant of plants) {
-            try {
-                const existingPlant = await prisma.plants.findFirst({
-                    where: { name: plant.name }
-                });
+        await prisma.$transaction(
+            async tx => {
+                for (const plant of plants) {
+                    if (!plant?.name || !Array.isArray(plant.variants)) {
+                        console.warn(`⚠️  Skipping invalid plant data:`, plant);
+                        continue;
+                    }
 
-                if (existingPlant) {
-                    console.log(`⚠️  Plant '${plant.name}' already exists`);
-                    continue;
-                }
+                    const existingPlant = await tx.plants.findFirst({
+                        where: { name: plant.name }
+                    });
 
-                await prisma.$transaction(async tx => {
-                    const plantId = await generateCustomId(PRODUCT_TYPES.PLANT);
+                    if (existingPlant) {
+                        console.log(`⚠️  Plant '${plant.name}' already exists`);
+                        continue;
+                    }
+
+                    const plantId = await generateCustomId(
+                        tx,
+                        PRODUCT_TYPES.PLANT
+                    );
 
                     const createdPlant = await tx.plants.create({
                         data: {
                             plantId,
                             name: plant.name,
                             description: plant.description,
-                            dateAdded: plant.dateAdded,
                             isProductActive: plant.isProductActive,
                             isFeatured: plant.isFeatured,
                             scientificName: plant.scientificName,
@@ -46,9 +53,14 @@ async function seedPlants() {
                         const variant = plant.variants[i];
                         const color = colors[i % colors.length];
 
+                        const variantId = await generateCustomId(
+                            tx,
+                            PRODUCT_TYPES.PLANT_VARIANT
+                        );
+
                         await tx.plantVariants.create({
                             data: {
-                                variantId: variant.variantId,
+                                variantId,
                                 plantId: createdPlant.plantId,
                                 colorId: color.id,
                                 plantSize: variant.plantSize,
@@ -63,25 +75,24 @@ async function seedPlants() {
                     console.log(
                         `✅ Plant '${plant.name}' with ${plant.variants.length} variants created`
                     );
-                });
-            } catch (error) {
-                console.error(
-                    `❌ Error with plant '${plant.name}':`,
-                    error.message
-                );
+                }
+            },
+            {
+                maxWait: 10000,
+                timeout: 20000
             }
-        }
+        );
 
         console.log("🎉 All plants and their variants seeding completed.");
     } catch (error) {
-        console.error("❌ Error seeding plants:", error.message);
+        console.error("❌ Error seeding plants:", error.stack || error);
     }
 }
 
 if (require.main === module) {
     seedPlants()
         .catch(e => {
-            console.error("❌ Seeding failed:", e);
+            console.error("❌ Seeding failed:", e.stack || e);
         })
         .finally(async () => {
             await prisma.$disconnect();

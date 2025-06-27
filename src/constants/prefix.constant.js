@@ -28,8 +28,8 @@ module.exports = {
     POT_CATEGORY: "POCT",
 
     // 🏷 Tags / Metadata
-    SPECIAL_TAG: "TAG",
-    SPECIAL_TAG_GROUP: "TGRP",
+    TAG: "TAG",
+    TAG_GROUP: "TGRP",
     SUB_CATEGORY: "SBCT",
     SUNLIGHT_TYPE: "SUN",
     HUMIDITY_LEVEL: "HUM",

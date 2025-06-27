@@ -6,36 +6,39 @@ const generateCustomId = require("../../utils/generateCustomId");
 async function seedRoles() {
     console.log("🌱 Seeding Roles...");
 
-    for (const roleData of roles) {
-        try {
-            const existingRole = await prisma.role.findFirst({
-                where: { role: roleData.role }
-            });
+    try {
+        await prisma.$transaction(async tx => {
+            for (const roleData of roles) {
+                if (!roleData.role) {
+                    console.warn(`⚠️  Skipping invalid role data:`, roleData);
+                    continue;
+                }
 
-            if (!existingRole) {
-                const roleId = await generateCustomId(ROLE);
-                await prisma.role.create({
-                    data: {
-                        roleId,
-                        role: roleData.role,
-                        addedByType: roleData.addedByType,
-                        addedByUserId: roleData.addedByUserId
-                    }
+                const existingRole = await tx.role.findFirst({
+                    where: { role: roleData.role }
                 });
 
-                console.log(`✅ Role '${roleData.role}' created`);
-            } else {
-                console.log(`⚠️  Role '${roleData.role}' already exists`);
+                if (!existingRole) {
+                    const roleId = await generateCustomId(tx, ROLE);
+                    await tx.role.create({
+                        data: {
+                            roleId,
+                            role: roleData.role,
+                            addedByType: roleData.addedByType,
+                            addedByUserId: roleData.addedByUserId
+                        }
+                    });
+                    console.log(`✅ Role '${roleData.role}' created`);
+                } else {
+                    console.log(`⚠️  Role '${roleData.role}' already exists`);
+                }
             }
-        } catch (error) {
-            console.error(
-                `❌ Error with role '${roleData.role}':`,
-                error.message
-            );
-        }
-    }
+        });
 
-    console.log("✅ Role seeding completed.");
+        console.log("✅ Role seeding completed.");
+    } catch (error) {
+        console.error(`❌ Error with role '${roleData.role}':`, error);
+    }
 }
 
 if (require.main === module) {

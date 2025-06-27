@@ -22,6 +22,8 @@ const ERROR_MESSAGES = {
             "Too many login attempts 🌒 Let’s take a break and reset your password.",
         ACCOUNT_INACTIVE:
             "Your account is resting like a seed 🌱 Reach out to support to help it grow again.",
+        ACCOUNT_ALREADY_DEACTIVATED:
+            "This account has already returned to the soil 🌾 You’ll need a fresh start or reach out for help.",
         PROFILE_DISPLAY_FAILED:
             "We couldn’t fetch your profile from the greenhouse 🌫️ Let’s give it another try soon.",
         TOKEN_EXPIRED:

@@ -35,8 +35,6 @@ const showSupplierProfile = async (req, h) => {
 
 const completeSupplierProfile = async (req, h) => {
     try {
-        console.log("completeSupplierProfile");
-
         const { userId } = req.auth;
         const { tradeLicenseImage, nurseryImages, ...profileFields } =
             req.payload;
@@ -57,8 +55,6 @@ const completeSupplierProfile = async (req, h) => {
             "state",
             "country",
             "pinCode",
-            "latitude",
-            "longitude",
             "gstin",
             "businessCategory",
             "warehouseId"
@@ -70,6 +66,7 @@ const completeSupplierProfile = async (req, h) => {
                 profileFields[key] === null ||
                 profileFields[key] === ""
         );
+        // console.log("missingFields: ", missingFields);
 
         const missingUploads = [];
         if (!tradeLicenseImage) missingUploads.push("tradeLicenseImage");

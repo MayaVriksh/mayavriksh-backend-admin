@@ -131,6 +131,35 @@ module.exports = [
     },
 
     {
+        method: "GET",
+        path: "/auth/verify-profile",
+        options: {
+            tags: ["api", "Auth"],
+            description: "Verify User Profile",
+            notes: "Verifies the user's authentication status and returns profile details. Also refreshes authentication cookies if applicable.",
+            pre: [authenticate],
+            handler: AuthController.verifyUser,
+            plugins: {
+                "hapi-swagger": {
+                    responses: {
+                        200: {
+                            description: "User profile verified successfully 🌿"
+                        },
+                        401: {
+                            description:
+                                "Unauthorized - Invalid or expired token 🌱"
+                        },
+                        500: {
+                            description:
+                                "Internal Server Error while verifying profile 🌾"
+                        }
+                    }
+                }
+            }
+        }
+    },
+
+    {
         method: "PUT",
         path: "/auth/deactivate-profile",
         options: {
