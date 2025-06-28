@@ -13,7 +13,7 @@ async function seedKeyAreaManagerUsers() {
 
     for (const entry of keyAreaManagerUsers) {
         await prisma.$transaction(async tx => {
-            const userId = await generateCustomId(ROLES.USER);
+            const userId = await generateCustomId(tx, ROLES.USER);
             const hashedPassword = await hashPassword(entry.user.password);
 
             const user = await tx.user.create({
@@ -24,7 +24,7 @@ async function seedKeyAreaManagerUsers() {
                 }
             });
 
-            const employeeId = await generateCustomId(ROLES.EMPLOYEE);
+            const employeeId = await generateCustomId(tx, ROLES.EMPLOYEE);
             await tx.employee.create({
                 data: {
                     employeeId,

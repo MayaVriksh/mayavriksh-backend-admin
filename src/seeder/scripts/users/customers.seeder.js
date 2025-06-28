@@ -13,7 +13,7 @@ async function seedCustomerUsers() {
 
     for (const entry of customerUsers) {
         await prisma.$transaction(async tx => {
-            const userId = await generateCustomId(ROLES.USER);
+            const userId = await generateCustomId(tx, ROLES.USER);
             const hashedPassword = await hashPassword(entry.user.password);
 
             const user = await tx.user.create({
@@ -24,7 +24,7 @@ async function seedCustomerUsers() {
                 }
             });
 
-            const customerId = await generateCustomId(ROLES.CUSTOMER);
+            const customerId = await generateCustomId(tx, ROLES.CUSTOMER);
             await tx.customer.create({
                 data: {
                     customerId,

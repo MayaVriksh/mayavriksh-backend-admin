@@ -13,7 +13,7 @@ async function seedAdminUsers() {
 
     for (const entry of adminUsers) {
         await prisma.$transaction(async tx => {
-            const userId = await generateCustomId(ROLES.USER);
+            const userId = await generateCustomId(tx, ROLES.USER);
             const hashedPassword = await hashPassword(entry.user.password);
 
             const user = await tx.user.create({
@@ -24,7 +24,7 @@ async function seedAdminUsers() {
                 }
             });
 
-            const adminId = await generateCustomId(ROLES.ADMIN);
+            const adminId = await generateCustomId(tx, ROLES.ADMIN);
             await tx.admin.create({
                 data: {
                     adminId,

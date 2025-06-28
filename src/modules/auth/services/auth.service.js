@@ -14,22 +14,6 @@ const SUCCESS_MESSAGES = require("../../../constants/successMessages.constant.js
 const register = async data => {
     const { firstName, lastName, email, password, role } = data;
 
-    const userId = await generateCustomId(ROLES.USER);
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    let roleEntityId;
-    if (role === ROLES.CUSTOMER)
-        roleEntityId = await generateCustomId(ROLES.CUSTOMER);
-    if (role === ROLES.ADMIN)
-        roleEntityId = await generateCustomId(ROLES.ADMIN);
-    if (role === ROLES.SUPER_ADMIN)
-        roleEntityId = await generateCustomId(ROLES.SUPER_ADMIN);
-    if (role === ROLES.SUPPLIER)
-        roleEntityId = await generateCustomId(ROLES.SUPPLIER);
-    if ([ROLES.KEY_AREA_MANAGER, ROLES.EMPLOYEE].includes(role)) {
-        roleEntityId = await generateCustomId(ROLES.EMPLOYEE);
-    }
-
     return await prisma.$transaction(async tx => {
         const existingUser = await tx.user.findUnique({ where: { email } });
         if (existingUser) {
@@ -48,12 +32,40 @@ const register = async data => {
                 message: ERROR_MESSAGES.COMMON.INTERNAL_SERVER_ERROR
             };
         }
-        const roleId = roleRecord.roleId;
 
-        const user = await tx.user.create({
+        const userId = await generateCustomId(tx, ROLES.USER);
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        let roleEntityId;
+        switch (role) {
+            case ROLES.CUSTOMER:
+                roleEntityId = await generateCustomId(tx, ROLES.CUSTOMER);
+                break;
+            case ROLES.ADMIN:
+                roleEntityId = await generateCustomId(tx, ROLES.ADMIN);
+                break;
+            case ROLES.SUPER_ADMIN:
+                roleEntityId = await generateCustomId(tx, ROLES.SUPER_ADMIN);
+                break;
+            case ROLES.SUPPLIER:
+                roleEntityId = await generateCustomId(tx, ROLES.SUPPLIER);
+                break;
+            case ROLES.KEY_AREA_MANAGER:
+            case ROLES.EMPLOYEE:
+                roleEntityId = await generateCustomId(tx, ROLES.EMPLOYEE);
+                break;
+            default:
+                throw {
+                    success: RESPONSE_FLAGS.FAILURE,
+                    code: RESPONSE_CODES.BAD_REQUEST,
+                    message: ERROR_MESSAGES.AUTH.INVALID_ROLE
+                };
+        }
+
+        const createdUser = await tx.user.create({
             data: {
                 userId,
-                roleId,
+                roleId: roleRecord.roleId,
                 email,
                 password: hashedPassword,
                 fullName: {
@@ -63,60 +75,43 @@ const register = async data => {
             }
         });
 
-        switch (role) {
-            case ROLES.CUSTOMER:
-                await tx.customer.create({
-                    data: {
-                        customerId: roleEntityId,
-                        userId: user.userId
-                    }
-                });
-                break;
+        const roleEntityMap = {
+            [ROLES.CUSTOMER]: {
+                model: tx.customer,
+                data: { customerId: roleEntityId, userId: createdUser.userId }
+            },
+            [ROLES.ADMIN]: {
+                model: tx.admin,
+                data: { adminId: roleEntityId, userId: createdUser.userId }
+            },
+            [ROLES.SUPER_ADMIN]: {
+                model: tx.superAdmin,
+                data: { superAdminId: roleEntityId, userId: createdUser.userId }
+            },
+            [ROLES.SUPPLIER]: {
+                model: tx.supplier,
+                data: { supplierId: roleEntityId, userId: createdUser.userId }
+            },
+            [ROLES.KEY_AREA_MANAGER]: {
+                model: tx.employee,
+                data: { employeeId: roleEntityId, userId: createdUser.userId }
+            },
+            [ROLES.EMPLOYEE]: {
+                model: tx.employee,
+                data: { employeeId: roleEntityId, userId: createdUser.userId }
+            }
+        };
 
-            case ROLES.ADMIN:
-                await tx.admin.create({
-                    data: {
-                        adminId: roleEntityId,
-                        userId: user.userId
-                    }
-                });
-                break;
-
-            case ROLES.SUPER_ADMIN:
-                await tx.superAdmin.create({
-                    data: {
-                        superAdminId: roleEntityId,
-                        userId: user.userId
-                    }
-                });
-                break;
-
-            case ROLES.SUPPLIER:
-                await tx.supplier.create({
-                    data: {
-                        supplierId: roleEntityId,
-                        userId: user.userId
-                    }
-                });
-                break;
-
-            case ROLES.KEY_AREA_MANAGER:
-            case ROLES.EMPLOYEE:
-                await tx.employee.create({
-                    data: {
-                        employeeId: roleEntityId,
-                        userId: user.userId
-                    }
-                });
-                break;
-
-            default:
-                throw {
-                    success: RESPONSE_FLAGS.FAILURE,
-                    code: RESPONSE_CODES.BAD_REQUEST,
-                    message: ERROR_MESSAGES.COMMON.ACTION_FAILED
-                };
+        const handler = roleEntityMap[role];
+        if (!handler) {
+            throw {
+                success: RESPONSE_FLAGS.FAILURE,
+                code: RESPONSE_CODES.BAD_REQUEST,
+                message: ERROR_MESSAGES.COMMON.ACTION_FAILED
+            };
         }
+
+        await handler.model.create({ data: handler.data });
     });
 };
 
