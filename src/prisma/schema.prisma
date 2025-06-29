@@ -461,6 +461,7 @@ model Supplier {
   businessCategory String?
   gstin            String?
   tradeLicenseUrl  String?
+  publicId         String?
   status           String  @default("REGISTERED")
   isVerified       Boolean @default(false)
 
@@ -1612,11 +1613,16 @@ model PotSalesAnalytics {
 // --------------------- Warehouse & Inventory -------------------------
 
 model Warehouse {
-  warehouseId   String   @id
+  warehouseId String @id
+
   name          String
   capacityUnits Int?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  officeEmail   String?
+  officePhone   String?
+  officeAddress Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   plantInventory      PlantWarehouseInventory[] @relation(name: "WarehouseToPlantInventory")
   potInventory        PotWarehouseInventory[]   @relation(name: "WarehouseToPotInventory")

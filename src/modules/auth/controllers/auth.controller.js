@@ -53,8 +53,9 @@ const signup = async (req, h) => {
 
 const signin = async (req, h) => {
     try {
-        const { email, password } = req.payload;
-        const result = await AuthService.login(email, password);
+        const payload = req.payload;
+
+        const result = await AuthService.login(payload);
         console.log("signin: ", result);
 
         return h
@@ -97,12 +98,7 @@ const logout = async (_, h) => {
                 success: true,
                 message: SUCCESS_MESSAGES.AUTH.LOGOUT_SUCCESS
             })
-            .unstate("mv_auth_token", {
-                path: "/"
-            })
-            .unstate("mv_user_token", {
-                path: "/"
-            })
+            .unstate("mv_auth_token")
             .code(RESPONSE_CODES.SUCCESS);
     } catch (error) {
         console.error("Logout error:", error);

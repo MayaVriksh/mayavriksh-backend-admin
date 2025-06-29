@@ -7,6 +7,7 @@ const SUCCESS_MESSAGES = require("../../../../constants/successMessages.constant
 const SupplierService = require("../services/supplier.service.js");
 const uploadBufferToCloudinary = require("../../../../utils/mediaUpload.util.js");
 const { getMediaType } = require("../../../../utils/file.utils.js");
+const uploadMedia = require("../../../../utils/uploadMedia.js");
 
 const showSupplierProfile = async (req, h) => {
     try {
@@ -36,8 +37,12 @@ const showSupplierProfile = async (req, h) => {
 const completeSupplierProfile = async (req, h) => {
     try {
         const { userId } = req.auth;
-        const { tradeLicenseImage, nurseryImages, ...profileFields } =
-            req.payload;
+        const {
+            tradeLicenseImage,
+            nurseryImages,
+            profileImage,
+            ...profileFields
+        } = req.payload;
 
         // console.log("Received payload fields:", {
         //     tradeLicenseImageType: typeof tradeLicenseImage,
@@ -48,7 +53,6 @@ const completeSupplierProfile = async (req, h) => {
 
         const requiredKeys = [
             "nurseryName",
-            "phoneNumber",
             "streetAddress",
             "landmark",
             "city",
@@ -86,85 +90,72 @@ const completeSupplierProfile = async (req, h) => {
                 .takeover();
         }
 
-        // Upload trade license image
-        const licenseMimeType = tradeLicenseImage?.hapi.headers["content-type"];
-
-        const licenseUpload = await uploadBufferToCloudinary(
-            tradeLicenseImage._data,
-            "suppliers/trade_licenses",
-            "trade_license",
-            licenseMimeType
-        );
-
-        // console.log("licenseUpload", licenseUpload);
-
-        if (!licenseUpload.success) {
-            console.error("License Upload Failed:", licenseUpload.error);
-            return h
-                .response({
-                    success: RESPONSE_FLAGS.FAILURE,
-                    message: ERROR_MESSAGES.CLOUDINARY.UPLOAD_FAILED
-                })
-                .code(RESPONSE_CODES.BAD_REQUEST)
-                .takeover();
-        }
-
-        const tradeLicenseUrl = licenseUpload.data.url;
-        // const tradeLicenseMediaType = getMediaType(licenseMimeType); // not needed as per the schema
-
-        // Upload nursery images
-        const nurseryUploads = await Promise.all(
-            nurseryImages.map((img, i) => {
-                const mimeType = img.hapi.headers["content-type"];
-                return uploadBufferToCloudinary(
-                    img._data,
-                    "suppliers/nursery_assets",
-                    `nursery_${i}`,
-                    mimeType
-                );
-            })
-        );
-
-        // console.log("nurseryUploads", nurseryUploads);
-
-        // Check for any failed upload
-        const failedUpload = nurseryUploads.find(u => !u.success);
-        if (failedUpload) {
-            console.error(
-                "One or more nursery uploads failed:",
-                failedUpload.error
-            );
-            return h
-                .response({
-                    success: RESPONSE_FLAGS.FAILURE,
-                    message: ERROR_MESSAGES.CLOUDINARY.UPLOAD_FAILED
-                })
-                .code(RESPONSE_CODES.BAD_REQUEST)
-                .takeover();
-        }
-
-        const mediaAssets = nurseryUploads.map((upload, index) => {
-            const mimeType = nurseryImages[index].hapi.headers["content-type"];
-            return {
-                mediaUrl: upload.data.url,
-                mediaType: getMediaType(mimeType),
-                isPrimary: index === 0
-            };
+        // Trade License Upload
+        const licenseUpload = await uploadMedia({
+            files: tradeLicenseImage,
+            folder: "suppliers/trade_licenses",
+            publicIdPrefix: "trade_license"
         });
+        if (!licenseUpload.success) {
+            return h
+                .response({
+                    success: false,
+                    message: licenseUpload.message
+                })
+                .code(RESPONSE_CODES.BAD_REQUEST)
+                .takeover();
+        }
 
-        console.log("mediaAssets", mediaAssets);
+        // Nursery Images Upload
+        const nurseryUpload = await uploadMedia({
+            files: nurseryImages,
+            folder: "suppliers/nursery_assets",
+            publicIdPrefix: "nursery"
+        });
+        if (!nurseryUpload.success) {
+            return h
+                .response({
+                    success: false,
+                    message: nurseryUpload.message
+                })
+                .code(RESPONSE_CODES.BAD_REQUEST)
+                .takeover();
+        }
 
-        // Pass all to service
+        // Profile Image Upload
+        let profileUpload = null;
+        if (profileImage) {
+            profileUpload = await uploadMedia({
+                files: profileImage,
+                folder: "suppliers/profile_images",
+                publicIdPrefix: "profile"
+            });
+            if (!profileUpload.success) {
+                return h
+                    .response({
+                        success: false,
+                        message: profileUpload.message
+                    })
+                    .code(RESPONSE_CODES.BAD_REQUEST)
+                    .takeover();
+            }
+        }
+
+        console.log(
+            userId,
+            profileFields,
+            licenseUpload.data,
+            profileUpload?.data,
+            nurseryUpload.data
+        );
+
         const result = await SupplierService.completeSupplierProfile(
             userId,
-            {
-                ...profileFields,
-                tradeLicenseUrl
-            },
-            mediaAssets
+            profileFields,
+            licenseUpload.data,
+            profileUpload?.data,
+            nurseryUpload.data
         );
-
-        // console.log("completeSupplierProfile", result);
 
         return h
             .response({
@@ -199,42 +190,30 @@ const updateSupplierProfile = async (req, h) => {
         const { userId } = req.auth;
         const { profileImage, ...updateData } = req.payload;
 
-        let profileImageUrl = null;
-
-        // If profile image is uploaded
-        if (profileImage && profileImage._data) {
-            const profileImageMimeType =
-                profileImage.hapi.headers["content-type"];
-
-            const uploadResult = await uploadBufferToCloudinary(
-                profileImage._data,
-                "suppliers/profile_images",
-                "supplier_profile_img",
-                profileImageMimeType
-            );
-
-            if (!uploadResult.success) {
-                console.error(
-                    "Profile Image Upload Failed:",
-                    uploadResult.error
-                );
+        // Profile Image Upload
+        let profileUpload = null;
+        if (profileImage) {
+            profileUpload = await uploadMedia({
+                files: profileImage,
+                folder: "suppliers/profile_images",
+                publicIdPrefix: "profile"
+            });
+            if (!profileUpload.success) {
                 return h
                     .response({
-                        success: RESPONSE_FLAGS.FAILURE,
-                        message: ERROR_MESSAGES.CLOUDINARY.UPLOAD_FAILED
+                        success: false,
+                        message: profileUpload.message
                     })
                     .code(RESPONSE_CODES.BAD_REQUEST)
                     .takeover();
             }
-
-            profileImageUrl = uploadResult.url;
         }
 
         // update supplier profile
         const result = await SupplierService.updateSupplierProfile(
             userId,
             updateData,
-            profileImageUrl
+            profileUpload?.data
         );
 
         return h
@@ -264,8 +243,37 @@ const updateSupplierProfile = async (req, h) => {
     }
 };
 
+const searchWarehouses = async (req, h) => {
+    try {
+        const { search } = req.query;
+
+        const result = await SupplierService.searchWarehousesByName(search);
+        // console.log("searchWarehouses: ", result);
+
+        return h
+            .response({
+                success: result.success,
+                message: result.message,
+                data: result.data
+            })
+            .code(result.code);
+    } catch (error) {
+        console.error("Warehouse Search Error:", error);
+
+        return h
+            .response({
+                success: error.success || RESPONSE_FLAGS.FAILURE,
+                message:
+                    error.message ||
+                    ERROR_MESSAGES.WAREHOUSES.WAREHOUSE_NOT_FOUND
+            })
+            .code(error.code || RESPONSE_CODES.INTERNAL_SERVER_ERROR);
+    }
+};
+
 module.exports = {
     showSupplierProfile,
     completeSupplierProfile,
-    updateSupplierProfile
+    updateSupplierProfile,
+    searchWarehouses
 };

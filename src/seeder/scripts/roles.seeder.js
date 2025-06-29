@@ -37,7 +37,7 @@ async function seedRoles() {
 
         console.log("✅ Role seeding completed.");
     } catch (error) {
-        console.error(`❌ Error with role '${roleData.role}':`, error);
+        console.error("❌ Error during role seeding:", error);
     }
 }
 

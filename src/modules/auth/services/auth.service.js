@@ -12,15 +12,28 @@ const {
 const SUCCESS_MESSAGES = require("../../../constants/successMessages.constant.js");
 
 const register = async data => {
-    const { firstName, lastName, email, password, role } = data;
+    const { firstName, lastName, email, phoneNumber, password, role } = data;
 
     return await prisma.$transaction(async tx => {
-        const existingUser = await tx.user.findUnique({ where: { email } });
-        if (existingUser) {
+        const existingUserByEmail = await tx.user.findUnique({
+            where: { email }
+        });
+        if (existingUserByEmail) {
             throw {
                 success: RESPONSE_FLAGS.FAILURE,
                 code: RESPONSE_CODES.BAD_REQUEST,
                 message: ERROR_MESSAGES.AUTH.EMAIL_ALREADY_REGISTERED
+            };
+        }
+
+        const existingUserByPhone = await tx.user.findUnique({
+            where: { phoneNumber }
+        });
+        if (existingUserByPhone) {
+            throw {
+                success: RESPONSE_FLAGS.FAILURE,
+                code: RESPONSE_CODES.BAD_REQUEST,
+                message: ERROR_MESSAGES.AUTH.PHONE_ALREADY_EXISTS
             };
         }
 
@@ -67,6 +80,7 @@ const register = async data => {
                 userId,
                 roleId: roleRecord.roleId,
                 email,
+                phoneNumber,
                 password: hashedPassword,
                 fullName: {
                     firstName,
@@ -115,9 +129,15 @@ const register = async data => {
     });
 };
 
-const login = async (email, password) => {
-    const user = await prisma.user.findUnique({
-        where: { email },
+const login = async payload => {
+    const { email, phoneNumber, password } = payload;
+    const user = await prisma.user.findFirst({
+        where: {
+            OR: [
+                email ? { email } : null,
+                phoneNumber ? { phoneNumber } : null
+            ].filter(Boolean)
+        },
         select: {
             userId: true,
             fullName: true,

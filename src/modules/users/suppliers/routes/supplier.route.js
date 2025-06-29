@@ -10,14 +10,14 @@ const {
 } = require("../../../../middlewares/authenticate.middleware");
 
 module.exports = [
-    // Supplier: Complete Profile
+    // Supplier: Fetch Profile
     {
         method: "GET",
         path: "/supplier/my-profile",
         options: {
             tags: ["api", "Supplier"],
-            handler: SupplierController.showSupplierProfile,
             pre: [authenticate],
+            handler: SupplierController.showSupplierProfile,
             description: "Get supplier profile details"
         }
     },
@@ -112,6 +112,35 @@ module.exports = [
                         },
                         400: { description: "Validation error" }
                     }
+                }
+            }
+        }
+    },
+
+    // Supplier: Fetch Warehouses
+    {
+        method: "GET",
+        path: "/supplier/search-warehouses",
+        options: {
+            tags: ["api", "Supplier"],
+            pre: [authenticate],
+            handler: SupplierController.searchWarehouses,
+            description: "🔎 Search warehouses by name for supplier",
+            validate: {
+                ...SupplierValidator.searchWarehouses,
+                failAction: (_, h, err) => {
+                    const customErrorMessages = err.details.map(
+                        detail => detail.message
+                    );
+                    console.log("Validation Error: ", customErrorMessages);
+                    return h
+                        .response({
+                            success: RESPONSE_FLAGS.FAILURE,
+                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
+                            message: customErrorMessages
+                        })
+                        .code(RESPONSE_CODES.BAD_REQUEST)
+                        .takeover();
                 }
             }
         }

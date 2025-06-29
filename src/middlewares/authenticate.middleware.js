@@ -10,8 +10,8 @@ const authenticate = async (req, h) => {
     try {
         const token = req.state.mv_auth_token || req.headers.authorization;
 
-        // console.log("token: ", req.headers.authorization);
-        // console.log("token: ", req.state.mv_auth_token);
+        // console.log("auth token: ", req.headers.authorization);
+        // console.log("cookie token: ", req.state.mv_auth_token);
         // console.log("token: ", token);
 
         if (!token) {

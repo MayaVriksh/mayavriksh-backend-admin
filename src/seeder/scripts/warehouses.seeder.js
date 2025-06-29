@@ -4,14 +4,14 @@ const generateCustomId = require("../../utils/generateCustomId");
 const warehouses = require("../data/warehouse.data");
 
 async function seedWarehouses() {
-    console.log("🏬 Seeding Warehouses...");
+    console.log("🏬 Seeding Warehouses for Mayavriksh...");
 
     try {
         await prisma.$transaction(async tx => {
             for (const warehouse of warehouses) {
-                if (!warehouse.name) {
+                if (!warehouse.name || !warehouse.officeAddress) {
                     console.warn(
-                        `⚠️  Skipping invalid warehouse data:`,
+                        "⚠️  Skipping invalid warehouse entry:",
                         warehouse
                     );
                     continue;
@@ -21,36 +21,38 @@ async function seedWarehouses() {
                     where: { name: warehouse.name }
                 });
 
-                if (!existingWarehouse) {
-                    const warehouseId = await generateCustomId(
-                        tx,
-                        ROLES.WAREHOUSE
-                    );
-                    await tx.warehouse.create({
-                        data: { ...warehouse, warehouseId }
-                    });
-
+                if (existingWarehouse) {
                     console.log(
-                        `✅ Warehouse '${warehouse.name}' created → ID: ${warehouseId}`
+                        `⚠️  Warehouse '${warehouse.name}' already exists.`
                     );
-                } else {
-                    console.log(
-                        `⚠️  Warehouse '${warehouse.name}' already exists`
-                    );
+                    continue;
                 }
+
+                const warehouseId = await generateCustomId(tx, ROLES.WAREHOUSE);
+
+                await tx.warehouse.create({
+                    data: {
+                        ...warehouse,
+                        warehouseId
+                    }
+                });
+
+                console.log(
+                    `✅ Created: '${warehouse.name}' → ID: ${warehouseId}`
+                );
             }
         });
 
-        console.log("🎉 Warehouse seeding completed.");
+        console.log("🎉 All Warehouses successfully seeded.");
     } catch (error) {
-        console.error("❌ Error while seeding warehouses:", error);
+        console.error("❌ Error during warehouse seeding:", error);
     }
 }
 
 if (require.main === module) {
     seedWarehouses()
-        .catch(e => {
-            console.error("❌ Seeding failed:", e.stack || e);
+        .catch(error => {
+            console.error("❌ Seeding failed:", error.stack || error);
         })
         .finally(async () => {
             await prisma.$disconnect();

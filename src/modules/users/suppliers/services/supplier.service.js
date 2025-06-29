@@ -60,10 +60,15 @@ const showSupplierProfile = async userId => {
     };
 };
 
-const completeSupplierProfile = async (userId, updateData, mediaAssets) => {
+const completeSupplierProfile = async (
+    userId,
+    profileFields,
+    tradeLicenseData,
+    profileImageData,
+    nurseryMediaAssets
+) => {
     const {
         nurseryName,
-        phoneNumber,
         streetAddress,
         landmark,
         city,
@@ -74,34 +79,18 @@ const completeSupplierProfile = async (userId, updateData, mediaAssets) => {
         longitude,
         gstin,
         businessCategory,
-        warehouseId,
-        tradeLicenseUrl
-    } = updateData;
+        warehouseId
+    } = profileFields;
 
-    return await prisma.$transaction(async tx => {
-        if (phoneNumber) {
-            const existingUsers = await tx.user.findMany({
-                where: {
-                    phoneNumber,
-                    NOT: { userId }
-                }
-            });
-            if (existingUsers.length > 0) {
-                throw {
-                    success: RESPONSE_FLAGS.FAILURE,
-                    code: RESPONSE_CODES.BAD_REQUEST,
-                    message: ERROR_MESSAGES.AUTH.PHONE_ALREADY_EXISTS
-                };
-            }
-        }
-
-        if (gstin) {
+    return await prisma.$transaction(
+        async tx => {
             const existingGSTINs = await tx.supplier.findMany({
                 where: {
                     gstin,
                     NOT: { userId }
                 }
             });
+
             if (existingGSTINs.length > 0) {
                 throw {
                     success: RESPONSE_FLAGS.FAILURE,
@@ -109,70 +98,81 @@ const completeSupplierProfile = async (userId, updateData, mediaAssets) => {
                     message: ERROR_MESSAGES.SUPPLIERS.GSTIN_ALREADY_EXISTS
                 };
             }
-        }
 
-        await tx.user.update({
-            where: {
-                userId,
-                isActive: true,
-                deletedAt: null
-            },
-            data: {
-                phoneNumber,
-                address: {
-                    streetAddress,
-                    landmark,
-                    city,
-                    state,
-                    country,
-                    pinCode,
-                    latitude,
-                    longitude
+            await tx.user.update({
+                where: {
+                    userId,
+                    isActive: true,
+                    deletedAt: null
+                },
+                data: {
+                    address: {
+                        streetAddress,
+                        landmark,
+                        city,
+                        state,
+                        country,
+                        pinCode,
+                        latitude,
+                        longitude
+                    },
+                    ...(profileImageData && {
+                        profileImageUrl: profileImageData.mediaUrl,
+                        publicId: profileImageData.publicId
+                    })
                 }
-            }
-        });
-
-        const supplierProfile = await tx.supplier.update({
-            where: {
-                userId,
-                isVerified: false,
-                deletedAt: null
-            },
-            data: {
-                nurseryName,
-                gstin,
-                businessCategory,
-                warehouseId,
-                tradeLicenseUrl,
-                status: "UNDER_REVIEW"
-            }
-        });
-
-        if (mediaAssets && mediaAssets.length > 0) {
-            const mediaData = mediaAssets.map(asset => ({
-                id: uuidv4(),
-                supplierId: supplierProfile.supplierId,
-                mediaUrl: asset.mediaUrl,
-                mediaType: asset.mediaType,
-                publicId: asset.publicId,
-                resourceType: asset.resourceType || null,
-                isPrimary: asset.isPrimary || false
-            }));
-
-            await tx.nurseryMediaAsset.createMany({
-                data: mediaData
             });
-        }
 
-        return {
-            success: RESPONSE_FLAGS.SUCCESS,
-            code: RESPONSE_CODES.SUCCESS,
-            message: SUCCESS_MESSAGES.SUPPLIERS.PROFILE_SUBMITTED_FOR_REVIEW
-        };
-    });
+            const supplierProfile = await tx.supplier.update({
+                where: {
+                    userId,
+                    isVerified: false,
+                    deletedAt: null
+                },
+                data: {
+                    nurseryName,
+                    gstin,
+                    businessCategory,
+                    warehouseId,
+                    tradeLicenseUrl: tradeLicenseData.mediaUrl,
+                    publicId: tradeLicenseData.publicId,
+                    status: "UNDER_REVIEW"
+                }
+            });
+
+            if (
+                Array.isArray(nurseryMediaAssets) &&
+                nurseryMediaAssets.length > 0
+            ) {
+                const mediaData = nurseryMediaAssets.map(asset => ({
+                    id: uuidv4(),
+                    supplierId: supplierProfile.supplierId,
+                    mediaUrl: asset.mediaUrl,
+                    mediaType: asset.mediaType,
+                    publicId: asset.publicId,
+                    resourceType: asset.resourceType || null,
+                    isPrimary: asset.isPrimary || false
+                }));
+
+                await tx.nurseryMediaAsset.createMany({
+                    data: mediaData
+                });
+            }
+
+            return {
+                success: RESPONSE_FLAGS.SUCCESS,
+                code: RESPONSE_CODES.SUCCESS,
+                message: SUCCESS_MESSAGES.SUPPLIERS.PROFILE_SUBMITTED_FOR_REVIEW
+            };
+        },
+        {
+            maxWait: 20000,
+            timeout: 30000
+        }
+    );
 };
 
-const updateSupplierProfile = async (userId, updateData, profileImageUrl) => {
+const updateSupplierProfile = async (userId, updateData, profileImageData) => {
     return await prisma.$transaction(async tx => {
         const {
             email,
@@ -254,7 +254,10 @@ const updateSupplierProfile = async (userId, updateData, profileImageUrl) => {
                         ...(longitude && { longitude })
                     }
                 }),
-                ...(profileImageUrl && { profileImageUrl })
+                ...(profileImageData && {
+                    profileImageUrl: profileImageData.mediaUrl,
+                    publicId: profileImageData.publicId
+                })
             }
         });
 
@@ -275,8 +278,48 @@ const updateSupplierProfile = async (userId, updateData, profileImageUrl) => {
     });
 };
 
+const searchWarehousesByName = async search => {
+    const trimmedSearch = search?.trim();
+
+    if (!trimmedSearch || trimmedSearch.length < 1) {
+        throw {
+            success: RESPONSE_FLAGS.FAILURE,
+            code: RESPONSE_CODES.BAD_REQUEST,
+            message: ERROR_MESSAGES.WAREHOUSES.INVENTORY_FETCH_FAILED
+        };
+    }
+
+    const matchedWarehouses = await prisma.warehouse.findMany({
+        where: {
+            name: {
+                contains: trimmedSearch,
+                mode: "insensitive"
+            }
+        },
+        select: {
+            warehouseId: true,
+            name: true,
+            officeAddress: true
+        },
+        orderBy: {
+            name: "asc"
+        }
+    });
+
+    return {
+        success: RESPONSE_FLAGS.SUCCESS,
+        code: RESPONSE_CODES.SUCCESS,
+        message:
+            matchedWarehouses.length > 0
+                ? SUCCESS_MESSAGES.WAREHOUSES.MULTIPLE_WAREHOUSES_FETCHED
+                : ERROR_MESSAGES.WAREHOUSES.WAREHOUSE_NOT_FOUND,
+        data: matchedWarehouses
+    };
+};
+
 module.exports = {
     showSupplierProfile,
     completeSupplierProfile,
-    updateSupplierProfile
+    updateSupplierProfile,
+    searchWarehousesByName
 };
