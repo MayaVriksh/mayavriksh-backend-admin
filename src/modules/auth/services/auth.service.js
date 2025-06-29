@@ -1,6 +1,6 @@
 const prisma = require("../../../config/prisma.config");
 const bcrypt = require("bcrypt");
-const { generateToken } = require("../../../utils/jwt.util");
+const { generateAccessToken, generateRefreshToken, verifyRefreshToken} = require("../../../utils/jwt.util");
 const generateCustomId = require("../../../utils/generateCustomId");
 
 const { ROLES } = require("../../../constants/roles.constant");
@@ -158,11 +158,73 @@ const login = async (email, password) => {
         };
     }
 
+    // <-- MODIFIED: Create two different payloads for our two tokens.
+    
+    // 1. Access Token Payload: Contains data for stateless verification.
+    // This data will be available in our middleware and controllers without a DB query.
+    const accessTokenPayload = {
+        userId: user.userId,
+        role: user.role.role,
+        // Including a name is useful for the frontend.
+        username: user.fullName.firstName 
+    };
+
+    // 2. Refresh Token Payload: Should be minimal, only what's needed to identify the user session.
+    const refreshTokenPayload = {
+        userId: user.userId
+    };
+
+    // <-- MODIFIED: Generate both tokens using the new utility functions.
+    const accessToken = generateAccessToken(accessTokenPayload);
+    const refreshToken = generateRefreshToken(refreshTokenPayload);
+
+    // Prepare user profile to be sent back to the client (remove sensitive info).
     const { password: _, deletedAt: __, ...userProfile } = user;
+    
+    // <-- MODIFIED: Return all the necessary pieces for the controller.
+    return { userProfile, accessToken, refreshToken };
+};
 
-    const systemToken = generateToken({ userId: user.userId });
+// --- NEW FUNCTION: REFRESH USER TOKEN ---
+// This new service is called by the /auth/refresh-token endpoint.
+const refreshUserToken = async (token) => {
+    try {
+        // 1. Verify the incoming refresh token. Throws an error if invalid/expired.
+        const decoded = verifyRefreshToken(token);
 
-    return { userProfile, systemToken };
+        // 2. IMPORTANT: Check the database to ensure the user is still valid.
+        // This is our periodic security check. If a user was banned, this is where we catch it.
+        const user = await prisma.user.findUnique({
+            where: { userId: decoded.userId },
+            select: {
+                userId: true,
+                isActive: true,
+                deletedAt: true,
+                role: { select: { role: true } },
+                fullName: { select: { firstName: true } }
+            }
+        });
+
+        if (!user || !user.isActive || user.deletedAt) {
+            throw new Error("User account is no longer active.");
+        }
+
+        // 3. If user is valid, issue a NEW access token with fresh data.
+        const newAccessTokenPayload = {
+            userId: user.userId,
+            role: user.role.role,
+            username: user.fullName.firstName
+        };
+
+        const newAccessToken = generateAccessToken(newAccessTokenPayload);
+
+        return { newAccessToken };
+    } catch (error) {
+        // The error could be from JWT verification or the DB check.
+        // The controller will catch this and force a logout.
+        console.error("Refresh token validation failed:", error.message);
+        throw new Error("Invalid refresh token. Please log in again.");
+    }
 };
 
 const verifyUser = async userId => {
@@ -291,6 +353,7 @@ const changePassword = async (userId, oldPassword, newPassword) => {
 module.exports = {
     login,
     register,
+    refreshUserToken,
     verifyUser,
     deactivateProfile,
     changePassword

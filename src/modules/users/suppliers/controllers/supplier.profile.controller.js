@@ -10,8 +10,10 @@ const { getMediaType } = require("../../../../utils/file.utils.js");
 
 const showSupplierProfile = async (req, h) => {
     try {
-        const { userId } = req.auth;
-
+        // const { userId } = req.auth;
+        // <-- MODIFIED: Get userId from `req.auth.credentials`.
+        // This data comes directly from the verified JWT payload, with no extra DB call.
+        const { userId } = req.auth.credentials;
         const result = await SupplierService.showSupplierProfile(userId);
 
         return h
@@ -35,7 +37,8 @@ const showSupplierProfile = async (req, h) => {
 
 const completeSupplierProfile = async (req, h) => {
     try {
-        const { userId } = req.auth;
+        // const { userId } = req.auth;
+        const { userId } = req.auth.credentials;
         const { tradeLicenseImage, nurseryImages, ...profileFields } =
             req.payload;
 
@@ -196,7 +199,8 @@ const completeSupplierProfile = async (req, h) => {
 
 const updateSupplierProfile = async (req, h) => {
     try {
-        const { userId } = req.auth;
+        // const { userId } = req.auth;
+        const { userId } = req.auth.credentials;
         const { profileImage, ...updateData } = req.payload;
 
         let profileImageUrl = null;

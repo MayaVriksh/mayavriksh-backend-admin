@@ -4,7 +4,7 @@ const {
     RESPONSE_CODES
 } = require("../../../constants/responseCodes.constant");
 const {
-    authenticate
+    verifyAccessTokenMiddleware
 } = require("../../../middlewares/authenticate.middleware");
 const AuthController = require("../controllers/auth.controller");
 const AuthValidator = require("../validations/auth.validator");
@@ -105,7 +105,17 @@ module.exports = [
             }
         }
     },
-
+    // --- NEW REFRESH TOKEN ROUTE ---
+    {
+        method: "POST",
+        path: "/auth/refresh-token",
+        options: {
+            tags: ["api", "Auth"],
+            description: "Obtain a new access token using the refresh token cookie.",
+            handler: AuthController.refreshToken
+        }
+    },
+    // ----- LOG OUT Route ------
     {
         method: "POST",
         path: "/auth/logout",
@@ -113,7 +123,6 @@ module.exports = [
             tags: ["api", "Auth"],
             description: "Logout the user",
             notes: "Clears the authentication cookies and logs the user out.",
-            pre: [authenticate],
             handler: AuthController.logout,
             plugins: {
                 "hapi-swagger": {
@@ -136,9 +145,18 @@ module.exports = [
         options: {
             tags: ["api", "Auth"],
             description: "Verify User Profile",
-            notes: "Verifies the user's authentication status and returns profile details. Also refreshes authentication cookies if applicable.",
-            pre: [authenticate],
-            handler: AuthController.verifyUser,
+            notes: "Verify the current user's Access Token and return their profile.",
+            pre: [verifyAccessTokenMiddleware],
+            // handler: AuthController.verifyUser,
+            handler: (req, h) => {
+                // The user data is now available from the middleware without a DB call
+                const userCredentials = req.auth.credentials;
+                return h.response({
+                    success: RESPONSE_FLAGS.SUCCESS,
+                    message: "User profile verified successfully 🌿",
+                    data: { user: userCredentials }
+                }).code(RESPONSE_CODES.SUCCESS);
+            },
             plugins: {
                 "hapi-swagger": {
                     responses: {
@@ -164,12 +182,17 @@ module.exports = [
         path: "/auth/deactivate-profile",
         options: {
             tags: ["api", "Auth"],
-            description: "Deactivate user profile",
-            notes: "Allows an authenticated user to deactivate their own profile.",
-            pre: [authenticate],
-            handler: AuthController.deactivateProfile,
+            description: "Deactivate the currently authenticated user's profile.",
+            notes: "This action will also clear the user's refresh token, effectively logging them out.",
+            // <-- MODIFIED: Switched from the old `authenticate` to the new `verifyAccessTokenMiddleware`.
+            // This makes the initial check fast and stateless.
+            pre: [verifyAccessTokenMiddleware],
+            // Your controller will need a minor update to get the userId from `req.auth.credentials.userId`.
+            handler: AuthController.deactivateProfile, 
             validate: {
-                ...AuthValidator.deactivateProfileValidation,
+                // You might not even need validation here if there's no payload.
+                // If there is (e.g., password confirmation), it would go here.
+                // ...AuthValidator.deactivateProfileValidation,
                 failAction: (_, h, err) => {
                     const customErrorMessages = err.details.map(
                         detail => detail.message
@@ -200,15 +223,19 @@ module.exports = [
         }
     },
 
+    //  ----------------- Change Password Route -------------
     {
         method: "PUT",
         path: "/auth/change-password",
         options: {
             tags: ["api", "Auth"],
-            description: "Change Password",
-            notes: "Allows logged-in users to change their password.",
+            description: "Change the currently authenticated user's password.",
+            notes: "Requires the user's old password and a new password.",
+            // <-- MODIFIED: Switched from the old `authenticate` to the new `verifyAccessTokenMiddleware`.
+            pre: [verifyAccessTokenMiddleware],
+            // Your controller gets the userId from `req.auth.credentials.userId` and passwords from `req.payload`.
             handler: AuthController.changePassword,
-            pre: [authenticate],
+            // pre: [authenticate],
             validate: {
                 ...AuthValidator.changePasswordValidation,
                 failAction: (_, h, err) => {
@@ -235,9 +262,8 @@ module.exports = [
                         400: {
                             description: "Validation or logical error"
                         },
-                        500: {
-                            description: "Server error"
-                        }
+                        403: { description: "Forbidden (e.g., old password incorrect)" },
+                        500: { description: "Server error" }
                     }
                 }
             }

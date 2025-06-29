@@ -6,89 +6,81 @@ const {
     RESPONSE_CODES
 } = require("../constants/responseCodes.constant");
 
-const authenticate = async (req, h) => {
-    try {
-        const token = req.state.mv_auth_token || req.headers.authorization;
+/**
+ * Hapi middleware to verify a JWT Access Token from the Authorization header.
+ * This is stateless and DOES NOT query the database, making it extremely fast.
+ * It attaches the decoded user payload to req.auth.credentials for use in subsequent handlers.
+ */
+// --- Bouncer #1: The Wristband Checker ---
+const verifyAccessTokenMiddleware = {
+    // This is Hapi-specific. It means "whatever this function returns, 
+    // store it in the request object at 'req.auth.credentials' for later use".
+    assign: 'credentials', 
 
-        // console.log("token: ", req.headers.authorization);
-        // console.log("token: ", req.state.mv_auth_token);
-        // console.log("token: ", token);
-
-        if (!token) {
-            return h
-                .response({
-                    success: RESPONSE_FLAGS.FAILURE,
-                    error: ERROR_MESSAGES.AUTH.INVALID_TOKEN
-                })
-                .code(RESPONSE_CODES.UNAUTHORIZED)
-                .takeover();
-        }
-
-        let decoded;
-
+    method: async (req, h) => {
         try {
-            decoded = verifyToken(token);
-        } catch (err) {
-            return h
-                .response({
-                    success: RESPONSE_FLAGS.FAILURE,
-                    error: ERROR_MESSAGES.AUTH.INVALID_TOKEN
-                })
-                .code(RESPONSE_CODES.FORBIDDEN)
-                .takeover();
-        }
+            // 1. Get the "Authorization" header from the incoming request.
+            const authHeader = req.headers.authorization;
 
-        const user = await prisma.user.findUnique({
-            where: { userId: decoded.userId },
-            select: {
-                userId: true,
-                isActive: true,
-                deletedAt: true,
-                role: {
-                    select: {
-                        role: true
-                    }
-                }
+            // 2. Check if the header exists and is correctly formatted. It must start with "Bearer ".
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                throw new Error("Token is missing or malformed.");
             }
-        });
 
-        if (!user) {
+            // 3. Extract the token string itself (the part after "Bearer ").
+            const token = authHeader.split(" ")[1];
+
+            // 4. THE MOST IMPORTANT STEP: Verify the token's signature.
+            // The `verifyAccessToken` function uses the ACCESS_TOKEN_SECRET to check the "hologram".
+            // If the token is expired, fake, or tampered with, this line will FAIL and throw an error.
+            const decoded = verifyAccessToken(token);
+
+            // 5. SUCCESS! The token is valid. We return the decoded payload.
+            // Because of `assign: 'credentials'`, this object (`{ userId, role, username }`)
+            // is now available at `req.auth.credentials`.
+            return decoded;
+
+        } catch (err) {
+            // This 'catch' block runs if step 4 fails for any reason.
+            // We immediately stop the request and send a 401 Unauthorized error.
+            // .takeover() tells Hapi to not process anything further.
             return h
-                .response({
-                    success: RESPONSE_FLAGS.FAILURE,
-                    error: ERROR_MESSAGES.USERS.PROFILE_NOT_FOUND
-                })
-                .code(RESPONSE_CODES.FORBIDDEN)
+                .response({ error: "Unauthorized: Session has expired or token is invalid." })
+                .code(401)
                 .takeover();
         }
-
-        if (!user.isActive || user.deletedAt) {
-            return h
-                .response({
-                    success: RESPONSE_FLAGS.FAILURE,
-                    error: ERROR_MESSAGES.AUTH.ACCOUNT_INACTIVE
-                })
-                .code(RESPONSE_CODES.FORBIDDEN)
-                .takeover();
-        }
-
-        req.auth = {
-            userId: user.userId,
-            role: user.role.role,
-            isActive: user.isActive
-        };
-
-        return h.continue;
-    } catch (err) {
-        // console.error("Authentication Error:", err);
-        return h
-            .response({
-                success: RESPONSE_FLAGS.FAILURE,
-                error: ERROR_MESSAGES.COMMON.INTERNAL_SERVER_ERROR
-            })
-            .code(RESPONSE_CODES.INTERNAL_SERVER_ERROR)
-            .takeover();
     }
 };
 
-module.exports = { authenticate };
+/**
+ * Hapi middleware to check if the verified user has a specific role.
+ * Depends on verifyAccessTokenMiddleware running first.
+ * @param {string} requiredRole - The role to check for (e.g., 'admin').
+ */
+// --- Bouncer #2: The VIP Section Guard ---
+// This is a "factory" that creates a middleware. You call it like `requireRole('admin')`.
+const requireRole = (requiredRole) => ({
+    // We don't strictly need to assign its result, but it's good practice.
+    assign: 'roleCheck',
+
+    method: (req, h) => {
+        // 1. This middleware RUNS AFTER `verifyAccessTokenMiddleware`.
+        // So, we can safely access `req.auth.credentials` because we know it exists.
+        const { role } = req.auth.credentials;
+
+        // 2. We simply check if the role from the token matches the role this route requires.
+        if (role && role === requiredRole) {
+            return h.continue; // Success! The user has the right role. Continue to the main handler.
+        }
+
+        // 3. The roles do not match. Deny access.
+        // We use 403 Forbidden, which means "I know who you are, but you are not allowed here."
+        return h
+            .response({ error: "Access Denied: You do not have permission to access this resource." })
+            .code(403)
+            .takeover();
+    }
+});
+
+
+module.exports = { verifyAccessTokenMiddleware, requireRole };
