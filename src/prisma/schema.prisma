@@ -461,9 +461,9 @@ model Supplier {
   businessCategory String?
   gstin            String?
   tradeLicenseUrl  String?
+  publicId         String?
   status           String  @default("REGISTERED")
   isVerified       Boolean @default(false)
-
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -1615,6 +1615,9 @@ model Warehouse {
   warehouseId   String   @id
   name          String
   capacityUnits Int?
+  officeEmail   String?
+  officePhone   String?
+  officeAddress Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

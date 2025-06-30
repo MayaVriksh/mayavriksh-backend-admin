@@ -3,12 +3,12 @@ const {
     RESPONSE_FLAGS,
     RESPONSE_CODES
 } = require("../../../constants/responseCodes.constant");
+const { ROLES } = require("../../../constants/roles.constant");
 const {
-    verifyAccessTokenMiddleware
+    verifyAccessTokenMiddleware, requireRole
 } = require("../../../middlewares/authenticate.middleware");
 const AuthController = require("../controllers/auth.controller");
 const AuthValidator = require("../validations/auth.validator");
-
 module.exports = [
     {
         method: "POST",
@@ -105,14 +105,44 @@ module.exports = [
             }
         }
     },
-    // --- NEW REFRESH TOKEN ROUTE ---
+    // --- NEW REFRESH TOKEN ROUTE (Need more work)---
     {
         method: "POST",
         path: "/auth/refresh-token",
         options: {
             tags: ["api", "Auth"],
             description: "Obtain a new access token using the refresh token cookie.",
-            handler: AuthController.refreshToken
+            notes: "This endpoint does not require an Authorization header. It relies on the 'mv_refresh_token' HttpOnly cookie that was set during login. The browser will send this cookie automatically.",
+            handler: AuthController.refreshToken,
+            validate: {
+                ...AuthValidator.refreshTokenValidation,
+                failAction: (_, h, err) => {
+                    const customErrorMessages = err.details.map(
+                        detail => detail.message
+                    );
+                    console.log("Validation Error: ", customErrorMessages);
+                    return h
+                        .response({
+                            success: RESPONSE_FLAGS.FAILURE,
+                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
+                            message: customErrorMessages
+                        })
+                        .code(RESPONSE_CODES.BAD_REQUEST)
+                        .takeover();
+                }
+            },
+            plugins: {
+                "hapi-swagger": {
+                    responses: {
+                        200: {
+                            description: "Logout successful"
+                        },
+                        500: {
+                            description: "Logout failed due to server error"
+                        }
+                    }
+                }
+            }
         }
     },
     // ----- LOG OUT Route ------
@@ -150,7 +180,7 @@ module.exports = [
             // handler: AuthController.verifyUser,
             handler: (req, h) => {
                 // The user data is now available from the middleware without a DB call
-                const userCredentials = req.auth.credentials;
+                const userCredentials = req.pre.credentials;
                 return h.response({
                     success: RESPONSE_FLAGS.SUCCESS,
                     message: "User profile verified successfully 🌿",
@@ -187,8 +217,8 @@ module.exports = [
             // <-- MODIFIED: Switched from the old `authenticate` to the new `verifyAccessTokenMiddleware`.
             // This makes the initial check fast and stateless.
             pre: [verifyAccessTokenMiddleware],
-            // Your controller will need a minor update to get the userId from `req.auth.credentials.userId`.
-            handler: AuthController.deactivateProfile, 
+            // Your controller will need a minor update to get the userId from `req.pre.credentials.userId`.
+            handler: AuthController.deactivateUser, 
             validate: {
                 // You might not even need validation here if there's no payload.
                 // If there is (e.g., password confirmation), it would go here.
@@ -223,6 +253,66 @@ module.exports = [
         }
     },
 
+    // --- TO BE CONSIDERED LATER ---
+    {
+        method: "PUT",
+        path: "/auth/reactivate-profile",
+        options: {
+            tags: ["api", "Auth"], // Matched tag
+            description: "Re-activate the currently authenticated user's profile.", // Matched description style
+            notes: "This action sets the user's 'isActive' flag to true and clears the 'deletedAt' timestamp.", // Matched notes style
+            
+            // Using the same fast middleware, as this is a protected action.
+             pre: [
+                verifyAccessTokenMiddleware,
+                requireRole(ROLES.SUPER_ADMIN) // Or ROLES.SUPER_ADMIN
+            ],
+            
+            // This now points to a new controller function you will need to create.
+            // The handler will get the userId from `req.pre.credentials.userId`.
+            handler: AuthController.reactivateUser, 
+            
+            validate: {
+                // This route does not require a payload, similar to the deactivate route.
+                // The standard failAction is kept for consistency.
+                ...AuthValidator.reactivateUserValidation,
+                failAction: (_, h, err) => {
+                    const customErrorMessages = err.details.map(
+                        detail => detail.message
+                    );
+                    console.log("Validation Error: ", customErrorMessages);
+                    return h
+                        .response({
+                            success: RESPONSE_FLAGS.FAILURE,
+                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
+                            message: customErrorMessages
+                        })
+                        .code(RESPONSE_CODES.BAD_REQUEST)
+                        .takeover();
+                }
+            },
+            plugins: {
+                "hapi-swagger": {
+                    // Matched Swagger response structure
+                    responses: {
+                        200: {
+                            description: "Profile reactivated successfully"
+                        },
+                        400: {
+                            description: "Bad Request (e.g., profile is already active)"
+                        },
+                        401: {
+                            description: "Unauthorized (invalid or expired token)"
+                        },
+                        500: {
+                            description: "Internal server error"
+                        }
+                    }
+                }
+            }
+        }
+    },
+
     //  ----------------- Change Password Route -------------
     {
         method: "PUT",
@@ -233,7 +323,7 @@ module.exports = [
             notes: "Requires the user's old password and a new password.",
             // <-- MODIFIED: Switched from the old `authenticate` to the new `verifyAccessTokenMiddleware`.
             pre: [verifyAccessTokenMiddleware],
-            // Your controller gets the userId from `req.auth.credentials.userId` and passwords from `req.payload`.
+            // Your controller gets the userId from `req.pre.credentials.userId` and passwords from `req.payload`.
             handler: AuthController.changePassword,
             // pre: [authenticate],
             validate: {

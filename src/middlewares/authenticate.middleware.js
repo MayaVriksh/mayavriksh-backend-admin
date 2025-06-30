@@ -1,43 +1,35 @@
-const { verifyToken } = require("../utils/jwt.util");
-const prisma = require("../config/prisma.config");
-const ERROR_MESSAGES = require("../constants/errorMessages.constant");
-const {
-    RESPONSE_FLAGS,
-    RESPONSE_CODES
-} = require("../constants/responseCodes.constant");
+const { verifyAccessToken } = require("../utils/jwt.util");
+
 
 /**
  * Hapi middleware to verify a JWT Access Token from the Authorization header.
  * This is stateless and DOES NOT query the database, making it extremely fast.
- * It attaches the decoded user payload to req.auth.credentials for use in subsequent handlers.
+ * It attaches the decoded user payload to req.pre.credentials for use in subsequent handlers.
  */
 // --- Bouncer #1: The Wristband Checker ---
 const verifyAccessTokenMiddleware = {
     // This is Hapi-specific. It means "whatever this function returns, 
-    // store it in the request object at 'req.auth.credentials' for later use".
+    // store it in the request object at 'req.pre.credentials' for later use".
     assign: 'credentials', 
 
     method: async (req, h) => {
+        
         try {
             // 1. Get the "Authorization" header from the incoming request.
             const authHeader = req.headers.authorization;
-
+            
             // 2. Check if the header exists and is correctly formatted. It must start with "Bearer ".
-            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            if (!authHeader) {
                 throw new Error("Token is missing or malformed.");
             }
-
-            // 3. Extract the token string itself (the part after "Bearer ").
-            const token = authHeader.split(" ")[1];
 
             // 4. THE MOST IMPORTANT STEP: Verify the token's signature.
             // The `verifyAccessToken` function uses the ACCESS_TOKEN_SECRET to check the "hologram".
             // If the token is expired, fake, or tampered with, this line will FAIL and throw an error.
-            const decoded = verifyAccessToken(token);
-
+            const decoded = verifyAccessToken(authHeader);
             // 5. SUCCESS! The token is valid. We return the decoded payload.
             // Because of `assign: 'credentials'`, this object (`{ userId, role, username }`)
-            // is now available at `req.auth.credentials`.
+            // is now available at `req.pre.credentials`.
             return decoded;
 
         } catch (err) {
@@ -65,9 +57,13 @@ const requireRole = (requiredRole) => ({
 
     method: (req, h) => {
         // 1. This middleware RUNS AFTER `verifyAccessTokenMiddleware`.
-        // So, we can safely access `req.auth.credentials` because we know it exists.
-        const { role } = req.auth.credentials;
-
+        const userCredentials = req.pre.credentials;
+        // This will now work because verifyAccessTokenMiddleware will correctly set credentials.
+        if (!userCredentials) {
+             return h.response({ error: "Authentication credentials not found. Middleware order might be incorrect." }).code(500).takeover();
+        }
+        // So, we can safely access `req.pre.credentials` because we know it exists.
+        const { role } = userCredentials;
         // 2. We simply check if the role from the token matches the role this route requires.
         if (role && role === requiredRole) {
             return h.continue; // Success! The user has the right role. Continue to the main handler.

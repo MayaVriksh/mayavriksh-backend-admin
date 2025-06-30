@@ -55,7 +55,7 @@ const signin = async (req, h) => {
     try {
         const { email, password } = req.payload;
         const { userProfile, accessToken, refreshToken } = await AuthService.login(email, password);
-        console.log("signin: ", result);
+        console.log("signin: ", userProfile, accessToken, refreshToken );
         // The secure Refresh Token is set in the HttpOnly cookie
         // The short-lived Access Token is sent in the response body for the client to use
         return h
@@ -101,6 +101,7 @@ const refreshToken = async (req, h) => {
              return h.response({ error: "Refresh token not found." }).code(401);
         }
         
+    console.log(incomingRefreshToken)
         // This service function will verify the refresh token and issue a new access token
         const { newAccessToken } = await AuthService.refreshUserToken(incomingRefreshToken);
 
@@ -166,13 +167,13 @@ const verifyUser = async (req, h) => {
     }
 };
 
-const deactivateProfile = async (req, h) => {
+const deactivateUser = async (req, h) => {
     try {
         // const userId = req.auth.userId;
         
         // Get the userId directly from the verified token's payload.
-        const { userId } = req.auth.credentials; 
-        await AuthService.deactivateProfile(userId);
+        const { userId } = req.pre.credentials; 
+        await AuthService.deactivateUser(userId);
 
         return h
             .response({
@@ -191,6 +192,32 @@ const deactivateProfile = async (req, h) => {
                 message: ERROR_MESSAGES.COMMON.ACTION_FAILED
             })
             .code(RESPONSE_CODES.INTERNAL_SERVER_ERROR);
+    }
+};
+
+/**
+ * Controller to handle the reactivation of a user profile.
+ * @param {object} req - The Hapi request object.
+ * @param {object} h - The Hapi response toolkit.
+ */
+const reactivateUser = async (req, h) => {
+    try {
+        // The userId to reactivate comes from the URL parameters.
+        const { userId } = req.params;
+        console.log(userId)
+        await AuthService.reactivateUserProfile(userId);
+
+        return h.response({
+            success: RESPONSE_FLAGS.SUCCESS,
+            message: SUCCESS_MESSAGES.USERS.PROFILE_ACTIVATED
+        }).code(RESPONSE_CODES.SUCCESS);
+
+    } catch (error) {
+        console.error("Admin Reactivate User Error:", error);
+        return h.response({
+            success: RESPONSE_FLAGS.FAILURE,
+            message: error.message || ERROR_MESSAGES.COMMON.INTERNAL_SERVER_ERROR
+        }).code(RESPONSE_CODES.INTERNAL_SERVER_ERROR);
     }
 };
 
@@ -228,7 +255,8 @@ module.exports = {
     signup,
     signin,
     refreshToken,
-    deactivateProfile,
+    deactivateUser,
+    reactivateUser,
     logout,
     verifyUser,
     changePassword

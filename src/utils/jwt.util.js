@@ -12,9 +12,8 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
  * @returns {string} The access token.
  */
 const generateAccessToken = payload => {
-    return jwt.sign(payload, ACCESS_TOKEN_SECRET, { expiresIn: "15m" }); // Short lifespan (e.g., 15 minutes)
+    return jwt.sign(payload, ACCESS_TOKEN_SECRET, { expiresIn: "10m" }); // Short lifespan (e.g., 15 minutes)
 };
-
 /**
  * Generates a long-lived Refresh Token.
  * This token is stored in a secure HttpOnly cookie.

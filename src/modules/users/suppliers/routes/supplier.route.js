@@ -14,8 +14,8 @@ module.exports = [
         path: "/supplier/my-profile",
         options: {
             tags: ["api", "Supplier"],
-            handler: SupplierController.showSupplierProfile,
             pre: [verifyAccessTokenMiddleware, requireRole(ROLES.SUPPLIER)],
+            handler: SupplierController.showSupplierProfile,
             description: "Get supplier profile details"
         }
     },
@@ -76,8 +76,8 @@ module.exports = [
             tags: ["api", "Supplier"],
             description: "Update Supplier Profile",
             notes: "Allows a supplier to update their profile partially including media uploads",
+            pre: [verifyAccessTokenMiddleware, requireRole(ROLES.SUPPLIER)],
             handler: SupplierController.updateSupplierProfile,
-             pre: [verifyAccessTokenMiddleware, requireRole(ROLES.SUPPLIER)],
             validate: {
                 ...SupplierValidator.updateSupplierProfile,
                 failAction: (_, h, err) => {
