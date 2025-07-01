@@ -36,163 +36,98 @@ const showSupplierProfile = async (req, h) => {
 
 const completeSupplierProfile = async (req, h) => {
     try {
-        // const { userId } = req.auth;
         const { userId } = req.pre.credentials;
-        const { tradeLicenseImage, nurseryImages, ...profileFields } =
-            req.payload;
+        const payload = req.payload;
 
-        // console.log("Received payload fields:", {
-        //     tradeLicenseImageType: typeof tradeLicenseImage,
-        //     tradeLicenseHeaders: tradeLicenseImage?.hapi?.headers,
-        //     nurseryImagesType: typeof nurseryImages,
-        //     nurseryImagesLength: nurseryImages?.length
-        // });
-
-        const requiredKeys = [
-            "nurseryName",
-            "phoneNumber",
-            "streetAddress",
-            "landmark",
-            "city",
-            "state",
-            "country",
-            "pinCode",
-            "gstin",
-            "businessCategory",
-            "warehouseId"
+        // --- MODIFIED: Simplified and Corrected Validation ---
+        // 1. Define only the fields required for THIS specific form.
+        // We no longer check for 'phoneNumber' here.
+        const requiredTextFields = [
+            'nurseryName', 'streetAddress', 'city', 'state',
+            'country', 'pinCode', 'gstin', 'businessCategory', 'warehouseId'
         ];
-
-        const missingFields = requiredKeys.filter(
-            key =>
-                profileFields[key] === undefined ||
-                profileFields[key] === null ||
-                profileFields[key] === ""
-        );
-        // console.log("missingFields: ", missingFields);
-
-        const missingUploads = [];
-        if (!tradeLicenseImage) missingUploads.push("tradeLicenseImage");
-        if (!nurseryImages || nurseryImages.length === 0)
-            missingUploads.push("nurseryImages");
-
-        const allMissing = [...missingFields, ...missingUploads];
-
-        if (allMissing.length > 0) {
-            return h
-                .response({
-                    success: RESPONSE_FLAGS.FAILURE,
-                    message:
-                        "Oops! 🌼 Some essential details seem to be missing. Let’s make sure your nursery blossoms fully — please provide nursery name, phone number, full address (street, landmark, city, state, country, pin code, latitude, longitude), GSTIN, business category, warehouse ID, a trade license image, and at least one nursery image 🌿"
-                })
-                .code(RESPONSE_CODES.BAD_REQUEST)
-                .takeover();
+        
+        // 2. Validate that all required text fields were sent from the frontend.
+        for (const field of requiredTextFields) {
+            if (!payload[field]) {
+                return h.response({ message: `Missing required field: ${field}` }).code(400).takeover();
+            }
         }
 
-        // Upload trade license image
-        const licenseMimeType = tradeLicenseImage?.hapi.headers["content-type"];
-
-        const licenseUpload = await uploadBufferToCloudinary(
-            tradeLicenseImage._data,
-            "suppliers/trade_licenses",
-            "trade_license",
-            licenseMimeType
-        );
-
-        // console.log("licenseUpload", licenseUpload);
-
-        if (!licenseUpload.success) {
-            console.error("License Upload Failed:", licenseUpload.error);
-            return h
-                .response({
-                    success: RESPONSE_FLAGS.FAILURE,
-                    message: ERROR_MESSAGES.CLOUDINARY.UPLOAD_FAILED
-                })
-                .code(RESPONSE_CODES.BAD_REQUEST)
-                .takeover();
+        // 3. Validate that the required file was uploaded.
+        if (!payload.tradeLicenseImage) {
+            return h.response({ message: "Trade license image is required." }).code(400).takeover();
         }
 
-        const tradeLicenseUrl = licenseUpload.data.url;
-        // const tradeLicenseMediaType = getMediaType(licenseMimeType); // not needed as per the schema
+        // --- MODIFIED: Streamlined File Upload Logic ---
+        
+        // Use a helper function for clarity to upload a single file.
+        const uploadFile = async (fileStream, folder, fileName) => {
+            const mimeType = fileStream.hapi.headers["content-type"];
+            const result = await uploadBufferToCloudinary(fileStream._data, folder, fileName, mimeType);
+            if (!result.success) {
+                // Throw an error to be caught by the main try-catch block.
+                throw new Error(`Failed to upload ${fileName}. Reason: ${result.error?.message}`);
+            }
+            return result.data.url;
+        };
 
-        // Upload nursery images
-        const nurseryUploads = await Promise.all(
-            nurseryImages.map((img, i) => {
-                const mimeType = img.hapi.headers["content-type"];
-                return uploadBufferToCloudinary(
-                    img._data,
-                    "suppliers/nursery_assets",
-                    `nursery_${i}`,
-                    mimeType
-                );
+        // Upload the trade license.
+        const tradeLicenseUrl = await uploadFile(payload.tradeLicenseImage, "suppliers/trade_licenses", `trade_license_${userId}`);
+
+        // Upload all nursery images.
+        const nurseryImages = Array.isArray(payload.nurseryImages) ? payload.nurseryImages : [payload.nurseryImages];
+        const mediaAssets = await Promise.all(
+            (nurseryImages || []).map(async (imageFile, index) => {
+                const url = await uploadFile(imageFile, "suppliers/nursery_assets", `nursery_${userId}_${index}`);
+                const mimeType = imageFile.hapi.headers["content-type"];
+                return {
+                    mediaUrl: url,
+                    mediaType: getMediaType(mimeType),
+                    isPrimary: index === 0,
+                };
             })
         );
+        
+        // --- MODIFIED: Simplified Service Call ---
+        // The service now receives a clean object of only the text fields it needs.
+        const profileData = {
+            nurseryName: payload.nurseryName,
+            streetAddress: payload.streetAddress,
+            landmark: payload.landmark || '',
+            city: payload.city,
+            state: payload.state,
+            country: payload.country,
+            pinCode: payload.pinCode,
+            gstin: payload.gstin,
+            businessCategory: payload.businessCategory,
+            warehouseId: payload.warehouseId,
+            tradeLicenseUrl: tradeLicenseUrl
+        };
 
-        // console.log("nurseryUploads", nurseryUploads);
+        const result = await SupplierService.completeSupplierProfile(userId, profileData, mediaAssets);
 
-        // Check for any failed upload
-        const failedUpload = nurseryUploads.find(u => !u.success);
-        if (failedUpload) {
-            console.error(
-                "One or more nursery uploads failed:",
-                failedUpload.error
-            );
-            return h
-                .response({
-                    success: RESPONSE_FLAGS.FAILURE,
-                    message: ERROR_MESSAGES.CLOUDINARY.UPLOAD_FAILED
-                })
-                .code(RESPONSE_CODES.BAD_REQUEST)
-                .takeover();
-        }
+        return h.response(result).code(result.code);
 
-        const mediaAssets = nurseryUploads.map((upload, index) => {
-            const mimeType = nurseryImages[index].hapi.headers["content-type"];
-            return {
-                mediaUrl: upload.data.url,
-                mediaType: getMediaType(mimeType),
-                isPrimary: index === 0
-            };
-        });
-
-        console.log("mediaAssets", mediaAssets);
-
-        // Pass all to service
-        const result = await SupplierService.completeSupplierProfile(
-            userId,
-            {
-                ...profileFields,
-                tradeLicenseUrl
-            },
-            mediaAssets
-        );
-
-        // console.log("completeSupplierProfile", result);
-
-        return h
-            .response({
-                success: result.success,
-                message:
-                    result.message || SUCCESS_MESSAGES.SUPPLIERS.PROFILE_UPDATED
-            })
-            .code(result.code);
     } catch (error) {
         console.error("Supplier Profile Completion Error:", error.message);
-        if (error && error.success === RESPONSE_FLAGS.FAILURE && error.code) {
-            return h
-                .response({
-                    success: RESPONSE_FLAGS.FAILURE,
-                    message: error.message
-                })
-                .code(error.code)
-                .takeover();
-        }
+        return h.response({
+            success: false,
+            message: error.message || "An internal error occurred during profile completion."
+        }).code(500);
+    }
+};
 
-        return h
-            .response({
-                success: RESPONSE_FLAGS.FAILURE,
-                message: ERROR_MESSAGES.SUPPLIERS.PROFILE_UPDATE_FAILED
-            })
-            .code(RESPONSE_CODES.INTERNAL_SERVER_ERROR);
+const listWarehouses = async (req, h) => {
+    try {
+        const result = await SupplierService.listAllWarehouses();
+        return h.response(result).code(result.code);
+    } catch (error) {
+        console.error("List Warehouses Error:", error);
+        return h.response({
+            success: false,
+            message: error.message || "Failed to retrieve warehouses."
+        }).code(error.code || 500);
     }
 };
 
@@ -270,5 +205,6 @@ const updateSupplierProfile = async (req, h) => {
 module.exports = {
     showSupplierProfile,
     completeSupplierProfile,
+    listWarehouses,
     updateSupplierProfile
 };

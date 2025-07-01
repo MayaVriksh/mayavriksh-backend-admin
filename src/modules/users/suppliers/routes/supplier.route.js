@@ -68,6 +68,37 @@ module.exports = [
         }
     },
 
+    // --- NEW WAREHOUSE LISTING ROUTE ---
+    {
+        method: "GET",
+        // Using a general path as warehouses can be considered a shared resource.
+        path: "/warehouses", 
+        options: {
+            tags: ["api", "Supplier", "Warehouse"],
+            description: "Get a list of all active warehouses for dropdowns.",
+            notes: "Accessible by Suppliers (for profile completion) and Admins.",
+            
+            // --- SECURITY LAYER ---
+            // This now uses our upgraded middleware to allow multiple roles.
+            pre: [
+                verifyAccessTokenMiddleware,
+                requireRole([ROLES.SUPPLIER, ROLES.ADMIN, ROLES.SUPER_ADMIN])
+            ],
+
+            // --- CONTROLLER HANDLER ---
+            handler: SupplierController.listWarehouses,
+
+            plugins: {
+                "hapi-swagger": {
+                    responses: {
+                        200: { description: "List of warehouses retrieved successfully." },
+                        401: { description: "Unauthorized." },
+                        403: { description: "Forbidden (user role not permitted)." }
+                    }
+                }
+            }
+        }
+    },
     // Supplier: Update Profile
     {
         method: "PUT",

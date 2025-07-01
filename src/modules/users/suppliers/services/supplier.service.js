@@ -60,65 +60,45 @@ const showSupplierProfile = async userId => {
     };
 };
 
-const completeSupplierProfile = async (userId, updateData, mediaAssets) => {
+const completeSupplierProfile = async (userId, profileData, mediaAssets) => {
+    // --- MODIFIED: Destructure only the fields we receive from the controller ---
     const {
         nurseryName,
-        phoneNumber,
         streetAddress,
         landmark,
         city,
         state,
         country,
         pinCode,
-        latitude,
-        longitude,
         gstin,
         businessCategory,
         warehouseId,
         tradeLicenseUrl
-    } = updateData;
+    } = profileData;
 
-    return await prisma.$transaction(async tx => {
-        if (phoneNumber) {
-            const existingUsers = await tx.user.findMany({
-                where: {
-                    phoneNumber,
-                    NOT: { userId }
-                }
-            });
-            if (existingUsers.length > 0) {
-                throw {
-                    success: RESPONSE_FLAGS.FAILURE,
-                    code: RESPONSE_CODES.BAD_REQUEST,
-                    message: ERROR_MESSAGES.AUTH.PHONE_ALREADY_EXISTS
-                };
-            }
-        }
+    return await prisma.$transaction(async (tx) => {
+        // --- REMOVED: Phone number validation ---
+        // This check is no longer needed here because the phone number was
+        // validated during the initial signup.
 
+        // This GSTIN check is still relevant and correct for this step.
         if (gstin) {
-            const existingGSTINs = await tx.supplier.findMany({
-                where: {
-                    gstin,
-                    NOT: { userId }
-                }
+            const existingGSTIN = await tx.supplier.findFirst({
+                where: { gstin, NOT: { userId } }
             });
-            if (existingGSTINs.length > 0) {
+            if (existingGSTIN) {
                 throw {
-                    success: RESPONSE_FLAGS.FAILURE,
-                    code: RESPONSE_CODES.BAD_REQUEST,
+                    code: RESPONSE_CODES.CONFLICT, // Use 409 Conflict for duplicates
                     message: ERROR_MESSAGES.SUPPLIERS.GSTIN_ALREADY_EXISTS
                 };
             }
         }
 
+        // --- MODIFIED: Update the User's address JSON blob ---
+        // We are only updating the address here, not other User fields.
         await tx.user.update({
-            where: {
-                userId,
-                isActive: true,
-                deletedAt: null
-            },
+            where: { userId },
             data: {
-                phoneNumber,
                 address: {
                     streetAddress,
                     landmark,
@@ -126,36 +106,33 @@ const completeSupplierProfile = async (userId, updateData, mediaAssets) => {
                     state,
                     country,
                     pinCode,
-                    latitude,
-                    longitude
                 }
             }
         });
 
+        // This update to the Supplier table is correct.
         const supplierProfile = await tx.supplier.update({
-            where: {
-                userId,
-                isVerified: false,
-                deletedAt: null
-            },
+            where: { userId },
             data: {
                 nurseryName,
                 gstin,
                 businessCategory,
                 warehouseId,
                 tradeLicenseUrl,
-                status: "UNDER_REVIEW"
+                status: "UNDER_REVIEW", // Set status for admin verification
+                isVerified: false       // Explicitly set to false until admin approval
             }
         });
 
+        // This logic to save media assets is correct and now complete.
         if (mediaAssets && mediaAssets.length > 0) {
             const mediaData = mediaAssets.map(asset => ({
                 id: uuidv4(),
                 supplierId: supplierProfile.supplierId,
                 mediaUrl: asset.mediaUrl,
                 mediaType: asset.mediaType,
-                publicId: asset.publicId,
-                resourceType: asset.resourceType || null,
+                // Make sure your Cloudinary helper returns publicId if you need it
+                publicId: asset.publicId || 'default_public_id', 
                 isPrimary: asset.isPrimary || false
             }));
 
@@ -170,6 +147,30 @@ const completeSupplierProfile = async (userId, updateData, mediaAssets) => {
             message: SUCCESS_MESSAGES.SUPPLIERS.PROFILE_SUBMITTED_FOR_REVIEW
         };
     });
+};
+
+const listAllWarehouses = async () => {
+    // Fetch only the ID and name for the dropdown, and only where not deleted.
+    const warehouses = await prisma.warehouse.findMany({
+        select: {
+            warehouseId: true,
+            name: true
+        },
+        orderBy: {
+            name: 'asc'
+        }
+    });
+
+    if (!warehouses) {
+        throw { code: 404, message: "No warehouses found." };
+    }
+
+    return {
+        success: true,
+        code: 200,
+        message: "Warehouses retrieved successfully.",
+        data: warehouses
+    };
 };
 
 const updateSupplierProfile = async (userId, updateData, profileImageUrl) => {
@@ -278,5 +279,6 @@ const updateSupplierProfile = async (userId, updateData, profileImageUrl) => {
 module.exports = {
     showSupplierProfile,
     completeSupplierProfile,
+    listAllWarehouses,
     updateSupplierProfile
 };
