@@ -154,7 +154,6 @@ To consume this API from a frontend (e.g., React app):
     ```
 
 - **Authentication:**
-
     - After login/signup, store the JWT token (e.g. `localStorage`).
     - Send token in request headers:
 
@@ -163,12 +162,10 @@ To consume this API from a frontend (e.g., React app):
         ```
 
 - **CORS:**
-
     - Configured to accept requests from any origin.
     - Works out-of-the-box with frontend apps running on different ports (e.g. React dev server on `localhost:3000`).
 
 - **API Documentation:**
-
     - Swagger UI is available at:
 
         ```

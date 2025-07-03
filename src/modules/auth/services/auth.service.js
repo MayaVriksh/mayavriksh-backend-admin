@@ -71,7 +71,7 @@ const register = async data => {
                 throw {
                     success: RESPONSE_FLAGS.FAILURE,
                     code: RESPONSE_CODES.BAD_REQUEST,
-                    message: ERROR_MESSAGES.AUTH.INVALID_ROLE
+                    message: ERROR_MESSAGES.AUTH.INVALID_REGISTRATION
                 };
         }
 

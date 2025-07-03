@@ -97,7 +97,7 @@ const completeSupplierProfile = {
             .messages({
                 "array.base": "🖼️ Nursery images must be in an array.",
                 "array.min":
-                    "🖼️ Please upload at least one image of your nursery.",
+                    "🖼️ Please upload at least two images of your nursery.",
                 "any.required": "🖼️ Nursery images are required."
             })
     })
@@ -129,11 +129,11 @@ const updateSupplierProfile = {
         }),
         businessCategory: Joi.string().optional(),
         warehouseId: Joi.string().optional(),
-        profileImageUrl: Joi.any()
+        profileImage: Joi.any()
             .meta({ swaggerType: "file" })
             .description("Profile Image file to upload")
             .optional()
-            .label("profile_image_url")
+            .label("profile_image")
     })
         .min(1)
         .messages({

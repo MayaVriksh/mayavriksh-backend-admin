@@ -141,13 +141,13 @@ const completeSupplierProfile = async (req, h) => {
             }
         }
 
-        console.log(
-            userId,
-            profileFields,
-            licenseUpload.data,
-            profileUpload?.data,
-            nurseryUpload.data
-        );
+        // console.log(
+        //     userId,
+        //     profileFields,
+        //     licenseUpload.data,
+        //     profileUpload?.data,
+        //     nurseryUpload.data
+        // );
 
         const result = await SupplierService.completeSupplierProfile(
             userId,
@@ -190,6 +190,9 @@ const updateSupplierProfile = async (req, h) => {
         const { userId } = req.auth;
         const { profileImage, ...updateData } = req.payload;
 
+        // console.log("Profile image: ", typeof profileImage);
+        // console.log("Profile image header: ", profileImage?.hapi?.headers);
+
         // Profile Image Upload
         let profileUpload = null;
         if (profileImage) {
@@ -208,6 +211,8 @@ const updateSupplierProfile = async (req, h) => {
                     .takeover();
             }
         }
+
+        // console.log("profileUpload: ", profileUpload);
 
         // update supplier profile
         const result = await SupplierService.updateSupplierProfile(
