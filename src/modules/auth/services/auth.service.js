@@ -2,7 +2,6 @@ const prisma = require("../../../config/prisma.config");
 const bcrypt = require("bcrypt");
 const { generateToken } = require("../../../utils/jwt.util");
 const generateCustomId = require("../../../utils/generateCustomId");
-
 const { ROLES } = require("../../../constants/roles.constant");
 const ERROR_MESSAGES = require("../../../constants/errorMessages.constant");
 const {
@@ -42,7 +41,7 @@ const register = async data => {
             throw {
                 success: RESPONSE_FLAGS.FAILURE,
                 code: RESPONSE_CODES.INTERNAL_SERVER_ERROR,
-                message: ERROR_MESSAGES.COMMON.INTERNAL_SERVER_ERROR
+                message: ERROR_MESSAGES.ROLES_PERMISSIONS.ROLE_ASSIGN_FAILED
             };
         }
 
@@ -131,6 +130,7 @@ const register = async data => {
 
 const login = async payload => {
     const { email, phoneNumber, password } = payload;
+
     const user = await prisma.user.findFirst({
         where: {
             OR: [
@@ -157,7 +157,9 @@ const login = async payload => {
         throw {
             success: RESPONSE_FLAGS.FAILURE,
             code: RESPONSE_CODES.UNAUTHORIZED,
-            message: ERROR_MESSAGES.AUTH.LOGIN_FAILED
+            message: email
+                ? ERROR_MESSAGES.AUTH.EMAIL_NOT_EXISTS
+                : ERROR_MESSAGES.AUTH.PHONE_NOT_EXISTS
         };
     }
 
@@ -174,7 +176,7 @@ const login = async payload => {
         throw {
             success: RESPONSE_FLAGS.FAILURE,
             code: RESPONSE_CODES.UNAUTHORIZED,
-            message: ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS
+            message: ERROR_MESSAGES.AUTH.PASSWORD_WRONG
         };
     }
 
