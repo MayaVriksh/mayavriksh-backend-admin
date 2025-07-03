@@ -38,14 +38,11 @@ const completeSupplierProfile = {
             "string.empty": "📮 Pincode is required.",
             "any.required": "📮 Pincode is required for precise location."
         }),
-        latitude: Joi.number().required().messages({
-            "number.base": "🧭 Latitude must be a number.",
-            "any.required":
-                "🧭 Latitude is required to place your nursery on the map."
+        latitude: Joi.number().optional().messages({
+            "number.base": "🧭 Latitude must be a number."
         }),
-        longitude: Joi.number().required().messages({
-            "number.base": "🧭 Longitude must be a number.",
-            "any.required": "🧭 Longitude is required to locate your nursery."
+        longitude: Joi.number().optional().messages({
+            "number.base": "🧭 Longitude must be a number."
         }),
         gstin: Joi.string()
             .pattern(
