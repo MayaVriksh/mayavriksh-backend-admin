@@ -52,6 +52,7 @@ const uploadBufferToCloudinary = async (
         // Cleanup handled inside `uploadToCloudinary`, but you may do extra check if needed
         return response;
     } catch (err) {
+        console.log(err)
         // Attempt cleanup
         if (tempPath) {
             try {

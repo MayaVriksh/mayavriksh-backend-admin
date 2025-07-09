@@ -12,7 +12,7 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
  * @returns {string} The access token.
  */
 const generateAccessToken = payload => {
-    return jwt.sign(payload, ACCESS_TOKEN_SECRET, { expiresIn: "30m" }); // Short lifespan (e.g., 15 minutes)
+    return jwt.sign(payload, ACCESS_TOKEN_SECRET, { expiresIn: "1m" }); // Short lifespan (e.g., 15 minutes)
 };
 /**
  * Generates a long-lived Refresh Token.
@@ -31,11 +31,7 @@ const generateRefreshToken = payload => {
  * @returns {object} The decoded payload if valid.
  */
 const verifyAccessToken = token => {
-    try {
-        return jwt.verify(token, ACCESS_TOKEN_SECRET);
-    } catch (error) {
-        console.log("Token Verification Error: ", error);
-    }
+    return jwt.verify(token, ACCESS_TOKEN_SECRET);
 };
 /**
  * Verifies a Refresh Token.
@@ -43,11 +39,9 @@ const verifyAccessToken = token => {
  * @returns {object} The decoded payload if valid.
  */
 const verifyRefreshToken = token => {
-    try {
-        return jwt.verify(token, REFRESH_TOKEN_SECRET);
-    } catch (error) {
-        console.log("Token Verification Error: ", error);
-    }
+    const dd = jwt.verify(token, REFRESH_TOKEN_SECRET);
+    console.log("xx2",dd)
+    return dd;
 };
 
 

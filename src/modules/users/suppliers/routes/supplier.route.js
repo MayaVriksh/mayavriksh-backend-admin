@@ -6,7 +6,8 @@ const {
 const SupplierController = require("../controllers/supplier.profile.controller");
 const SupplierValidator = require("../validations/supplierProfile.validations");
 const { verifyAccessTokenMiddleware, requireRole } = require("../../../../middlewares/authenticate.middleware");
-const { ROLES } = require("../../../../constants/roles.constant"); 
+const { ROLES } = require("../../../../constants/roles.constant");
+
 module.exports = [
     // Supplier: Complete Profile
     {
@@ -143,6 +144,37 @@ module.exports = [
                     }
                 }
             }
+        }
+    },
+
+    {
+        method: "GET",
+        path: "/supplier/order-requests",
+        options: {
+            tags: ["api", "Supplier"],
+            description: "Get a list of order requests for the authenticated supplier.",
+            pre: [
+                verifyAccessTokenMiddleware,
+                requireRole([ROLES.SUPPLIER])
+            ],
+            validate: {
+                ...SupplierValidator.orderRequestValidation,
+                failAction: (_, h, err) => {
+                    const customErrorMessages = err.details.map(
+                        detail => detail.message
+                    );
+                    console.log("Validation Error: ", customErrorMessages);
+                    return h
+                        .response({
+                            success: RESPONSE_FLAGS.FAILURE,
+                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
+                            message: customErrorMessages
+                        })
+                        .code(RESPONSE_CODES.BAD_REQUEST)
+                        .takeover();
+                }
+            },
+            handler: SupplierController.listOrderRequests,
         }
     }
 ];

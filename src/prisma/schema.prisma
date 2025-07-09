@@ -464,6 +464,7 @@ model Supplier {
   publicId         String?
   status           String  @default("REGISTERED")
   isVerified       Boolean @default(false)
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -749,7 +750,8 @@ model Plants {
   PlantOrderItem                PlantOrderItem[]                @relation(name: "PlantOrderItemToPlant")
   PlantCheckoutLater            PlantCheckoutLater[]            @relation(name: "PlantCheckoutLaterToPlant")
   PlantCartItem                 PlantCartItem[]                 @relation(name: "PlantCartItemToPlant")
-  PurchaseOrder                 PurchaseOrder[]                 @relation(name: "PlantToPurchaseOrder")
+  PurchaseOrderItems            PurchaseOrderItems[]            @relation(name: "PlantToPurchaseOrder")
+  WarehouseCartItem             WarehouseCartItem[]             @relation(name: "PlantToWarehouseCartItem")
 }
 
 model PlantVariants {
@@ -787,9 +789,10 @@ model PlantVariants {
   NotifyMeSubscription    NotifyMeSubscription[]    @relation(name: "NotifyMeSubscriptionToPlantVariants")
   PlantCheckoutLater      PlantCheckoutLater[]      @relation(name: "PlantCheckoutLaterToPlantVariant")
   PlantOrderItem          PlantOrderItem[]          @relation(name: "PlantOrderItemToPlantVariant")
-  PurchaseOrder           PurchaseOrder[]           @relation(name: "PlantVariantToPurchaseOrder")
+  PurchaseOrderItems      PurchaseOrderItems[]      @relation(name: "PlantVariantToPurchaseOrder")
   PlantRestockEventLog    PlantRestockEventLog[]    @relation(name: "PlantVariantToRestockEvent")
   compatiblePots          PotVariants[]
+  WarehouseCartItem       WarehouseCartItem[]       @relation(name: "PlantVariantToWarehouseCartItem")
   // compatiblePots          PotVariants[]             @relation(name: "PlantVariantsToPotVariants")
 }
 
@@ -889,7 +892,8 @@ model PotCategory {
   NotifyMeSubscription  NotifyMeSubscription[]  @relation(name: "NotifyMeSubscriptionToPotCategory")
   PotCheckoutLater      PotCheckoutLater[]      @relation(name: "PotCheckoutLaterToPotCategory")
   PotOrderItem          PotOrderItem[]          @relation(name: "PotOrderItemToPotCategory")
-  PurchaseOrder         PurchaseOrder[]         @relation(name: "PotCategoryToPurchaseOrder")
+  PurchaseOrderItems    PurchaseOrderItems[]    @relation(name: "PotCategoryToPurchaseOrder")
+  WarehouseCartItem     WarehouseCartItem[]     @relation(name: "PotCategoryToWarehouseCartItem")
 }
 
 model PotVariants {
@@ -931,7 +935,8 @@ model PotVariants {
   NotifyMeSubscription  NotifyMeSubscription[]  @relation(name: "NotifyMeSubscriptionToPotVariants")
   PotCheckoutLater      PotCheckoutLater[]      @relation(name: "PotCheckoutLaterToPotVariant")
   PotOrderItem          PotOrderItem[]          @relation(name: "PotOrderItemToPotVariant")
-  PurchaseOrder         PurchaseOrder[]         @relation(name: "PotVariantToPurchaseOrder")
+  PurchaseOrderItems    PurchaseOrderItems[]    @relation(name: "PotVariantToPurchaseOrder")
+  WarehouseCartItem     WarehouseCartItem[]     @relation(name: "PotVariantToWarehouseCartItem")
   PlantVariants         PlantVariants[]
   // PlantVariants         PlantVariants[]         @relation(name: "PlantVariantsToPotVariants")
 
@@ -1612,14 +1617,16 @@ model PotSalesAnalytics {
 // --------------------- Warehouse & Inventory -------------------------
 
 model Warehouse {
-  warehouseId   String   @id
+  warehouseId String @id
+
   name          String
   capacityUnits Int?
   officeEmail   String?
   officePhone   String?
   officeAddress Json?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   plantInventory      PlantWarehouseInventory[] @relation(name: "WarehouseToPlantInventory")
   potInventory        PotWarehouseInventory[]   @relation(name: "WarehouseToPotInventory")
@@ -1632,6 +1639,7 @@ model Warehouse {
   PotStockAuditLog    PotStockAuditLog[]        @relation(name: "WarehouseToStockAuditPot")
   PotDamagedProduct   PotDamagedProduct[]       @relation(name: "WarehouseToDamagePot")
   PurchaseOrder       PurchaseOrder[]           @relation(name: "WarehouseToPurchaseOrder")
+  WarehouseCartItem   WarehouseCartItem[]       @relation(name: "warehouseCartItemToWarehouse")
 }
 
 model PlantWarehouseInventory {
@@ -1758,37 +1766,59 @@ model PotRestockEventLog {
 //   PotRestockEventLog   PotRestockEventLog[]   @relation(name: "PotRestockToRequest")
 // }
 
+// This are the CART Items of the Purchased Orders
 model PurchaseOrderItems {
-  id             String   @id
-  productType    String // Plant || Pot
+  id              String   @id
+  purchaseOrderId String
+  productType     String // Plant || Pot
+  plantId         String?
+  plantVariantId  String?
+  potCategoryId   String?
+  potVariantId    String?
+  unitsRequested  Int
+  unitCostPrice   Decimal?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchaseOrder PurchaseOrder  @relation(name: "PurchaseOrderToPurchaseOrderItem", fields: [purchaseOrderId], references: [id])
+  plant         Plants?        @relation(name: "PlantToPurchaseOrder", fields: [plantId], references: [plantId])
+  plantVariant  PlantVariants? @relation(name: "PlantVariantToPurchaseOrder", fields: [plantVariantId], references: [variantId])
+  potCategory   PotCategory?   @relation(name: "PotCategoryToPurchaseOrder", fields: [potCategoryId], references: [categoryId])
+  potVariant    PotVariants?   @relation(name: "PotVariantToPurchaseOrder", fields: [potVariantId], references: [potVariantId])
+}
+
+model WarehouseCartItem {
+  cartItemId     String  @id
+  warehouseId    String
   plantId        String?
   plantVariantId String?
   potCategoryId  String?
   potVariantId   String?
-  unitsRequested Int
+
+  productType    String // Plant || Pot
+  unitsRequested Int      @default(1)
   unitCostPrice  Decimal?
+
+  addedAt   DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  warehouse    Warehouse      @relation(name: "warehouseCartItemToWarehouse", fields: [warehouseId], references: [warehouseId])
+  plant        Plants?        @relation(name: "PlantToWarehouseCartItem", fields: [plantId], references: [plantId])
+  plantVariant PlantVariants? @relation(name: "PlantVariantToWarehouseCartItem", fields: [plantVariantId], references: [variantId])
+  potCategory  PotCategory?   @relation(name: "PotCategoryToWarehouseCartItem", fields: [potCategoryId], references: [categoryId])
+  potVariant   PotVariants?   @relation(name: "PotVariantToWarehouseCartItem", fields: [potVariantId], references: [potVariantId])
+
+  @@unique([warehouseId, plantId, plantVariantId])
+  @@unique([warehouseId, potCategoryId, potVariantId])
 }
 
 model PurchaseOrder {
-  id             String  @id
-  warehouseId    String
-  supplierId     String
-  productType    String // Plant || Pot
-  plantId        String?
-  plantVariantId String?
-  potCategoryId  String?
-  potVariantId   String?
+  id          String @id
+  warehouseId String
+  supplierId  String
 
-  // snake plant --> 4 variants, 50 plants 
-  // 1 single row
-
-  // 1 plant --> 4 varaints, 50 plants x 4 = 200 rows
-  // 33 fields x 1 = 33, 200 x 33 = 6600 fields
-
-  // 7 * 200 = 1400 + 26 = 1426 fields
-
-  unitsRequested    Int
-  unitCostPrice     Decimal? // set by admin only
   deliveryCharges   Decimal? // optional
   totalCost         Decimal? // units * negotiated price + delivery charge
   paymentPercentage Int      @default(0)
@@ -1807,15 +1837,11 @@ model PurchaseOrder {
 
   supplier           Supplier               @relation(name: "SupplierToPurchaseOrder", fields: [supplierId], references: [supplierId])
   warehouse          Warehouse              @relation(name: "WarehouseToPurchaseOrder", fields: [warehouseId], references: [warehouseId])
-  plant              Plants?                @relation(name: "PlantToPurchaseOrder", fields: [plantId], references: [plantId])
-  plantVariant       PlantVariants?         @relation(name: "PlantVariantToPurchaseOrder", fields: [plantVariantId], references: [variantId])
-  potCategory        PotCategory?           @relation(name: "PotCategoryToPurchaseOrder", fields: [potCategoryId], references: [categoryId])
-  potVariant         PotVariants?           @relation(name: "PotVariantToPurchaseOrder", fields: [potVariantId], references: [potVariantId])
   media              PurchaseOrderMedia[]   @relation(name: "PurchaseOrderToMedia")
+  payments           PurchaseOrderPayment[] @relation(name: "PurchaseOrderPaymentToPurchaseOrder")
+  PurchaseOrderItems PurchaseOrderItems[]   @relation(name: "PurchaseOrderToPurchaseOrderItem")
   plantRestockEvents PlantRestockEventLog[] @relation(name: "PlantRestockToRequest")
   potRestockEvents   PotRestockEventLog[]   @relation(name: "PotRestockToRequest")
-  payments           PurchaseOrderPayment[] @relation(name: "PurchaseOrderPaymentToPurchaseOrder")
-  // cartitems []
 }
 
 model PurchaseOrderPayment {

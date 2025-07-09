@@ -60,7 +60,11 @@ const showSupplierProfile = async userId => {
     };
 };
 
-const completeSupplierProfile = async (userId, profileData, mediaAssets) => {
+const completeSupplierProfile = async (userId,
+    profileFields,
+    tradeLicenseData,
+    profileImageData,
+    nurseryMediaAssets) => {
     // --- MODIFIED: Destructure only the fields we receive from the controller ---
     const {
         nurseryName,
@@ -72,10 +76,8 @@ const completeSupplierProfile = async (userId, profileData, mediaAssets) => {
         pinCode,
         gstin,
         businessCategory,
-        warehouseId,
-        tradeLicenseUrl
-    } = profileData;
-
+        warehouseId
+    } = profileFields;
     return await prisma.$transaction(async (tx) => {
         // --- REMOVED: Phone number validation ---
         // This check is no longer needed here because the phone number was
@@ -88,6 +90,7 @@ const completeSupplierProfile = async (userId, profileData, mediaAssets) => {
             });
             if (existingGSTIN) {
                 throw {
+                    success: RESPONSE_FLAGS.FAILURE,
                     code: RESPONSE_CODES.CONFLICT, // Use 409 Conflict for duplicates
                     message: ERROR_MESSAGES.SUPPLIERS.GSTIN_ALREADY_EXISTS
                 };
@@ -95,9 +98,12 @@ const completeSupplierProfile = async (userId, profileData, mediaAssets) => {
         }
 
         // --- MODIFIED: Update the User's address JSON blob ---
-        // We are only updating the address here, not other User fields.
+        // We are only updating the address here, not other User fields. Here 
         await tx.user.update({
-            where: { userId },
+            where: { 
+                userId,
+                isActive: true,
+                deletedAt: null},
             data: {
                 address: {
                     streetAddress,
@@ -106,40 +112,50 @@ const completeSupplierProfile = async (userId, profileData, mediaAssets) => {
                     state,
                     country,
                     pinCode,
-                }
+                },
+                ...(profileImageData && {
+                        profileImageUrl: profileImageData.mediaUrl,
+                        publicId: profileImageData.publicId
+                    })
             }
         });
 
         // This update to the Supplier table is correct.
         const supplierProfile = await tx.supplier.update({
-            where: { userId },
+            where: { 
+                userId,
+                isVerified: false,
+                deletedAt: null },
             data: {
                 nurseryName,
                 gstin,
                 businessCategory,
                 warehouseId,
-                tradeLicenseUrl,
+                tradeLicenseUrl: tradeLicenseData.mediaUrl,
+                publicId: tradeLicenseData.publicId,
                 status: "UNDER_REVIEW", // Set status for admin verification
                 isVerified: false       // Explicitly set to false until admin approval
             }
         });
 
-        // This logic to save media assets is correct and now complete.
-        if (mediaAssets && mediaAssets.length > 0) {
-            const mediaData = mediaAssets.map(asset => ({
-                id: uuidv4(),
-                supplierId: supplierProfile.supplierId,
-                mediaUrl: asset.mediaUrl,
-                mediaType: asset.mediaType,
-                // Make sure your Cloudinary helper returns publicId if you need it
-                publicId: asset.publicId || 'default_public_id', 
-                isPrimary: asset.isPrimary || false
-            }));
+        if (
+                Array.isArray(nurseryMediaAssets) &&
+                nurseryMediaAssets.length > 0
+            ) {
+                const mediaData = nurseryMediaAssets.map(asset => ({
+                    id: uuidv4(),
+                    supplierId: supplierProfile.supplierId,
+                    mediaUrl: asset.mediaUrl,
+                    mediaType: asset.mediaType,
+                    publicId: asset.publicId,
+                    resourceType: asset.resourceType || null,
+                    isPrimary: asset.isPrimary || false
+                }));
 
-            await tx.nurseryMediaAsset.createMany({
-                data: mediaData
-            });
-        }
+                await tx.nurseryMediaAsset.createMany({
+                    data: mediaData
+                });
+            }
 
         return {
             success: RESPONSE_FLAGS.SUCCESS,
@@ -172,6 +188,76 @@ const listAllWarehouses = async () => {
         data: warehouses
     };
 };
+
+const listOrderRequests = async ({ userId, page = 1, search = '' }) => {
+    const itemsPerPage = 8;
+     // --- STEP 1: Find the supplierId from the userId ---
+    // We first query the Supplier table to get the supplierId for the logged-in user.
+    const supplier = await prisma.supplier.findUnique({
+        where: { userId: userId },
+        select: { supplierId: true }
+    });
+    console.log("xx",supplier)
+    // If no supplier profile exists for this user, they have no orders.
+    if (!supplier) {
+        return {
+            success: true,
+            code: 200,
+            message: "Supplier profile not found.",
+            data: { orders: [], totalPages: 0, currentPage: 1 }
+        };
+    }
+    const whereClause = {
+        supplierId: supplier.supplierId, // Assuming a relation from PurchaseOrder to Supplier
+        // Add search filter if a search term is provided
+        ...(search && {
+            id: { // Example: searching by product name
+                contains: search,
+                mode: 'insensitive'
+            }
+        })
+    };
+console.log("yy",whereClause)
+    // Fetch the total count for pagination
+    const totalItems = await prisma.purchaseOrder.count({ where: whereClause });
+    console.log("Items" + totalItems)
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    console.log(totalPages)
+    // Fetch the paginated data
+    const orders = await prisma.purchaseOrder.findMany({
+        where: whereClause,
+        skip: (page - 1) * itemsPerPage,
+        take: itemsPerPage,
+        orderBy: {
+            requestedAt: 'desc'
+        },
+        // The 'include' block is now corrected to match your schema.
+        include: {
+            // For each PurchaseOrder, include its list of items.
+            PurchaseOrderItems: {
+                // For each item in the list, include the linked product's details.
+                include: {
+                    plant: { select: { name: true } },
+                    plantVariant: { select: { plantSize: true } },
+                    potCategory: { select: { name: true } },
+                    potVariant: { select: { potName: true, size: true } },
+                }
+            }
+        }
+    });
+console.log("zz",orders)
+    return {
+        success: true,
+        code: 200,
+        message: "Order requests retrieved successfully.",
+        data: {
+            orders,
+            totalPages,
+            currentPage: page
+        }
+    };
+};
+
 
 const updateSupplierProfile = async (userId, updateData, profileImageUrl) => {
     return await prisma.$transaction(async tx => {
@@ -280,5 +366,6 @@ module.exports = {
     showSupplierProfile,
     completeSupplierProfile,
     listAllWarehouses,
+    listOrderRequests,
     updateSupplierProfile
 };

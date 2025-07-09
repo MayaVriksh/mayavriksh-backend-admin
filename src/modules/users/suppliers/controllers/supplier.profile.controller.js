@@ -7,6 +7,7 @@ const SUCCESS_MESSAGES = require("../../../../constants/successMessages.constant
 const SupplierService = require("../services/supplier.service.js");
 const uploadBufferToCloudinary = require("../../../../utils/mediaUpload.util.js");
 const { getMediaType } = require("../../../../utils/file.utils.js");
+const uploadMedia = require("../../../../utils/uploadMedia.js");
 
 const showSupplierProfile = async (req, h) => {
     try {
@@ -38,16 +39,29 @@ const completeSupplierProfile = async (req, h) => {
     try {
         // const { userId } = req.auth;
         const { userId } = req.pre.credentials;
-        const { tradeLicenseImage, nurseryImages, ...profileFields } =
+        const { tradeLicenseImage, nurseryImages, profileImage, ...profileFields } =
             req.payload;
 
-        // console.log("Received payload fields:", {
-        //     tradeLicenseImageType: typeof tradeLicenseImage,
-        //     tradeLicenseHeaders: tradeLicenseImage?.hapi?.headers,
-        //     nurseryImagesType: typeof nurseryImages,
-        //     nurseryImagesLength: nurseryImages?.length
-        // });
-
+        console.log("Received payload fields:", {
+            tradeLicenseImageType: typeof tradeLicenseImage,
+            tradeLicenseHeaders: tradeLicenseImage?.hapi?.headers,
+            profilePhotoType: typeof profileImage,
+            profilePhotoHeaders: profileImage?.hapi?.headers, 
+            nurseryImagesType: typeof nurseryImages,
+            nurseryImagesLength: nurseryImages?.length
+        });
+        const {
+        nurseryName,
+        streetAddress,
+        landmark,
+        city,
+        state,
+        country,
+        pinCode,
+        gstin,
+        businessCategory,
+        warehouseId,
+    } = profileFields;
         const requiredKeys = [
             "nurseryName",
             "streetAddress",
@@ -87,82 +101,71 @@ const completeSupplierProfile = async (req, h) => {
                 .takeover();
         }
 
-        // Upload trade license image
-        const licenseMimeType = tradeLicenseImage?.hapi.headers["content-type"];
-
-        const licenseUpload = await uploadBufferToCloudinary(
-            tradeLicenseImage._data,
-            "suppliers/trade_licenses",
-            "trade_license",
-            licenseMimeType
-        );
-
-        // console.log("licenseUpload", licenseUpload);
-
-        if (!licenseUpload.success) {
-            console.error("License Upload Failed:", licenseUpload.error);
-            return h
-                .response({
-                    success: RESPONSE_FLAGS.FAILURE,
-                    message: ERROR_MESSAGES.CLOUDINARY.UPLOAD_FAILED
-                })
-                .code(RESPONSE_CODES.BAD_REQUEST)
-                .takeover();
-        }
-
-        const tradeLicenseUrl = licenseUpload.data.url;
-        // const tradeLicenseMediaType = getMediaType(licenseMimeType); // not needed as per the schema
-
-        // Upload nursery images
-        const nurseryUploads = await Promise.all(
-            nurseryImages.map((img, i) => {
-                const mimeType = img.hapi.headers["content-type"];
-                return uploadBufferToCloudinary(
-                    img._data,
-                    "suppliers/nursery_assets",
-                    `nursery_${i}`,
-                    mimeType
-                );
-            })
-        );
-
-        // console.log("nurseryUploads", nurseryUploads);
-
-        // Check for any failed upload
-        const failedUpload = nurseryUploads.find(u => !u.success);
-        if (failedUpload) {
-            console.error(
-                "One or more nursery uploads failed:",
-                failedUpload.error
-            );
-            return h
-                .response({
-                    success: RESPONSE_FLAGS.FAILURE,
-                    message: ERROR_MESSAGES.CLOUDINARY.UPLOAD_FAILED
-                })
-                .code(RESPONSE_CODES.BAD_REQUEST)
-                .takeover();
-        }
-
-        const mediaAssets = nurseryUploads.map((upload, index) => {
-            const mimeType = nurseryImages[index].hapi.headers["content-type"];
-            return {
-                mediaUrl: upload.data.url,
-                mediaType: getMediaType(mimeType),
-                isPrimary: index === 0
-            };
+       // Trade License Upload
+        const licenseUpload = await uploadMedia({
+            files: tradeLicenseImage,
+            folder: "suppliers/trade_licenses",
+            publicIdPrefix: "trade_license"
         });
+        if (!licenseUpload.success) {
+            return h
+                .response({
+                    success: false,
+                    message: licenseUpload.message
+                })
+                .code(RESPONSE_CODES.BAD_REQUEST)
+                .takeover();
+        }
 
-        console.log("mediaAssets", mediaAssets);
+        // Nursery Images Upload
+        const nurseryUpload = await uploadMedia({
+            files: nurseryImages,
+            folder: "suppliers/nursery_assets",
+            publicIdPrefix: "nursery"
+        });
+        if (!nurseryUpload.success) {
+            return h
+                .response({
+                    success: false,
+                    message: nurseryUpload.message
+                })
+                .code(RESPONSE_CODES.BAD_REQUEST)
+                .takeover();
+        }
 
-        // Pass all to service
+        // Profile Image Upload
+        let profileUpload = null;
+        if (profileImage) {
+            profileUpload = await uploadMedia({
+                files: profileImage,
+                folder: "suppliers/profile_images",
+                publicIdPrefix: "profile"
+            });
+            if (!profileUpload.success) {
+                return h
+                    .response({
+                        success: false,
+                        message: profileUpload.message
+                    })
+                    .code(RESPONSE_CODES.BAD_REQUEST)
+                    .takeover();
+            }
+        }
+
+        // console.log(
+        //     userId,
+        //     profileFields,
+        //     licenseUpload.data,
+        //     profileUpload?.data,
+        //     nurseryUpload.data
+        // );
+
         const result = await SupplierService.completeSupplierProfile(
             userId,
-            {
-                ...profileFields,
-                tradeLicenseUrl
-            },
-            mediaAssets
+            profileFields,
+            licenseUpload.data,
+            profileUpload?.data,
+            nurseryUpload.data
         );
 
         return h
@@ -192,6 +195,7 @@ const completeSupplierProfile = async (req, h) => {
             .code(RESPONSE_CODES.INTERNAL_SERVER_ERROR);
     }
 };
+
 const listWarehouses = async (req, h) => {
     try {
         const result = await SupplierService.listAllWarehouses();
@@ -204,6 +208,35 @@ const listWarehouses = async (req, h) => {
         }).code(error.code || 500);
     }
 };
+const listOrderRequests = async (req, h) => {
+    try {
+        const { userId } = req.pre.credentials;
+        // Get pagination and search terms from the URL query string
+        const { page = 1, search = '' } = req.query;
+
+        const result = await SupplierService.listOrderRequests({
+            userId,
+            page: parseInt(page, 10),
+            search
+        });
+        return h.response(result).code(result.code);
+    } catch (error) {
+         // --- THIS IS THE FIX ---
+        // The catch block must also explicitly return a Hapi response.
+        console.error("Error in listOrderRequests controller:", error.message);
+
+        return h.response({
+            success: false,
+            message: "An error occurred while fetching order requests.",
+            error: error.message // It's helpful to include the original error message for debugging
+        })
+        .code(500) // Send a 500 Internal Server Error status
+        .takeover(); // Tell Hapi to stop processing and send this response immediately
+    }
+};
+
+module.exports = { listOrderRequests, /* ... your other controller exports */ };
+
 const updateSupplierProfile = async (req, h) => {
     try {
         // const { userId } = req.auth;
@@ -279,5 +312,6 @@ module.exports = {
     showSupplierProfile,
     completeSupplierProfile,
     listWarehouses,
+    listOrderRequests,
     updateSupplierProfile
 };

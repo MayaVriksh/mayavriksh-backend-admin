@@ -116,6 +116,7 @@ const register = async data => {
 };
 
 const login = async (email, password) => {
+    console.log("In AuthService Page for Logging In")
     const user = await prisma.user.findUnique({
         where: { email },
         select: {
@@ -138,6 +139,7 @@ const login = async (email, password) => {
             }
         }
     });
+    console.log("User Detail In AuthService Page for Logging In:", user);
     if (!user) {
         throw {
             success: RESPONSE_FLAGS.FAILURE,
@@ -171,7 +173,8 @@ const login = async (email, password) => {
         userId: user.userId,
         role: user.role.role,
         // Including a name is useful for the frontend.
-        username: user.fullName.firstName 
+        username: user.fullName.firstName,
+        isVerified: user.Supplier?.isVerified || false
     };
     // 2. Refresh Token Payload: Should be minimal, only what's needed to identify the user session.
     const refreshTokenPayload = {
@@ -198,6 +201,8 @@ const refreshUserToken = async (token) => {
     try {
         // 1. Verify the incoming refresh token. Throws an error if invalid/expired.
         const decoded = verifyRefreshToken(token);
+        console.log(decoded)
+        const userId = decoded.userId;
         // 2. IMPORTANT: Check the database to ensure the user is still valid.
         // This is our periodic security check. If a user was banned, this is where we catch it.
         const user = await prisma.user.findUnique({
@@ -208,17 +213,30 @@ const refreshUserToken = async (token) => {
                 deletedAt: true,
                 role: { select: { role: true } },
                 fullName: true,
+                // The 'Supplier' relation MUST be nested inside the 'select' object.
+                Supplier: {
+                    select: {
+                        isVerified: true
+                    }
+                }
             }
         });
 
-        if (!user || !user.isActive || user.deletedAt) {
+    console.log("User Detail In AuthService Page for Refresh User Token:", user);
+        if (!user) {
+            throw new Error("User associated with this token no longer exists.");
+        }
+        if (!user.isActive || user.deletedAt) {
             throw new Error("User account is no longer active.");
         }
         // 3. If user is valid, issue a NEW access token with fresh data.
         const newAccessTokenPayload = {
             userId: user.userId,
             role: user.role.role,
-            username: user.fullName.firstName
+            username: user.fullName.firstName,
+            // This optional chaining (?.) safely handles non-supplier roles.
+            // If user.Supplier is null (for an Admin), isVerified becomes false.
+            isVerified: user.Supplier?.isVerified || false
         };
         const newAccessToken = generateAccessToken(newAccessTokenPayload);
 
