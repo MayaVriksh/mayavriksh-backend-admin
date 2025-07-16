@@ -120,6 +120,7 @@ http://localhost:5500/mayavriksh-docs
 | `npm start`      | Starts server using Node                           |
 | `npm run format` | Formats code using Prettier                        |
 | `npm run prisma` | Shortcut to Prisma CLI                             |
+| `npx prisma migrate dev` | Run after making schema changes(Delete "generated" folder before-hand)                            |
 
 ---
 
