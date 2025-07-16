@@ -113,14 +113,14 @@ http://localhost:5500/mayavriksh-docs
 
 ## 🧪 Available Scripts
 
-| Command          | Description                                        |
-| ---------------- | -------------------------------------------------- |
-| `npm install`    | Installs all dependencies & runs `prisma generate` |
-| `npm run dev`    | Starts server using `nodemon`                      |
-| `npm start`      | Starts server using Node                           |
-| `npm run format` | Formats code using Prettier                        |
-| `npm run prisma` | Shortcut to Prisma CLI                             |
-| `npx prisma migrate dev` | Run after making schema changes(Delete "generated" folder before-hand)                            |
+| Command                  | Description                                                            |
+| ------------------------ | ---------------------------------------------------------------------- |
+| `npm install`            | Installs all dependencies & runs `prisma generate`                     |
+| `npm run dev`            | Starts server using `nodemon`                                          |
+| `npm start`              | Starts server using Node                                               |
+| `npm run format`         | Formats code using Prettier                                            |
+| `npm run prisma`         | Shortcut to Prisma CLI                                                 |
+| `npx prisma migrate dev` | Run after making schema changes(Delete "generated" folder before-hand) |
 
 ---
 

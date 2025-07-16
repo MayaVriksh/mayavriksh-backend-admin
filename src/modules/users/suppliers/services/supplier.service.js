@@ -60,11 +60,13 @@ const showSupplierProfile = async userId => {
     };
 };
 
-const completeSupplierProfile = async (userId,
+const completeSupplierProfile = async (
+    userId,
     profileFields,
     tradeLicenseData,
     profileImageData,
-    nurseryMediaAssets) => {
+    nurseryMediaAssets
+) => {
     // --- MODIFIED: Destructure only the fields we receive from the controller ---
     const {
         nurseryName,
@@ -78,66 +80,69 @@ const completeSupplierProfile = async (userId,
         businessCategory,
         warehouseId
     } = profileFields;
-    return await prisma.$transaction(async (tx) => {
-        // --- REMOVED: Phone number validation ---
-        // This check is no longer needed here because the phone number was
-        // validated during the initial signup.
+    return await prisma.$transaction(
+        async tx => {
+            // --- REMOVED: Phone number validation ---
+            // This check is no longer needed here because the phone number was
+            // validated during the initial signup.
 
-        // This GSTIN check is still relevant and correct for this step.
-        if (gstin) {
-            const existingGSTIN = await tx.supplier.findFirst({
-                where: { gstin, NOT: { userId } }
-            });
-            if (existingGSTIN) {
-                throw {
-                    success: RESPONSE_FLAGS.FAILURE,
-                    code: RESPONSE_CODES.CONFLICT, // Use 409 Conflict for duplicates
-                    message: ERROR_MESSAGES.SUPPLIERS.GSTIN_ALREADY_EXISTS
-                };
+            // This GSTIN check is still relevant and correct for this step.
+            if (gstin) {
+                const existingGSTIN = await tx.supplier.findFirst({
+                    where: { gstin, NOT: { userId } }
+                });
+                if (existingGSTIN) {
+                    throw {
+                        success: RESPONSE_FLAGS.FAILURE,
+                        code: RESPONSE_CODES.CONFLICT, // Use 409 Conflict for duplicates
+                        message: ERROR_MESSAGES.SUPPLIERS.GSTIN_ALREADY_EXISTS
+                    };
+                }
             }
-        }
-        // --- MODIFIED: Update the User's address JSON blob ---
-        // We are only updating the address here, not other User fields. Here 
-        await tx.user.update({
-            where: { 
-                userId,
-                isActive: true,
-                deletedAt: null},
-            data: {
-                address: {
-                    streetAddress,
-                    landmark,
-                    city,
-                    state,
-                    country,
-                    pinCode,
+            // --- MODIFIED: Update the User's address JSON blob ---
+            // We are only updating the address here, not other User fields. Here
+            await tx.user.update({
+                where: {
+                    userId,
+                    isActive: true,
+                    deletedAt: null
                 },
-                ...(profileImageData && {
+                data: {
+                    address: {
+                        streetAddress,
+                        landmark,
+                        city,
+                        state,
+                        country,
+                        pinCode
+                    },
+                    ...(profileImageData && {
                         profileImageUrl: profileImageData.mediaUrl,
                         publicId: profileImageData.publicId
                     })
-            }
-        });
+                }
+            });
 
-        // This update to the Supplier table is correct.
-        const supplierProfile = await tx.supplier.update({
-            where: { 
-                userId,
-                isVerified: false,
-                deletedAt: null },
-            data: {
-                nurseryName,
-                gstin,
-                businessCategory,
-                warehouseId,
-                tradeLicenseUrl: tradeLicenseData.mediaUrl,
-                publicId: tradeLicenseData.publicId,
-                status: "UNDER_REVIEW", // Set status for admin verification
-                isVerified: false       // Explicitly set to false until admin approval
-            }
-        });
+            // This update to the Supplier table is correct.
+            const supplierProfile = await tx.supplier.update({
+                where: {
+                    userId,
+                    isVerified: false,
+                    deletedAt: null
+                },
+                data: {
+                    nurseryName,
+                    gstin,
+                    businessCategory,
+                    warehouseId,
+                    tradeLicenseUrl: tradeLicenseData.mediaUrl,
+                    publicId: tradeLicenseData.publicId,
+                    status: "UNDER_REVIEW", // Set status for admin verification
+                    isVerified: false // Explicitly set to false until admin approval
+                }
+            });
 
-        if (
+            if (
                 Array.isArray(nurseryMediaAssets) &&
                 nurseryMediaAssets.length > 0
             ) {
@@ -177,7 +182,7 @@ const listAllWarehouses = async () => {
             name: true
         },
         orderBy: {
-            name: 'asc'
+            name: "asc"
         }
     });
 
@@ -193,15 +198,15 @@ const listAllWarehouses = async () => {
     };
 };
 
-const listOrderRequests = async ({ userId, page = 1, search = '' }) => {
+const listOrderRequests = async ({ userId, page = 1, search = "" }) => {
     const itemsPerPage = 8;
-     // --- STEP 1: Find the supplierId from the userId ---
+    // --- STEP 1: Find the supplierId from the userId ---
     // We first query the Supplier table to get the supplierId for the logged-in user.
     const supplier = await prisma.supplier.findUnique({
         where: { userId: userId },
         select: { supplierId: true }
     });
-    console.log("xx",supplier)
+    console.log("xx", supplier);
     // If no supplier profile exists for this user, they have no orders.
     if (!supplier) {
         return {
@@ -215,19 +220,19 @@ const listOrderRequests = async ({ userId, page = 1, search = '' }) => {
         supplierId: supplier.supplierId, // Assuming a relation from PurchaseOrder to Supplier
         // Add search filter if a search term is provided
         ...(search && {
-            id: { // Example: searching by product name
+            id: {
+                // Example: searching by product name
                 contains: search,
-                mode: 'insensitive'
+                mode: "insensitive"
             }
         })
     };
-    console.log("yy",whereClause)
+    console.log("yy", whereClause);
     // Fetch the total count for pagination
     const totalItems = await prisma.purchaseOrder.count({ where: whereClause });
-    console.log("Items" + totalItems)
+    console.log("Items" + totalItems);
     const totalPages = Math.ceil(totalItems / itemsPerPage);
-    console.log(totalPages)
-
+    console.log(totalPages);
 
     // Fetch the paginated data
     const orders = await prisma.purchaseOrder.findMany({
@@ -235,7 +240,7 @@ const listOrderRequests = async ({ userId, page = 1, search = '' }) => {
         skip: (page - 1) * itemsPerPage,
         take: itemsPerPage,
         orderBy: {
-            requestedAt: 'desc'
+            requestedAt: "desc"
         },
         // The 'include' block is now corrected to match your schema.
         include: {
@@ -248,24 +253,23 @@ const listOrderRequests = async ({ userId, page = 1, search = '' }) => {
                     productType: true,
                     unitsRequested: true,
                     unitCostPrice: true,
-                    
+
                     // Data from related models needed for display
                     plant: { select: { name: true } },
                     plantVariant: { select: { plantSize: true } },
                     potCategory: { select: { name: true } },
-                    potVariant: { select: { potName: true, size: true } },
+                    potVariant: { select: { potName: true, size: true } }
                 }
             }
         }
     });
     console.log(orders);
-orders.forEach(order => {
+    orders.forEach(order => {
+        // Use JSON.stringify with a spacing of 2 for pretty-printing.
+        console.log(JSON.stringify(order.PurchaseOrderItems, null, 2));
 
-    // Use JSON.stringify with a spacing of 2 for pretty-printing.
-    console.log(JSON.stringify(order.PurchaseOrderItems, null, 2));
-
-    console.log(`------------------------------------`);
-});
+        console.log(`------------------------------------`);
+    });
     return {
         success: true,
         code: 200,
@@ -277,7 +281,6 @@ orders.forEach(order => {
         }
     };
 };
-
 
 const updateSupplierProfile = async (userId, updateData, profileImageUrl) => {
     return await prisma.$transaction(async tx => {

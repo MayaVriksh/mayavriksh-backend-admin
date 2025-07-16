@@ -139,8 +139,12 @@ const updateSupplierProfile = {
 const orderRequestValidation = {
     query: Joi.object({
         page: Joi.number().integer().min(1).default(1),
-        search: Joi.string().allow('').optional()
+        search: Joi.string().allow("").optional()
     })
 };
 
-module.exports = { completeSupplierProfile, updateSupplierProfile, orderRequestValidation };
+module.exports = {
+    completeSupplierProfile,
+    updateSupplierProfile,
+    orderRequestValidation
+};

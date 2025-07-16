@@ -39,29 +39,33 @@ const completeSupplierProfile = async (req, h) => {
     try {
         // const { userId } = req.auth;
         const { userId } = req.pre.credentials;
-        const { tradeLicenseImage, nurseryImages, profileImage, ...profileFields } =
-            req.payload;
+        const {
+            tradeLicenseImage,
+            nurseryImages,
+            profileImage,
+            ...profileFields
+        } = req.payload;
 
         console.log("Received payload fields:", {
             tradeLicenseImageType: typeof tradeLicenseImage,
             tradeLicenseHeaders: tradeLicenseImage?.hapi?.headers,
             profilePhotoType: typeof profileImage,
-            profilePhotoHeaders: profileImage?.hapi?.headers, 
+            profilePhotoHeaders: profileImage?.hapi?.headers,
             nurseryImagesType: typeof nurseryImages,
             nurseryImagesLength: nurseryImages?.length
         });
         const {
-        nurseryName,
-        streetAddress,
-        landmark,
-        city,
-        state,
-        country,
-        pinCode,
-        gstin,
-        businessCategory,
-        warehouseId,
-    } = profileFields;
+            nurseryName,
+            streetAddress,
+            landmark,
+            city,
+            state,
+            country,
+            pinCode,
+            gstin,
+            businessCategory,
+            warehouseId
+        } = profileFields;
         const requiredKeys = [
             "nurseryName",
             "streetAddress",
@@ -101,7 +105,7 @@ const completeSupplierProfile = async (req, h) => {
                 .takeover();
         }
 
-       // Trade License Upload
+        // Trade License Upload
         const licenseUpload = await uploadMedia({
             files: tradeLicenseImage,
             folder: "suppliers/trade_licenses",
@@ -202,17 +206,19 @@ const listWarehouses = async (req, h) => {
         return h.response(result).code(result.code);
     } catch (error) {
         console.error("List Warehouses Error:", error);
-        return h.response({
-            success: false,
-            message: error.message || "Failed to retrieve warehouses."
-        }).code(error.code || 500);
+        return h
+            .response({
+                success: false,
+                message: error.message || "Failed to retrieve warehouses."
+            })
+            .code(error.code || 500);
     }
 };
 const listOrderRequests = async (req, h) => {
     try {
         const { userId } = req.pre.credentials;
         // Get pagination and search terms from the URL query string
-        const { page = 1, search = '' } = req.query;
+        const { page = 1, search = "" } = req.query;
 
         const result = await SupplierService.listOrderRequests({
             userId,
@@ -221,21 +227,22 @@ const listOrderRequests = async (req, h) => {
         });
         return h.response(result).code(result.code);
     } catch (error) {
-         // --- THIS IS THE FIX ---
+        // --- THIS IS THE FIX ---
         // The catch block must also explicitly return a Hapi response.
         console.error("Error in listOrderRequests controller:", error.message);
 
-        return h.response({
-            success: false,
-            message: "An error occurred while fetching order requests.",
-            error: error.message // It's helpful to include the original error message for debugging
-        })
-        .code(500) // Send a 500 Internal Server Error status
-        .takeover(); // Tell Hapi to stop processing and send this response immediately
+        return h
+            .response({
+                success: false,
+                message: "An error occurred while fetching order requests.",
+                error: error.message // It's helpful to include the original error message for debugging
+            })
+            .code(500) // Send a 500 Internal Server Error status
+            .takeover(); // Tell Hapi to stop processing and send this response immediately
     }
 };
 
-module.exports = { listOrderRequests, /* ... your other controller exports */ };
+module.exports = { listOrderRequests /* ... your other controller exports */ };
 
 const updateSupplierProfile = async (req, h) => {
     try {

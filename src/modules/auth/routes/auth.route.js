@@ -5,7 +5,8 @@ const {
 } = require("../../../constants/responseCodes.constant");
 const { ROLES } = require("../../../constants/roles.constant");
 const {
-    verifyAccessTokenMiddleware, requireRole
+    verifyAccessTokenMiddleware,
+    requireRole
 } = require("../../../middlewares/authenticate.middleware");
 const AuthController = require("../controllers/auth.controller");
 const AuthValidator = require("../validations/auth.validator");
@@ -111,7 +112,8 @@ module.exports = [
         path: "/auth/refresh-token",
         options: {
             tags: ["api", "Auth"],
-            description: "Obtain a new access token using the refresh token cookie.",
+            description:
+                "Obtain a new access token using the refresh token cookie.",
             notes: "This endpoint does not require an Authorization header. It relies on the 'mv_refresh_token' HttpOnly cookie that was set during login. The browser will send this cookie automatically.",
             handler: AuthController.refreshToken,
             validate: {
@@ -181,11 +183,13 @@ module.exports = [
             handler: (req, h) => {
                 // The user data is now available from the middleware without a DB call
                 const userCredentials = req.pre.credentials;
-                return h.response({
-                    success: RESPONSE_FLAGS.SUCCESS,
-                    message: "User profile verified successfully 🌿",
-                    data: { user: userCredentials }
-                }).code(RESPONSE_CODES.SUCCESS);
+                return h
+                    .response({
+                        success: RESPONSE_FLAGS.SUCCESS,
+                        message: "User profile verified successfully 🌿",
+                        data: { user: userCredentials }
+                    })
+                    .code(RESPONSE_CODES.SUCCESS);
             },
             plugins: {
                 "hapi-swagger": {
@@ -212,13 +216,14 @@ module.exports = [
         path: "/auth/deactivate-profile",
         options: {
             tags: ["api", "Auth"],
-            description: "Deactivate the currently authenticated user's profile.",
+            description:
+                "Deactivate the currently authenticated user's profile.",
             notes: "This action will also clear the user's refresh token, effectively logging them out.",
             // <-- MODIFIED: Switched from the old `authenticate` to the new `verifyAccessTokenMiddleware`.
             // This makes the initial check fast and stateless.
             pre: [verifyAccessTokenMiddleware],
             // Your controller will need a minor update to get the userId from `req.pre.credentials.userId`.
-            handler: AuthController.deactivateUser, 
+            handler: AuthController.deactivateUser,
             validate: {
                 // You might not even need validation here if there's no payload.
                 // If there is (e.g., password confirmation), it would go here.
@@ -259,19 +264,20 @@ module.exports = [
         path: "/auth/reactivate-profile",
         options: {
             tags: ["api", "Auth"], // Matched tag
-            description: "Re-activate the currently authenticated user's profile.", // Matched description style
+            description:
+                "Re-activate the currently authenticated user's profile.", // Matched description style
             notes: "This action sets the user's 'isActive' flag to true and clears the 'deletedAt' timestamp.", // Matched notes style
-            
+
             // Using the same fast middleware, as this is a protected action.
-             pre: [
+            pre: [
                 verifyAccessTokenMiddleware,
                 requireRole(ROLES.SUPER_ADMIN) // Or ROLES.SUPER_ADMIN
             ],
-            
+
             // This now points to a new controller function you will need to create.
             // The handler will get the userId from `req.pre.credentials.userId`.
-            handler: AuthController.reactivateUser, 
-            
+            handler: AuthController.reactivateUser,
+
             validate: {
                 // This route does not require a payload, similar to the deactivate route.
                 // The standard failAction is kept for consistency.
@@ -299,10 +305,12 @@ module.exports = [
                             description: "Profile reactivated successfully"
                         },
                         400: {
-                            description: "Bad Request (e.g., profile is already active)"
+                            description:
+                                "Bad Request (e.g., profile is already active)"
                         },
                         401: {
-                            description: "Unauthorized (invalid or expired token)"
+                            description:
+                                "Unauthorized (invalid or expired token)"
                         },
                         500: {
                             description: "Internal server error"
@@ -352,7 +360,10 @@ module.exports = [
                         400: {
                             description: "Validation or logical error"
                         },
-                        403: { description: "Forbidden (e.g., old password incorrect)" },
+                        403: {
+                            description:
+                                "Forbidden (e.g., old password incorrect)"
+                        },
                         500: { description: "Server error" }
                     }
                 }

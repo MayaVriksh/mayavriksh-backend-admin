@@ -15,7 +15,7 @@ const createServer = async () => {
         routes: {
             cors: {
                 // origin: process.env.NODE_ENV === "production" ? ["https://your-frontend-domain.com"] : ["http://localhost:5000", "http://localhost:5500"],
-                origin : ["*"],
+                origin: ["*"],
                 headers: ["Authorization", "Content-Type", "If-None-Match"],
                 exposedHeaders: ["WWW-Authenticate", "Server-Authorization"],
                 additionalExposedHeaders: ["X-Custom-Header"],
@@ -29,7 +29,7 @@ const createServer = async () => {
         }
     });
 
-// --- REWRITTEN & SECURED COOKIE CONFIGURATION ---
+    // --- REWRITTEN & SECURED COOKIE CONFIGURATION ---
     // This cookie is ONLY for the long-lived Refresh Token.
     server.state("mv_refresh_token", {
         ttl: 7 * 24 * 60 * 60 * 1000, // 7 days, matches refresh token expiry

@@ -54,8 +54,9 @@ const signup = async (req, h) => {
 const signin = async (req, h) => {
     try {
         const { email, password } = req.payload;
-        const { userProfile, accessToken, refreshToken } = await AuthService.login(email, password);
-        console.log("signin: ", userProfile, accessToken, refreshToken );
+        const { userProfile, accessToken, refreshToken } =
+            await AuthService.login(email, password);
+        console.log("signin: ", userProfile, accessToken, refreshToken);
         // The secure Refresh Token is set in the HttpOnly cookie
         // The short-lived Access Token is sent in the response body for the client to use
         return h
@@ -69,7 +70,6 @@ const signin = async (req, h) => {
             })
             .state("mv_refresh_token", refreshToken)
             .code(RESPONSE_CODES.SUCCESS);
-
     } catch (error) {
         console.error("Signin Error:", error);
 
@@ -98,39 +98,46 @@ const refreshToken = async (req, h) => {
     try {
         const incomingRefreshToken = req.state.mv_refresh_token;
         if (!incomingRefreshToken) {
-             return h.response({ error: "Refresh token not found." }).code(401);
+            return h.response({ error: "Refresh token not found." }).code(401);
         }
-        
-    console.log(incomingRefreshToken)
+
+        console.log(incomingRefreshToken);
         // This service function will verify the refresh token and issue a new access token
-        const { newAccessToken } = await AuthService.refreshUserToken(incomingRefreshToken);
+        const { newAccessToken } =
+            await AuthService.refreshUserToken(incomingRefreshToken);
 
-        return h.response({
-            success: RESPONSE_FLAGS.SUCCESS,
-            accessToken: newAccessToken
-        }).code(RESPONSE_CODES.SUCCESS);
-
+        return h
+            .response({
+                success: RESPONSE_FLAGS.SUCCESS,
+                accessToken: newAccessToken
+            })
+            .code(RESPONSE_CODES.SUCCESS);
     } catch (error) {
-         console.error("Refresh Token Error:", error);
-         // Important: clear the invalid cookie on failure
-         return h.response({ error: "Invalid refresh token." }).code(403).unstate("mv_refresh_token");
+        console.error("Refresh Token Error:", error);
+        // Important: clear the invalid cookie on failure
+        return h
+            .response({ error: "Invalid refresh token." })
+            .code(403)
+            .unstate("mv_refresh_token");
     }
 };
 
 const logout = async (_, h) => {
     try {
-        return h
-            .response({
-                success: true,
-                message: SUCCESS_MESSAGES.AUTH.LOGOUT_SUCCESS
-            })
-            .unstate("mv_refresh_token", {
-                path: "/"
-            })
-            // .unstate("mv_user_token", {
-            //     path: "/"
-            // })
-            .code(RESPONSE_CODES.SUCCESS);
+        return (
+            h
+                .response({
+                    success: true,
+                    message: SUCCESS_MESSAGES.AUTH.LOGOUT_SUCCESS
+                })
+                .unstate("mv_refresh_token", {
+                    path: "/"
+                })
+                // .unstate("mv_user_token", {
+                //     path: "/"
+                // })
+                .code(RESPONSE_CODES.SUCCESS)
+        );
     } catch (error) {
         console.error("Logout error:", error);
         return h
@@ -170,9 +177,9 @@ const verifyUser = async (req, h) => {
 const deactivateUser = async (req, h) => {
     try {
         // const userId = req.auth.userId;
-        
+
         // Get the userId directly from the verified token's payload.
-        const { userId } = req.pre.credentials; 
+        const { userId } = req.pre.credentials;
         await AuthService.deactivateUser(userId);
 
         return h
@@ -182,7 +189,6 @@ const deactivateUser = async (req, h) => {
             })
             .code(RESPONSE_CODES.SUCCESS)
             .unstate("mv_refresh_token");
-            
     } catch (error) {
         console.error("Deactivate Profile Error:", error);
 
@@ -204,20 +210,24 @@ const reactivateUser = async (req, h) => {
     try {
         // The userId to reactivate comes from the URL parameters.
         const { userId } = req.params;
-        console.log(userId)
+        console.log(userId);
         await AuthService.reactivateUserProfile(userId);
 
-        return h.response({
-            success: RESPONSE_FLAGS.SUCCESS,
-            message: SUCCESS_MESSAGES.USERS.PROFILE_ACTIVATED
-        }).code(RESPONSE_CODES.SUCCESS);
-
+        return h
+            .response({
+                success: RESPONSE_FLAGS.SUCCESS,
+                message: SUCCESS_MESSAGES.USERS.PROFILE_ACTIVATED
+            })
+            .code(RESPONSE_CODES.SUCCESS);
     } catch (error) {
         console.error("Admin Reactivate User Error:", error);
-        return h.response({
-            success: RESPONSE_FLAGS.FAILURE,
-            message: error.message || ERROR_MESSAGES.COMMON.INTERNAL_SERVER_ERROR
-        }).code(RESPONSE_CODES.INTERNAL_SERVER_ERROR);
+        return h
+            .response({
+                success: RESPONSE_FLAGS.FAILURE,
+                message:
+                    error.message || ERROR_MESSAGES.COMMON.INTERNAL_SERVER_ERROR
+            })
+            .code(RESPONSE_CODES.INTERNAL_SERVER_ERROR);
     }
 };
 

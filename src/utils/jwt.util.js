@@ -40,9 +40,13 @@ const verifyAccessToken = token => {
  */
 const verifyRefreshToken = token => {
     const dd = jwt.verify(token, REFRESH_TOKEN_SECRET);
-    console.log("xx2",dd)
+    console.log("xx2", dd);
     return dd;
 };
 
-
-module.exports = { generateAccessToken, generateRefreshToken, verifyAccessToken, verifyRefreshToken };
+module.exports = {
+    generateAccessToken,
+    generateRefreshToken,
+    verifyAccessToken,
+    verifyRefreshToken
+};
