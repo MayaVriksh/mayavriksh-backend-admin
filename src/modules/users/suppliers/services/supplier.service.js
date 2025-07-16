@@ -217,12 +217,14 @@ const listOrderRequests = async ({ userId, page = 1, search = '' }) => {
             }
         })
     };
-console.log("yy",whereClause)
+    console.log("yy",whereClause)
     // Fetch the total count for pagination
     const totalItems = await prisma.purchaseOrder.count({ where: whereClause });
     console.log("Items" + totalItems)
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     console.log(totalPages)
+
+
     // Fetch the paginated data
     const orders = await prisma.purchaseOrder.findMany({
         where: whereClause,
@@ -235,8 +237,15 @@ console.log("yy",whereClause)
         include: {
             // For each PurchaseOrder, include its list of items.
             PurchaseOrderItems: {
-                // For each item in the list, include the linked product's details.
-                include: {
+                // We use 'select' here to pick fields from the PurchaseOrderItems model itself,
+                // AND to include data from further related tables.
+                select: {
+                    // Fields from the PurchaseOrderItems model
+                    productType: true,
+                    unitsRequested: true,
+                    unitCostPrice: true,
+                    
+                    // Data from related models needed for display
                     plant: { select: { name: true } },
                     plantVariant: { select: { plantSize: true } },
                     potCategory: { select: { name: true } },
@@ -245,7 +254,14 @@ console.log("yy",whereClause)
             }
         }
     });
-console.log("zz",orders)
+    console.log(orders);
+orders.forEach(order => {
+
+    // Use JSON.stringify with a spacing of 2 for pretty-printing.
+    console.log(JSON.stringify(order.PurchaseOrderItems, null, 2));
+
+    console.log(`------------------------------------`);
+});
     return {
         success: true,
         code: 200,

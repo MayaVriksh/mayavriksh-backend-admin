@@ -1767,26 +1767,6 @@ model PotRestockEventLog {
 // }
 
 // This are the CART Items of the Purchased Orders
-model PurchaseOrderItems {
-  id              String   @id
-  purchaseOrderId String
-  productType     String // Plant || Pot
-  plantId         String?
-  plantVariantId  String?
-  potCategoryId   String?
-  potVariantId    String?
-  unitsRequested  Int
-  unitCostPrice   Decimal?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  purchaseOrder PurchaseOrder  @relation(name: "PurchaseOrderToPurchaseOrderItem", fields: [purchaseOrderId], references: [id])
-  plant         Plants?        @relation(name: "PlantToPurchaseOrder", fields: [plantId], references: [plantId])
-  plantVariant  PlantVariants? @relation(name: "PlantVariantToPurchaseOrder", fields: [plantVariantId], references: [variantId])
-  potCategory   PotCategory?   @relation(name: "PotCategoryToPurchaseOrder", fields: [potCategoryId], references: [categoryId])
-  potVariant    PotVariants?   @relation(name: "PotVariantToPurchaseOrder", fields: [potVariantId], references: [potVariantId])
-}
 
 model WarehouseCartItem {
   cartItemId     String  @id
@@ -1814,6 +1794,29 @@ model WarehouseCartItem {
   @@unique([warehouseId, potCategoryId, potVariantId])
 }
 
+model PurchaseOrderItems {
+  id              String   @id
+  purchaseOrderId String
+  productType     String // Plant || Pot
+  plantId         String?
+  plantVariantId  String?
+  potCategoryId   String?
+  potVariantId    String?
+  unitsRequested  Int
+  unitCostPrice   Decimal?
+  totalCost       Decimal? // Needed for Plant Inventory, to update total CP
+  isAccepted      Boolean  @default(false) // Items whose isAccepted isFalse, their total cost will not be fetched from UI and stored in DB, only true ones are added & stored
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchaseOrder PurchaseOrder  @relation(name: "PurchaseOrderToPurchaseOrderItem", fields: [purchaseOrderId], references: [id])
+  plant         Plants?        @relation(name: "PlantToPurchaseOrder", fields: [plantId], references: [plantId])
+  plantVariant  PlantVariants? @relation(name: "PlantVariantToPurchaseOrder", fields: [plantVariantId], references: [variantId])
+  potCategory   PotCategory?   @relation(name: "PotCategoryToPurchaseOrder", fields: [potCategoryId], references: [categoryId])
+  potVariant    PotVariants?   @relation(name: "PotVariantToPurchaseOrder", fields: [potVariantId], references: [potVariantId])
+}
+
+
 model PurchaseOrder {
   id          String @id
   warehouseId String
@@ -1821,7 +1824,8 @@ model PurchaseOrder {
 
   deliveryCharges   Decimal? // optional
   totalCost         Decimal? // units * negotiated price + delivery charge
-  paymentPercentage Int      @default(0)
+  pendingAmount    Decimal?
+  paymentPercentage  Int      @default(0)
   status            String   @default("PENDING")
   isAccepted        Boolean  @default(false)
   invoiceUrl        String? // uploaded by warehouse manager only
@@ -1843,7 +1847,9 @@ model PurchaseOrder {
   plantRestockEvents PlantRestockEventLog[] @relation(name: "PlantRestockToRequest")
   potRestockEvents   PotRestockEventLog[]   @relation(name: "PotRestockToRequest")
 }
-
+/**
+PurchaseOrder -> PurchaseOrderPayment : 1 -> Many
+*/
 model PurchaseOrderPayment {
   paymentId String  @id
   orderId   String

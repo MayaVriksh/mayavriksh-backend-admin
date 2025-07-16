@@ -1,3 +1,5 @@
+const { handleValidationFailure } = require("../../../../utils/failActionValidation");
+
 const ERROR_MESSAGES = require("../../../../constants/errorMessages.constant");
 const {
     RESPONSE_CODES,
@@ -33,20 +35,7 @@ module.exports = [
             handler: SupplierController.completeSupplierProfile,
             validate: {
                 ...SupplierValidator.completeSupplierProfile,
-                failAction: (_, h, err) => {
-                    const customErrorMessages = err.details.map(
-                        detail => detail.message
-                    );
-                    console.log("Validation Error: ", customErrorMessages);
-                    return h
-                        .response({
-                            success: RESPONSE_FLAGS.FAILURE,
-                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
-                            message: customErrorMessages
-                        })
-                        .code(RESPONSE_CODES.BAD_REQUEST)
-                        .takeover();
-                }
+                failAction: handleValidationFailure
             },
             payload: {
                 parse: true,
@@ -78,12 +67,10 @@ module.exports = [
             tags: ["api", "Supplier", "Warehouse"],
             description: "Get a list of all active warehouses for dropdowns.",
             notes: "Accessible by Suppliers (for profile completion) and Admins.",
-            
-            // --- SECURITY LAYER ---
             // This now uses our upgraded middleware to allow multiple roles.
             pre: [
                 verifyAccessTokenMiddleware,
-                requireRole([ROLES.SUPPLIER, ROLES.ADMIN, ROLES.SUPER_ADMIN])
+                requireRole([ROLES.SUPPLIER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) // Just for example this roles are used. In Supplier Route folder, admin will not be used.
             ],
 
             // --- CONTROLLER HANDLER ---
@@ -112,20 +99,7 @@ module.exports = [
             handler: SupplierController.updateSupplierProfile,
             validate: {
                 ...SupplierValidator.updateSupplierProfile,
-                failAction: (_, h, err) => {
-                    const customErrorMessages = err.details.map(
-                        detail => detail.message
-                    );
-                    console.log("Validation Error: ", customErrorMessages);
-                    return h
-                        .response({
-                            success: RESPONSE_FLAGS.FAILURE,
-                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
-                            message: customErrorMessages
-                        })
-                        .code(RESPONSE_CODES.BAD_REQUEST)
-                        .takeover();
-                }
+                failAction: handleValidationFailure
             },
             payload: {
                 parse: true,
@@ -159,20 +133,7 @@ module.exports = [
             ],
             validate: {
                 ...SupplierValidator.orderRequestValidation,
-                failAction: (_, h, err) => {
-                    const customErrorMessages = err.details.map(
-                        detail => detail.message
-                    );
-                    console.log("Validation Error: ", customErrorMessages);
-                    return h
-                        .response({
-                            success: RESPONSE_FLAGS.FAILURE,
-                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
-                            message: customErrorMessages
-                        })
-                        .code(RESPONSE_CODES.BAD_REQUEST)
-                        .takeover();
-                }
+                failAction: handleValidationFailure
             },
             handler: SupplierController.listOrderRequests,
         }
