@@ -1733,30 +1733,6 @@ model PotRestockEventLog {
   purchaseOrder PurchaseOrder @relation(name: "PotRestockToRequest", fields: [purchaseOrderId], references: [id])
 }
 
-model PurchaseOrderItems {
-  id              String  @id
-  purchaseOrderId String
-  productType     String // Plant || Pot
-  plantId         String?
-  plantVariantId  String?
-  potCategoryId   String?
-  potVariantId    String?
-
-  unitsRequested Int
-  unitCostPrice  Decimal?
-  totalCost      Decimal? // Needed for Plant Inventory to update the total cost price (CP)
-  isAccepted     Boolean  @default(false) // Only items with isAccepted set to true will have their total cost fetched from the UI and stored in the DB
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  purchaseOrder PurchaseOrder  @relation(name: "PurchaseOrderToPurchaseOrderItem", fields: [purchaseOrderId], references: [id])
-  plant         Plants?        @relation(name: "PlantToPurchaseOrder", fields: [plantId], references: [plantId])
-  plantVariant  PlantVariants? @relation(name: "PlantVariantToPurchaseOrder", fields: [plantVariantId], references: [variantId])
-  potCategory   PotCategory?   @relation(name: "PotCategoryToPurchaseOrder", fields: [potCategoryId], references: [categoryId])
-  potVariant    PotVariants?   @relation(name: "PotVariantToPurchaseOrder", fields: [potVariantId], references: [potVariantId])
-}
-
 // These are the CART items of the purchased orders
 model WarehouseCartItem {
   cartItemId     String  @id
@@ -1813,6 +1789,30 @@ model PurchaseOrder {
   PurchaseOrderItems PurchaseOrderItems[]   @relation(name: "PurchaseOrderToPurchaseOrderItem")
   plantRestockEvents PlantRestockEventLog[] @relation(name: "PlantRestockToRequest")
   potRestockEvents   PotRestockEventLog[]   @relation(name: "PotRestockToRequest")
+}
+
+model PurchaseOrderItems {
+  id              String  @id
+  purchaseOrderId String
+  productType     String // Plant || Pot
+  plantId         String?
+  plantVariantId  String?
+  potCategoryId   String?
+  potVariantId    String?
+
+  unitsRequested Int
+  unitCostPrice  Decimal?
+  totalCost      Decimal? // Needed for Plant Inventory to update the total cost price (CP)
+  isAccepted     Boolean  @default(false) // Only items with isAccepted set to true will have their total cost fetched from the UI and stored in the DB
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  purchaseOrder PurchaseOrder  @relation(name: "PurchaseOrderToPurchaseOrderItem", fields: [purchaseOrderId], references: [id])
+  plant         Plants?        @relation(name: "PlantToPurchaseOrder", fields: [plantId], references: [plantId])
+  plantVariant  PlantVariants? @relation(name: "PlantVariantToPurchaseOrder", fields: [plantVariantId], references: [variantId])
+  potCategory   PotCategory?   @relation(name: "PotCategoryToPurchaseOrder", fields: [potCategoryId], references: [categoryId])
+  potVariant    PotVariants?   @relation(name: "PotVariantToPurchaseOrder", fields: [potVariantId], references: [potVariantId])
 }
 
 model PurchaseOrderPayment {
