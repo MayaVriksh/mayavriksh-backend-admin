@@ -95,7 +95,7 @@ const completeSupplierProfile = async (userId,
                     message: ERROR_MESSAGES.SUPPLIERS.GSTIN_ALREADY_EXISTS
                 };
             }
-
+        }
         // --- MODIFIED: Update the User's address JSON blob ---
         // We are only updating the address here, not other User fields. Here 
         await tx.user.update({
