@@ -1,3 +1,5 @@
+const { handleValidationFailure } = require("../../../../utils/failActionValidation");
+
 const ERROR_MESSAGES = require("../../../../constants/errorMessages.constant");
 const {
     RESPONSE_CODES,
@@ -5,9 +7,8 @@ const {
 } = require("../../../../constants/responseCodes.constant");
 const SupplierController = require("../controllers/supplier.profile.controller");
 const SupplierValidator = require("../validations/supplierProfile.validations");
-const {
-    authenticate
-} = require("../../../../middlewares/authenticate.middleware");
+const { verifyAccessTokenMiddleware, requireRole } = require("../../../../middlewares/authenticate.middleware");
+const { ROLES } = require("../../../../constants/roles.constant");
 
 module.exports = [
     // Supplier: Fetch Profile
@@ -16,7 +17,7 @@ module.exports = [
         path: "/supplier/my-profile",
         options: {
             tags: ["api", "Supplier"],
-            pre: [authenticate],
+            pre: [verifyAccessTokenMiddleware, requireRole(ROLES.SUPPLIER)],
             handler: SupplierController.showSupplierProfile,
             description: "Get supplier profile details"
         }
@@ -30,24 +31,11 @@ module.exports = [
             tags: ["api", "Supplier"],
             description: "Complete Supplier Profile",
             notes: "Allows a newly registered supplier to complete their profile with address, GSTIN, documents, etc.",
+            pre: [verifyAccessTokenMiddleware, requireRole(ROLES.SUPPLIER)],
             handler: SupplierController.completeSupplierProfile,
-            pre: [authenticate],
             validate: {
                 ...SupplierValidator.completeSupplierProfile,
-                failAction: (_, h, err) => {
-                    const customErrorMessages = err.details.map(
-                        detail => detail.message
-                    );
-                    console.log("Validation Error: ", customErrorMessages);
-                    return h
-                        .response({
-                            success: RESPONSE_FLAGS.FAILURE,
-                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
-                            message: customErrorMessages
-                        })
-                        .code(RESPONSE_CODES.BAD_REQUEST)
-                        .takeover();
-                }
+                failAction: handleValidationFailure
             },
             payload: {
                 parse: true,
@@ -70,6 +58,35 @@ module.exports = [
         }
     },
 
+    // --- NEW WAREHOUSE LISTING ROUTE ---
+    {
+        method: "GET",
+        // Using a general path as warehouses can be considered a shared resource.
+        path: "/warehouses", 
+        options: {
+            tags: ["api", "Supplier", "Warehouse"],
+            description: "Get a list of all active warehouses for dropdowns.",
+            notes: "Accessible by Suppliers (for profile completion) and Admins.",
+            // This now uses our upgraded middleware to allow multiple roles.
+            pre: [
+                verifyAccessTokenMiddleware,
+                requireRole([ROLES.SUPPLIER, ROLES.ADMIN, ROLES.SUPER_ADMIN]) // Just for example this roles are used. In Supplier Route folder, admin will not be used.
+            ],
+
+            // --- CONTROLLER HANDLER ---
+            handler: SupplierController.listWarehouses,
+
+            plugins: {
+                "hapi-swagger": {
+                    responses: {
+                        200: { description: "List of warehouses retrieved successfully." },
+                        401: { description: "Unauthorized." },
+                        403: { description: "Forbidden (user role not permitted)." }
+                    }
+                }
+            }
+        }
+    },
     // Supplier: Update Profile
     {
         method: "PUT",
@@ -78,24 +95,11 @@ module.exports = [
             tags: ["api", "Supplier"],
             description: "Update Supplier Profile",
             notes: "Allows a supplier to update their profile partially including media uploads",
+            pre: [verifyAccessTokenMiddleware, requireRole(ROLES.SUPPLIER)],
             handler: SupplierController.updateSupplierProfile,
-            pre: [authenticate],
             validate: {
                 ...SupplierValidator.updateSupplierProfile,
-                failAction: (_, h, err) => {
-                    const customErrorMessages = err.details.map(
-                        detail => detail.message
-                    );
-                    console.log("Validation Error: ", customErrorMessages);
-                    return h
-                        .response({
-                            success: RESPONSE_FLAGS.FAILURE,
-                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
-                            message: customErrorMessages
-                        })
-                        .code(RESPONSE_CODES.BAD_REQUEST)
-                        .takeover();
-                }
+                failAction: handleValidationFailure
             },
             payload: {
                 parse: true,
@@ -117,32 +121,21 @@ module.exports = [
         }
     },
 
-    // Supplier: Fetch Warehouses
     {
         method: "GET",
-        path: "/supplier/search-warehouses",
+        path: "/supplier/order-requests",
         options: {
             tags: ["api", "Supplier"],
-            pre: [authenticate],
-            handler: SupplierController.searchWarehouses,
-            description: "🔎 Search warehouses by name for supplier",
+            description: "Get a list of order requests for the authenticated supplier.",
+            pre: [
+                verifyAccessTokenMiddleware,
+                requireRole([ROLES.SUPPLIER])
+            ],
             validate: {
-                ...SupplierValidator.searchWarehouses,
-                failAction: (_, h, err) => {
-                    const customErrorMessages = err.details.map(
-                        detail => detail.message
-                    );
-                    console.log("Validation Error: ", customErrorMessages);
-                    return h
-                        .response({
-                            success: RESPONSE_FLAGS.FAILURE,
-                            error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
-                            message: customErrorMessages
-                        })
-                        .code(RESPONSE_CODES.BAD_REQUEST)
-                        .takeover();
-                }
-            }
+                ...SupplierValidator.orderRequestValidation,
+                failAction: handleValidationFailure
+            },
+            handler: SupplierController.listOrderRequests,
         }
     }
 ];

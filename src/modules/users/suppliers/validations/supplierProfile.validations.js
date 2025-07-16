@@ -38,12 +38,15 @@ const completeSupplierProfile = {
             "string.empty": "📮 Pincode is required.",
             "any.required": "📮 Pincode is required for precise location."
         }),
-        latitude: Joi.number().optional().messages({
-            "number.base": "🧭 Latitude must be a number."
-        }),
-        longitude: Joi.number().optional().messages({
-            "number.base": "🧭 Longitude must be a number."
-        }),
+        // latitude: Joi.number().required().messages({
+        //     "number.base": "🧭 Latitude must be a number.",
+        //     "any.required":
+        //         "🧭 Latitude is required to place your nursery on the map."
+        // }),
+        // longitude: Joi.number().required().messages({
+        //     "number.base": "🧭 Longitude must be a number.",
+        //     "any.required": "🧭 Longitude is required to locate your nursery."
+        // }),
         gstin: Joi.string()
             .pattern(
                 /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
@@ -99,7 +102,6 @@ const completeSupplierProfile = {
             })
     })
 };
-
 const updateSupplierProfile = {
     payload: Joi.object({
         email: Joi.string().email().optional().messages({
@@ -131,26 +133,14 @@ const updateSupplierProfile = {
             .description("Profile Image file to upload")
             .optional()
             .label("profile_image")
-    })
-        .min(1)
-        .messages({
-            "object.min":
-                "🌱 Please provide at least one field to update your profile."
-        })
+    }).min(1)
 };
 
-const searchWarehouses = {
+const orderRequestValidation = {
     query: Joi.object({
-        search: Joi.string().trim().min(1).required().messages({
-            "string.base": "🌿 Search input must be a string.",
-            "string.empty": "🌿 Search input cannot be empty.",
-            "any.required": "🌿 Please type something to search warehouses."
-        })
+        page: Joi.number().integer().min(1).default(1),
+        search: Joi.string().allow('').optional()
     })
 };
 
-module.exports = {
-    completeSupplierProfile,
-    updateSupplierProfile,
-    searchWarehouses
-};
+module.exports = { completeSupplierProfile, updateSupplierProfile, orderRequestValidation };
