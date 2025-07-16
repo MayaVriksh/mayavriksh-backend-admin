@@ -11,7 +11,7 @@ const { verifyAccessTokenMiddleware, requireRole } = require("../../../../middle
 const { ROLES } = require("../../../../constants/roles.constant");
 
 module.exports = [
-    // Supplier: Complete Profile
+    // Supplier: Fetch Profile
     {
         method: "GET",
         path: "/supplier/my-profile",

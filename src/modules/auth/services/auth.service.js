@@ -2,7 +2,6 @@ const prisma = require("../../../config/prisma.config");
 const bcrypt = require("bcrypt");
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken} = require("../../../utils/jwt.util");
 const generateCustomId = require("../../../utils/generateCustomId");
-
 const { ROLES } = require("../../../constants/roles.constant");
 const ERROR_MESSAGES = require("../../../constants/errorMessages.constant");
 const {
@@ -12,15 +11,28 @@ const {
 const SUCCESS_MESSAGES = require("../../../constants/successMessages.constant.js");
 
 const register = async data => {
-    const { firstName, lastName, email, password, role } = data;
+    const { firstName, lastName, email, phoneNumber, password, role } = data;
 
     return await prisma.$transaction(async tx => {
-        const existingUser = await tx.user.findUnique({ where: { email } });
-        if (existingUser) {
+        const existingUserByEmail = await tx.user.findUnique({
+            where: { email }
+        });
+        if (existingUserByEmail) {
             throw {
                 success: RESPONSE_FLAGS.FAILURE,
                 code: RESPONSE_CODES.BAD_REQUEST,
                 message: ERROR_MESSAGES.AUTH.EMAIL_ALREADY_REGISTERED
+            };
+        }
+
+        const existingUserByPhone = await tx.user.findUnique({
+            where: { phoneNumber }
+        });
+        if (existingUserByPhone) {
+            throw {
+                success: RESPONSE_FLAGS.FAILURE,
+                code: RESPONSE_CODES.BAD_REQUEST,
+                message: ERROR_MESSAGES.AUTH.PHONE_ALREADY_EXISTS
             };
         }
 
@@ -29,7 +41,7 @@ const register = async data => {
             throw {
                 success: RESPONSE_FLAGS.FAILURE,
                 code: RESPONSE_CODES.INTERNAL_SERVER_ERROR,
-                message: ERROR_MESSAGES.COMMON.INTERNAL_SERVER_ERROR
+                message: ERROR_MESSAGES.ROLES_PERMISSIONS.ROLE_ASSIGN_FAILED
             };
         }
 
@@ -58,7 +70,7 @@ const register = async data => {
                 throw {
                     success: RESPONSE_FLAGS.FAILURE,
                     code: RESPONSE_CODES.BAD_REQUEST,
-                    message: ERROR_MESSAGES.AUTH.INVALID_ROLE
+                    message: ERROR_MESSAGES.AUTH.INVALID_REGISTRATION
                 };
         }
 
@@ -67,6 +79,7 @@ const register = async data => {
                 userId,
                 roleId: roleRecord.roleId,
                 email,
+                phoneNumber,
                 password: hashedPassword,
                 fullName: {
                     firstName,
@@ -144,7 +157,9 @@ const login = async (email, password) => {
         throw {
             success: RESPONSE_FLAGS.FAILURE,
             code: RESPONSE_CODES.UNAUTHORIZED,
-            message: ERROR_MESSAGES.AUTH.LOGIN_FAILED
+            message: email
+                ? ERROR_MESSAGES.AUTH.EMAIL_NOT_EXISTS
+                : ERROR_MESSAGES.AUTH.PHONE_NOT_EXISTS
         };
     }
 
@@ -161,7 +176,7 @@ const login = async (email, password) => {
         throw {
             success: RESPONSE_FLAGS.FAILURE,
             code: RESPONSE_CODES.UNAUTHORIZED,
-            message: ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS
+            message: ERROR_MESSAGES.AUTH.PASSWORD_WRONG
         };
     }
 

@@ -8,6 +8,12 @@ const ERROR_MESSAGES = {
             "A blooming email like this is already rooted here 🌼 Try using a different one.",
         PHONE_ALREADY_EXISTS:
             "This phone number is already sprouting in our system 🌾 Try another one to plant anew.",
+        EMAIL_NOT_EXISTS:
+            "We couldn’t find this email in our garden 🌱 Maybe try a different one or register anew.",
+        PHONE_NOT_EXISTS:
+            "This phone number hasn’t taken root here yet 🌿 Try checking again or sign up first.",
+        PASSWORD_WRONG:
+            "That password doesn’t seem to match the garden gate key 🌒 Give it another go.",
         INVALID_REGISTRATION:
             "Looks like something needs a little trimming ✂️ Please check and try again.",
         LOGIN_FAILED:

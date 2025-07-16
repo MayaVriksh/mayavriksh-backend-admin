@@ -104,18 +104,28 @@ const completeSupplierProfile = {
 };
 const updateSupplierProfile = {
     payload: Joi.object({
-        email: Joi.string().email().optional(),
+        email: Joi.string().email().optional().messages({
+            "string.email": "📩 Please provide a valid email address."
+        }),
         phoneNumber: Joi.string()
-            .pattern(/^\d{10}$/)
-            .optional(),
+            .pattern(/^[6-9]\d{9}$/)
+            .optional()
+            .messages({
+                "string.pattern.base":
+                    "📞 Phone number must be a valid 10-digit Indian number."
+            }),
         streetAddress: Joi.string().optional(),
         landmark: Joi.string().optional(),
         city: Joi.string().optional(),
         state: Joi.string().optional(),
         country: Joi.string().optional(),
         pinCode: Joi.string().optional(),
-        latitude: Joi.number().optional(),
-        longitude: Joi.number().optional(),
+        latitude: Joi.number().optional().messages({
+            "number.base": "🧭 Latitude must be a valid number."
+        }),
+        longitude: Joi.number().optional().messages({
+            "number.base": "🧭 Longitude must be a valid number."
+        }),
         businessCategory: Joi.string().optional(),
         warehouseId: Joi.string().optional(),
         profileImage: Joi.any()

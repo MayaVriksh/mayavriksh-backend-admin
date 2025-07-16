@@ -243,42 +243,35 @@ const updateSupplierProfile = async (req, h) => {
         const { userId } = req.pre.credentials;
         const { profileImage, ...updateData } = req.payload;
 
-        let profileImageUrl = null;
+        // console.log("Profile image: ", typeof profileImage);
+        // console.log("Profile image header: ", profileImage?.hapi?.headers);
 
-        // If profile image is uploaded
-        if (profileImage && profileImage._data) {
-            const profileImageMimeType =
-                profileImage.hapi.headers["content-type"];
-
-            const uploadResult = await uploadBufferToCloudinary(
-                profileImage._data,
-                "suppliers/profile_images",
-                "supplier_profile_img",
-                profileImageMimeType
-            );
-
-            if (!uploadResult.success) {
-                console.error(
-                    "Profile Image Upload Failed:",
-                    uploadResult.error
-                );
+        // Profile Image Upload
+        let profileUpload = null;
+        if (profileImage) {
+            profileUpload = await uploadMedia({
+                files: profileImage,
+                folder: "suppliers/profile_images",
+                publicIdPrefix: "profile"
+            });
+            if (!profileUpload.success) {
                 return h
                     .response({
-                        success: RESPONSE_FLAGS.FAILURE,
-                        message: ERROR_MESSAGES.CLOUDINARY.UPLOAD_FAILED
+                        success: false,
+                        message: profileUpload.message
                     })
                     .code(RESPONSE_CODES.BAD_REQUEST)
                     .takeover();
             }
-
-            profileImageUrl = uploadResult.url;
         }
+
+        // console.log("profileUpload: ", profileUpload);
 
         // update supplier profile
         const result = await SupplierService.updateSupplierProfile(
             userId,
             updateData,
-            profileImageUrl
+            profileUpload?.data
         );
 
         return h
@@ -305,6 +298,34 @@ const updateSupplierProfile = async (req, h) => {
                 message: ERROR_MESSAGES.SUPPLIERS.PROFILE_UPDATE_FAILED
             })
             .code(RESPONSE_CODES.INTERNAL_SERVER_ERROR);
+    }
+};
+
+const searchWarehouses = async (req, h) => {
+    try {
+        const { search } = req.query;
+
+        const result = await SupplierService.searchWarehousesByName(search);
+        // console.log("searchWarehouses: ", result);
+
+        return h
+            .response({
+                success: result.success,
+                message: result.message,
+                data: result.data
+            })
+            .code(result.code);
+    } catch (error) {
+        console.error("Warehouse Search Error:", error);
+
+        return h
+            .response({
+                success: error.success || RESPONSE_FLAGS.FAILURE,
+                message:
+                    error.message ||
+                    ERROR_MESSAGES.WAREHOUSES.WAREHOUSE_NOT_FOUND
+            })
+            .code(error.code || RESPONSE_CODES.INTERNAL_SERVER_ERROR);
     }
 };
 

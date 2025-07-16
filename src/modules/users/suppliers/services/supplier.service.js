@@ -95,7 +95,6 @@ const completeSupplierProfile = async (userId,
                     message: ERROR_MESSAGES.SUPPLIERS.GSTIN_ALREADY_EXISTS
                 };
             }
-        }
 
         // --- MODIFIED: Update the User's address JSON blob ---
         // We are only updating the address here, not other User fields. Here 
@@ -157,12 +156,17 @@ const completeSupplierProfile = async (userId,
                 });
             }
 
-        return {
-            success: RESPONSE_FLAGS.SUCCESS,
-            code: RESPONSE_CODES.SUCCESS,
-            message: SUCCESS_MESSAGES.SUPPLIERS.PROFILE_SUBMITTED_FOR_REVIEW
-        };
-    });
+            return {
+                success: RESPONSE_FLAGS.SUCCESS,
+                code: RESPONSE_CODES.SUCCESS,
+                message: SUCCESS_MESSAGES.SUPPLIERS.PROFILE_SUBMITTED_FOR_REVIEW
+            };
+        },
+        {
+            maxWait: 20000,
+            timeout: 30000
+        }
+    );
 };
 
 const listAllWarehouses = async () => {
@@ -357,7 +361,10 @@ const updateSupplierProfile = async (userId, updateData, profileImageUrl) => {
                         ...(longitude && { longitude })
                     }
                 }),
-                ...(profileImageUrl && { profileImageUrl })
+                ...(profileImageData && {
+                    profileImageUrl: profileImageData.mediaUrl,
+                    publicId: profileImageData.publicId
+                })
             }
         });
 
@@ -376,6 +383,45 @@ const updateSupplierProfile = async (userId, updateData, profileImageUrl) => {
             message: SUCCESS_MESSAGES.SUPPLIERS.PROFILE_UPDATED
         };
     });
+};
+
+const searchWarehousesByName = async search => {
+    const trimmedSearch = search?.trim();
+
+    if (!trimmedSearch || trimmedSearch.length < 1) {
+        throw {
+            success: RESPONSE_FLAGS.FAILURE,
+            code: RESPONSE_CODES.BAD_REQUEST,
+            message: ERROR_MESSAGES.WAREHOUSES.INVENTORY_FETCH_FAILED
+        };
+    }
+
+    const matchedWarehouses = await prisma.warehouse.findMany({
+        where: {
+            name: {
+                contains: trimmedSearch,
+                mode: "insensitive"
+            }
+        },
+        select: {
+            warehouseId: true,
+            name: true,
+            officeAddress: true
+        },
+        orderBy: {
+            name: "asc"
+        }
+    });
+
+    return {
+        success: RESPONSE_FLAGS.SUCCESS,
+        code: RESPONSE_CODES.SUCCESS,
+        message:
+            matchedWarehouses.length > 0
+                ? SUCCESS_MESSAGES.WAREHOUSES.MULTIPLE_WAREHOUSES_FETCHED
+                : ERROR_MESSAGES.WAREHOUSES.WAREHOUSE_NOT_FOUND,
+        data: matchedWarehouses
+    };
 };
 
 module.exports = {

@@ -29,7 +29,6 @@ const createServer = async () => {
         }
     });
 
-   
 // --- REWRITTEN & SECURED COOKIE CONFIGURATION ---
     // This cookie is ONLY for the long-lived Refresh Token.
     server.state("mv_refresh_token", {

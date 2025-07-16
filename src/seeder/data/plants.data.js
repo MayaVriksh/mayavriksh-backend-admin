@@ -1,5 +1,3 @@
-const { v4: uuidv4 } = require("uuid");
-
 module.exports = [
     {
         name: "Areca Palm",

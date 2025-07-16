@@ -2,7 +2,7 @@
 const FIRST_NAME = "FIRST_NAME";
 const LAST_NAME = "LAST_NAME";
 
-// Address Field Constants in ALL CAPS
+// Address Field Constants
 const STREET_ADDRESS = "STREET_ADDRESS";
 const LANDMARK = "LANDMARK";
 const CITY = "CITY";

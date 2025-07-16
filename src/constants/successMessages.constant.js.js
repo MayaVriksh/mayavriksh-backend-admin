@@ -94,6 +94,10 @@ const SUCCESS_MESSAGES = {
             "Stock replenished successfully 🌱 The shelves are green again!",
         INVENTORY_COUNTED: "Inventory check complete 🧮 Everything’s in order!",
         WAREHOUSE_ASSIGNED: "Warehouse assigned successfully 🌾",
+        WAREHOUSE_PROFILE_FETCHED:
+            "Warehouse profile fetched successfully 🏡 Blooming with details!",
+        MULTIPLE_WAREHOUSES_FETCHED:
+            "A garden of warehouses has been fetched successfully 🌾 Explore your blooming network!",
         WAREHOUSE_SYNCED:
             "Your warehouse data is now fresh as morning dew 🌿 All synced and sprouting!",
         LOW_STOCK_ALERT_HANDLED:

@@ -1,4 +1,5 @@
 const fs = require("fs").promises;
+const fssync = require("fs");
 const path = require("path");
 const mime = require("mime-types");
 const { uploadToCloudinary } = require("./cloudinaryUploader");
@@ -13,7 +14,13 @@ const saveTempFile = async (
 ) => {
     const extension = mime.extension(mimeType) || "bin";
     const fileName = `${prefix}_${Date.now()}.${extension}`;
-    const filePath = path.join(__dirname, `../../uploads/${fileName}`);
+    const uploadsDir = path.join(__dirname, "../../uploads");
+
+    // Check if 'uploads' folder exists, create if not
+    if (!fssync.existsSync(uploadsDir))
+        await fs.mkdir(uploadsDir, { recursive: true });
+
+    const filePath = path.join(uploadsDir, fileName);
     await fs.writeFile(filePath, buffer);
     return filePath;
 };
@@ -64,7 +71,7 @@ const uploadBufferToCloudinary = async (
 
         return {
             success: RESPONSE_FLAGS.FAILURE,
-            error: `${ERROR_MESSAGES.CLOUDINARY.UPLOAD_FAILED} (${err.message})`
+            error: `${ERROR_MESSAGES.CLOUDINARY.UPLOAD_FAILED} (${error.message})`
         };
     }
 };
