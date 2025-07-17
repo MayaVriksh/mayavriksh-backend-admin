@@ -5,7 +5,7 @@ const {
     RESPONSE_CODES,
     RESPONSE_FLAGS
 } = require("../../../../constants/responseCodes.constant");
-const SupplierController = require("../controllers/supplier.profile.controller");
+const SupplierController = require("../controllers/supplier.controller");
 const SupplierValidator = require("../validations/supplierProfile.validations");
 const { verifyAccessTokenMiddleware, requireRole } = require("../../../../middlewares/authenticate.middleware");
 const { ROLES } = require("../../../../constants/roles.constant");

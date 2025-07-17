@@ -9,6 +9,7 @@ const uploadBufferToCloudinary = require("../../../../utils/mediaUpload.util.js"
 const { getMediaType } = require("../../../../utils/file.utils.js");
 const uploadMedia = require("../../../../utils/uploadMedia.js");
 
+// Profile 
 const showSupplierProfile = async (req, h) => {
     try {
         // const { userId } = req.auth;
@@ -208,34 +209,6 @@ const listWarehouses = async (req, h) => {
         }).code(error.code || 500);
     }
 };
-const listOrderRequests = async (req, h) => {
-    try {
-        const { userId } = req.pre.credentials;
-        // Get pagination and search terms from the URL query string
-        const { page = 1, search = '' } = req.query;
-
-        const result = await SupplierService.listOrderRequests({
-            userId,
-            page: parseInt(page, 10),
-            search
-        });
-        return h.response(result).code(result.code);
-    } catch (error) {
-         // --- THIS IS THE FIX ---
-        // The catch block must also explicitly return a Hapi response.
-        console.error("Error in listOrderRequests controller:", error.message);
-
-        return h.response({
-            success: false,
-            message: "An error occurred while fetching order requests.",
-            error: error.message // It's helpful to include the original error message for debugging
-        })
-        .code(500) // Send a 500 Internal Server Error status
-        .takeover(); // Tell Hapi to stop processing and send this response immediately
-    }
-};
-
-module.exports = { listOrderRequests, /* ... your other controller exports */ };
 
 const updateSupplierProfile = async (req, h) => {
     try {
@@ -298,6 +271,34 @@ const updateSupplierProfile = async (req, h) => {
                 message: ERROR_MESSAGES.SUPPLIERS.PROFILE_UPDATE_FAILED
             })
             .code(RESPONSE_CODES.INTERNAL_SERVER_ERROR);
+    }
+};
+
+// Supplier Orders
+const listOrderRequests = async (req, h) => {
+    try {
+        const { userId } = req.pre.credentials;
+        // Get pagination and search terms from the URL query string
+        const { page = 1, search = '' } = req.query;
+
+        const result = await SupplierService.listOrderRequests({
+            userId,
+            page: parseInt(page, 10),
+            search
+        });
+        return h.response(result).code(result.code);
+    } catch (error) {
+         // --- THIS IS THE FIX ---
+        // The catch block must also explicitly return a Hapi response.
+        console.error("Error in listOrderRequests controller:", error.message);
+
+        return h.response({
+            success: false,
+            message: "An error occurred while fetching order requests.",
+            error: error.message // It's helpful to include the original error message for debugging
+        })
+        .code(500) // Send a 500 Internal Server Error status
+        .takeover(); // Tell Hapi to stop processing and send this response immediately
     }
 };
 

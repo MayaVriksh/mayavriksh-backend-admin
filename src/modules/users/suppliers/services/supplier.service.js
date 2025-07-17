@@ -195,77 +195,137 @@ const listAllWarehouses = async () => {
 
 const listOrderRequests = async ({ userId, page = 1, search = '' }) => {
     const itemsPerPage = 8;
-     // --- STEP 1: Find the supplierId from the userId ---
-    // We first query the Supplier table to get the supplierId for the logged-in user.
+    
+    // Step 1: Find the supplierId from the userId (this is correct).
     const supplier = await prisma.supplier.findUnique({
         where: { userId: userId },
         select: { supplierId: true }
     });
-    console.log("xx",supplier)
-    // If no supplier profile exists for this user, they have no orders.
+
     if (!supplier) {
         return {
-            success: true,
-            code: 200,
-            message: "Supplier profile not found.",
+            success: true, code: 200,
             data: { orders: [], totalPages: 0, currentPage: 1 }
         };
     }
+    
     const whereClause = {
-        supplierId: supplier.supplierId, // Assuming a relation from PurchaseOrder to Supplier
-        // Add search filter if a search term is provided
+        supplierId: supplier.supplierId,
         ...(search && {
-            id: { // Example: searching by product name
-                contains: search,
-                mode: 'insensitive'
-            }
+            id: { contains: search, mode: 'insensitive' }
         })
     };
-    console.log("yy",whereClause)
-    // Fetch the total count for pagination
-    const totalItems = await prisma.purchaseOrder.count({ where: whereClause });
-    console.log("Items" + totalItems)
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    console.log(totalPages)
 
-
-    // Fetch the paginated data
-    const orders = await prisma.purchaseOrder.findMany({
-        where: whereClause,
-        skip: (page - 1) * itemsPerPage,
-        take: itemsPerPage,
-        orderBy: {
-            requestedAt: 'desc'
-        },
-        // The 'include' block is now corrected to match your schema.
-        include: {
-            // For each PurchaseOrder, include its list of items.
-            PurchaseOrderItems: {
-                // We use 'select' here to pick fields from the PurchaseOrderItems model itself,
-                // AND to include data from further related tables.
-                select: {
-                    // Fields from the PurchaseOrderItems model
-                    productType: true,
-                    unitsRequested: true,
-                    unitCostPrice: true,
-                    
-                    // Data from related models needed for display
-                    plant: { select: { name: true } },
-                    plantVariant: { select: { plantSize: true } },
-                    potCategory: { select: { name: true } },
-                    potVariant: { select: { potName: true, size: true } },
+    // Step 2: Fetch the total count and paginated data in parallel for efficiency.
+    const [totalItems, orders] = await prisma.$transaction([
+        prisma.purchaseOrder.count({ where: whereClause }),
+        prisma.purchaseOrder.findMany({
+            where: whereClause,
+            skip: (page - 1) * itemsPerPage,
+            take: itemsPerPage,
+            orderBy: { requestedAt: 'desc' },
+            
+            // --- THIS IS THE FULLY CORRECTED AND ALIGNED QUERY ---
+            select: {
+                // Fields from the main PurchaseOrder table
+                id: true,
+                totalCost: true,
+                pendingAmount: true,
+                paymentPercentage: true,
+                status: true,
+                isAccepted: true,
+                invoiceUrl: true,
+                expectedDateOfArrival: true,
+                requestedAt: true,
+                acceptedAt: true,
+                deliveredAt: true,
+                supplierReviewNotes: true,
+                warehouseManagerReviewNotes: true,
+                
+                // Now, fetch all related items for the details modal
+                PurchaseOrderItems: {
+                    select: {
+                        id: true,
+                        productType: true,
+                        unitsRequested: true,
+                        unitCostPrice: true,
+                        isAccepted: true,
+                        // Include Plant details if the item is a Plant
+                        plant: {
+                            select: { name: true }
+                        },
+                        plantVariant: {
+                            select: { 
+                                plantSize: true,
+                                sku: true, 
+                                /** mediaUrl:true */
+                                color: {
+                                    select: {
+                                        name: true,
+                                        hexCode: true,
+                                    }
+                                },
+                                plantVariantImages: { // This is the relation name
+                                    where: { isPrimary: true }, // Filter for the primary image
+                                    take: 1, // We only need one
+                                    select: { mediaUrl: true } // Select just the URL
+                                }
+                            },
+                        },
+                        potVariant: {
+                            select: {
+                                potName: true,
+                                size: true,
+                                sku: true,
+                                // --- ADDED: Include the nested material name for pots ---
+                                material: {
+                                    select: {
+                                        name: true
+                                    }
+                                },
+                                color: {
+                                    select: {
+                                        name: true,
+                                        hexCode: true
+                                    }
+                                },
+                                images: { // This is the relation name for pot variant images
+                                    where: { isPrimary: true },
+                                    take: 1,
+                                    select: { mediaUrl: true }
+                                }
+                            }
+                        }
+                    }
+                },
+                payments: {
+                    select: {
+                        paymentId: true,
+                        amount: true,
+                        paymentMethod: true,
+                        status: true,
+                        receiptUrl: true,
+                        paidAt: true,
+                        remarks: true
+                    },
+                    // orderBy: {
+                    //     // Show the payments in chronological order
+                    //     requestedAt: 'asc'
+                    // }
                 }
             }
-        }
-    });
+        })
+    ]);
     console.log(orders);
-orders.forEach(order => {
+    orders.forEach(order => {
 
-    // Use JSON.stringify with a spacing of 2 for pretty-printing.
-    console.log(JSON.stringify(order.PurchaseOrderItems, null, 2));
+        // Use JSON.stringify with a spacing of 2 for pretty-printing.
+        console.log(JSON.stringify(order.PurchaseOrderItems, null, 2));
 
-    console.log(`------------------------------------`);
-});
+        console.log(`------------------------------------`);
+    });
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
     return {
         success: true,
         code: 200,
@@ -273,11 +333,10 @@ orders.forEach(order => {
         data: {
             orders,
             totalPages,
-            currentPage: page
+            currentPage: parseInt(page, 10)
         }
     };
 };
-
 
 const updateSupplierProfile = async (userId, updateData, profileImageUrl) => {
     return await prisma.$transaction(async tx => {

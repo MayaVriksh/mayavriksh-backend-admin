@@ -897,11 +897,11 @@ model PotCategory {
 
 model PotVariants {
   potVariantId String @id
+  // We've used colorId, materialId, and categoryId individually (instead of arrays) to associate images/videos with a specific combination or variant
   categoryId   String
   colorId      String
   materialId   String
-  // We've used colorId, materialId, and categoryId individually (instead of arrays) to associate images/videos with a specific combination or variant
-
+  
   potName String
   size    String
   height  Decimal?
