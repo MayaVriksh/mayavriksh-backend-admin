@@ -137,5 +137,22 @@ module.exports = [
             },
             handler: SupplierController.listOrderRequests,
         }
-    }
+    },
+    // {
+    //     method: "GET",
+    //     path: "/supplier/order-requests/{orderId}", // The path includes the ID
+    //     options: {
+    //         tags: ["api", "Supplier"],
+    //         description: "Get a single order request by its ID.",
+    //         pre: [
+    //             verifyAccessTokenMiddleware,
+    //             requireRole([ROLES.SUPPLIER])
+    //         ],
+    //         validate: {
+    //             ...SupplierValidator.orderIdParamValidation,
+    //             failAction: handleValidationFailure,
+    //         },
+    //         handler: SupplierController.getOrderRequestById,
+    //     }
+    // }
 ];

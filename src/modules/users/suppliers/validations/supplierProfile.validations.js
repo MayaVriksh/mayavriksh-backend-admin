@@ -143,4 +143,10 @@ const orderRequestValidation = {
     })
 };
 
-module.exports = { completeSupplierProfile, updateSupplierProfile, orderRequestValidation };
+const orderIdParamValidation = {
+    params: Joi.object({
+        orderId: Joi.string().required().description('The ID of the purchase order')
+    })
+};
+
+module.exports = { completeSupplierProfile, updateSupplierProfile, orderRequestValidation, orderIdParamValidation };

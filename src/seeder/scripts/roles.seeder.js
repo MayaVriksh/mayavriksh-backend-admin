@@ -33,7 +33,7 @@ async function seedRoles() {
                     console.log(`⚠️  Role '${roleData.role}' already exists`);
                 }
             }
-        });
+        },{maxWait:200000});
 
         console.log("✅ Role seeding completed.");
     } catch (error) {

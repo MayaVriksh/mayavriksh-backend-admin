@@ -19,7 +19,7 @@
         "seed:serial_trackers": "node src/seeder/scripts/serialtracker.seeder.js",
         "seed:roles": "node src/seeder/scripts/roles.seeder.js",
         "seed:warehouses": "node src/seeder/scripts/warehouses.seeder.js",
-        "seed:users": "node src/seeder/scripts/users.seeder.js",
+        "seed:users": "node src/seeder/scripts/users/users.seeder.js",
         "seed:tags": "node src/seeder/scripts/tags.seeder.js",
         "seed:colors": "node src/seeder/scripts/colors.seeder.js",
         "seed:pot_materials": "node src/seeder/scripts/potMaterials.seeder.js",

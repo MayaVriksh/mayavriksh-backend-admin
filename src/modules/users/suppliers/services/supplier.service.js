@@ -6,6 +6,7 @@ const {
 } = require("../../../../constants/responseCodes.constant");
 const ERROR_MESSAGES = require("../../../../constants/errorMessages.constant");
 const SUCCESS_MESSAGES = require("../../../../constants/successMessages.constant.js");
+const fetchPurchaseOrderList = require("../repositories/supplier.repository.js");
 
 const showSupplierProfile = async userId => {
     const profile = await prisma.supplier.findUnique({
@@ -193,136 +194,89 @@ const listAllWarehouses = async () => {
     };
 };
 
-const listOrderRequests = async ({ userId, page = 1, search = '' }) => {
-    const itemsPerPage = 8;
-    
-    // Step 1: Find the supplierId from the userId (this is correct).
-    const supplier = await prisma.supplier.findUnique({
-        where: { userId: userId },
-        select: { supplierId: true }
-    });
 
-    if (!supplier) {
-        return {
-            success: true, code: 200,
-            data: { orders: [], totalPages: 0, currentPage: 1 }
-        };
-    }
-    
-    const whereClause = {
-        supplierId: supplier.supplierId,
-        ...(search && {
-            id: { contains: search, mode: 'insensitive' }
-        })
-    };
+    const listOrderRequests = async ({ userId, page = 1, search = '' }) => {
+        const itemsPerPage = 8;
+        
+        // 1. Call the repository to get the supplier ID.
+        const supplier = await fetchPurchaseOrderList.findSupplierByUserId(userId);
+        
+        // 2. Handle the business case where the user is not a supplier.
+        if (!supplier) {
+            return {
+                success: true,
+                code: 200,
+                message: "Supplier profile not found for this user.",
+                data: { orders: [], totalPages: 0, currentPage: page }
+            };
+        }
+        
+        // 3. Call the repository to get the purchase order data.
+        const [totalItems, rawOrders] = await fetchPurchaseOrderList.findPurchaseOrdersBySupplier(
+            supplier.supplierId,
+            { page, search, itemsPerPage }
+        );
 
-    // Step 2: Fetch the total count and paginated data in parallel for efficiency.
-    const [totalItems, orders] = await prisma.$transaction([
-        prisma.purchaseOrder.count({ where: whereClause }),
-        prisma.purchaseOrder.findMany({
-            where: whereClause,
-            skip: (page - 1) * itemsPerPage,
-            take: itemsPerPage,
-            orderBy: { requestedAt: 'desc' },
+        // --- NEW: Transform the raw database results into a clean, generic structure ---
+    const checkOrderItem = rawOrders.map(order => {
+        const transformedItems = order.PurchaseOrderItems.map(item => {
+
+            // --- Object 1: For the main "Purchase Order Items Table" ---
+            const purchaseOrderDetails = {
+                id: order.id,
+                totalOrderCost: order.totalCost,
+                pendingAmount: order.pendingAmount,
+                paymentPercentage: order.paymentPercentage,
+                paymentStatus: order.status, // Can be mapped to "NIL", "PAID" etc. on the frontend
+                expectedDOA: order.expectedDateOfArrival,
+                orderStatus: order.status,
+            };
+
+            // --- Object 2: For the "View Payments Modal" ---
+            let runningTotalPaid = 0;
+            const paymentHistory = order.payments.map(payment => {
+                runningTotalPaid += payment.amount;
+                return {
+                    paidAmount: payment.amount,
+                    pendingAmountAfterPayment: order.totalCost - runningTotalPaid,
+                    paymentMethod: payment.paymentMethod,
+                    paymentRemarks: payment.remarks,
+                    receiptUrl: payment.receiptUrl,
+                    requestedAt: payment.requestedAt,
+                    paidAt: payment.paidAt,
+                };
+            });
+            // Determine the generic properties based on the productType
+            const isPlant = item.productType === 'PLANT';
             
-            // --- THIS IS THE FULLY CORRECTED AND ALIGNED QUERY ---
-            select: {
-                // Fields from the main PurchaseOrder table
-                id: true,
-                totalCost: true,
-                pendingAmount: true,
-                paymentPercentage: true,
-                status: true,
-                isAccepted: true,
-                invoiceUrl: true,
-                expectedDateOfArrival: true,
-                requestedAt: true,
-                acceptedAt: true,
-                deliveredAt: true,
-                supplierReviewNotes: true,
-                warehouseManagerReviewNotes: true,
-                
-                // Now, fetch all related items for the details modal
-                PurchaseOrderItems: {
-                    select: {
-                        id: true,
-                        productType: true,
-                        unitsRequested: true,
-                        unitCostPrice: true,
-                        isAccepted: true,
-                        // Include Plant details if the item is a Plant
-                        plant: {
-                            select: { name: true }
-                        },
-                        plantVariant: {
-                            select: { 
-                                plantSize: true,
-                                sku: true, 
-                                /** mediaUrl:true */
-                                color: {
-                                    select: {
-                                        name: true,
-                                        hexCode: true,
-                                    }
-                                },
-                                plantVariantImages: { // This is the relation name
-                                    where: { isPrimary: true }, // Filter for the primary image
-                                    take: 1, // We only need one
-                                    select: { mediaUrl: true } // Select just the URL
-                                }
-                            },
-                        },
-                        potVariant: {
-                            select: {
-                                potName: true,
-                                size: true,
-                                sku: true,
-                                // --- ADDED: Include the nested material name for pots ---
-                                material: {
-                                    select: {
-                                        name: true
-                                    }
-                                },
-                                color: {
-                                    select: {
-                                        name: true,
-                                        hexCode: true
-                                    }
-                                },
-                                images: { // This is the relation name for pot variant images
-                                    where: { isPrimary: true },
-                                    take: 1,
-                                    select: { mediaUrl: true }
-                                }
-                            }
-                        }
-                    }
-                },
-                payments: {
-                    select: {
-                        paymentId: true,
-                        amount: true,
-                        paymentMethod: true,
-                        status: true,
-                        receiptUrl: true,
-                        paidAt: true,
-                        remarks: true
-                    },
-                    // orderBy: {
-                    //     // Show the payments in chronological order
-                    //     requestedAt: 'asc'
-                    // }
-                }
-            }
-        })
-    ]);
-    console.log(orders);
-    orders.forEach(order => {
+            const variantName = isPlant ? item.plant?.name : item.potVariant?.potName;
+            const variantSize = isPlant ? item.plantVariant?.plantSize : item.potVariant?.size;
+            const sku = isPlant ? item.plantVariant?.sku : item.potVariant?.sku;
+            const color = isPlant ? item.plantVariant?.color?.name : item.potVariant?.color?.name;
+            const material = isPlant ? null : item.potVariant?.material?.name;
+            const variantImage = isPlant 
+                ? item.plantVariant?.plantVariantImages[0]?.mediaUrl 
+                : item.potVariant?.images[0]?.mediaUrl;
 
-        // Use JSON.stringify with a spacing of 2 for pretty-printing.
-        console.log(JSON.stringify(order.PurchaseOrderItems, null, 2));
-
-        console.log(`------------------------------------`);
+            // Return the new, simplified item object
+            return {
+                id: item.id,
+                variantImage,
+                variantName: `${variantName}-${variantSize}-${color}`,
+                sku,
+                material,
+                requestedDate: order.requestedAt, // Date comes from the parent order
+                unitCostPrice: item.unitCostPrice,
+                unitRequested: item.unitsRequested,
+                totalVariantCost: Number(item.unitsRequested) * Number(item.unitCostPrice),
+            };
+        });
+        // Return the order with the transformed items array
+        return {
+            purchaseOrderDetails,
+            paymentHistory,
+            orderItems
+        };
     });
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
@@ -331,7 +285,7 @@ const listOrderRequests = async ({ userId, page = 1, search = '' }) => {
         code: 200,
         message: "Order requests retrieved successfully.",
         data: {
-            orders,
+            orders: checkOrderItem,
             totalPages,
             currentPage: parseInt(page, 10)
         }

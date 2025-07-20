@@ -278,29 +278,46 @@ const updateSupplierProfile = async (req, h) => {
 const listOrderRequests = async (req, h) => {
     try {
         const { userId } = req.pre.credentials;
-        // Get pagination and search terms from the URL query string
         const { page = 1, search = '' } = req.query;
 
+        // 1. Call the service. The service does all the complex work.
         const result = await SupplierService.listOrderRequests({
             userId,
             page: parseInt(page, 10),
             search
         });
-        return h.response(result).code(result.code);
-    } catch (error) {
-         // --- THIS IS THE FIX ---
-        // The catch block must also explicitly return a Hapi response.
-        console.error("Error in listOrderRequests controller:", error.message);
 
+        // 2. Return the entire result object directly.
+        //    The controller should not try to access 'purchaseOrderDetails' itself.
+        return h.response(result).code(result.code);
+
+    } catch (error) {
+        console.error("Error in listOrderRequests controller:", error.message);
         return h.response({
             success: false,
             message: "An error occurred while fetching order requests.",
-            error: error.message // It's helpful to include the original error message for debugging
+            error: error.message
         })
-        .code(500) // Send a 500 Internal Server Error status
-        .takeover(); // Tell Hapi to stop processing and send this response immediately
+        .code(500)
+        .takeover();
     }
 };
+
+// const getOrderRequestById = async (req, h) => {
+//     try {
+//         const { userId } = req.pre.credentials;
+//         const { orderId } = req.params; // Get the orderId from the URL parameter
+
+//         const result = await SupplierService.getOrderRequestById({ userId, orderId });
+//         return h.response(result).code(result.code);
+//     } catch (error) {
+//         console.error("Error in getOrderRequestById controller:", error);
+//         return h.response({
+//             success: false,
+//             message: error.message || "Failed to retrieve order request."
+//         }).code(error.code || 500);
+//     }
+// };
 
 const searchWarehouses = async (req, h) => {
     try {
@@ -335,5 +352,6 @@ module.exports = {
     completeSupplierProfile,
     listWarehouses,
     listOrderRequests,
+    // getOrderRequestById,
     updateSupplierProfile
 };

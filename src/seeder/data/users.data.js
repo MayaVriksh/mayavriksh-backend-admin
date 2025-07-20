@@ -41,15 +41,15 @@ const adminUsers = [
         }
     },
     {
-        role: ROLES.ADMIN,
+        role: ROLES.SUPPLIER,
         user: {
             fullName: {
-                [FIRST_NAME]: "Rajat",
-                [LAST_NAME]: "Verma"
+                [FIRST_NAME]: "Maya",
+                [LAST_NAME]: "Vriksh"
             },
-            email: "rajat.verma.admin@example.com",
+            email: "maya.vriksh2025@gmail.com",
             phoneNumber: "+919876543211",
-            password: "password@123",
+            password: "Maya@1234",
             profileImageUrl: null,
             phoneVerified: true,
             emailVerified: true,
