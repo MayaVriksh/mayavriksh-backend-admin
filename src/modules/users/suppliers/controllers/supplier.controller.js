@@ -286,7 +286,6 @@ const listOrderRequests = async (req, h) => {
             page: parseInt(page, 10),
             search
         });
-
         // 2. Return the entire result object directly.
         //    The controller should not try to access 'purchaseOrderDetails' itself.
         return h.response(result).code(result.code);

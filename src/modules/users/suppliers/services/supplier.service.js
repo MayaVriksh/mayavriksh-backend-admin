@@ -1,3 +1,4 @@
+const util = require('util');
 const { v4: uuidv4 } = require("uuid");
 const prisma = require("../../../../config/prisma.config.js");
 const {
@@ -217,20 +218,8 @@ const listAllWarehouses = async () => {
             { page, search, itemsPerPage }
         );
 
-        // --- NEW: Transform the raw database results into a clean, generic structure ---
-    const checkOrderItem = rawOrders.map(order => {
-        const transformedItems = order.PurchaseOrderItems.map(item => {
-
-            // --- Object 1: For the main "Purchase Order Items Table" ---
-            const purchaseOrderDetails = {
-                id: order.id,
-                totalOrderCost: order.totalCost,
-                pendingAmount: order.pendingAmount,
-                paymentPercentage: order.paymentPercentage,
-                paymentStatus: order.status, // Can be mapped to "NIL", "PAID" etc. on the frontend
-                expectedDOA: order.expectedDateOfArrival,
-                orderStatus: order.status,
-            };
+        // --- Transform the raw database results into a clean, generic structure ---
+        const transformedOrders = rawOrders.map(order => {
 
             // --- Object 2: For the "View Payments Modal" ---
             let runningTotalPaid = 0;
@@ -238,7 +227,7 @@ const listAllWarehouses = async () => {
                 runningTotalPaid += payment.amount;
                 return {
                     paidAmount: payment.amount,
-                    pendingAmountAfterPayment: order.totalCost - runningTotalPaid,
+                    pendingAmountAfterPayment: (order.totalCost || 0) - runningTotalPaid,
                     paymentMethod: payment.paymentMethod,
                     paymentRemarks: payment.remarks,
                     receiptUrl: payment.receiptUrl,
@@ -247,37 +236,63 @@ const listAllWarehouses = async () => {
                 };
             });
             // Determine the generic properties based on the productType
-            const isPlant = item.productType === 'PLANT';
-            
-            const variantName = isPlant ? item.plant?.name : item.potVariant?.potName;
-            const variantSize = isPlant ? item.plantVariant?.plantSize : item.potVariant?.size;
-            const sku = isPlant ? item.plantVariant?.sku : item.potVariant?.sku;
-            const color = isPlant ? item.plantVariant?.color?.name : item.potVariant?.color?.name;
-            const material = isPlant ? null : item.potVariant?.material?.name;
-            const variantImage = isPlant 
-                ? item.plantVariant?.plantVariantImages[0]?.mediaUrl 
-                : item.potVariant?.images[0]?.mediaUrl;
-
-            // Return the new, simplified item object
-            return {
-                id: item.id,
-                variantImage,
-                variantName: `${variantName}-${variantSize}-${color}`,
-                sku,
-                material,
-                requestedDate: order.requestedAt, // Date comes from the parent order
-                unitCostPrice: item.unitCostPrice,
-                unitRequested: item.unitsRequested,
-                totalVariantCost: Number(item.unitsRequested) * Number(item.unitCostPrice),
-            };
-        });
+            // --- Object 3: For the "Order Items Modal" ---
+            const orderItems = order.PurchaseOrderItems.map(item => {
+                const isPlant = item.productType === 'Plant';
+                
+                const variantName = isPlant ? item.plant?.name : item.potVariant?.potName;
+                const variantSize = isPlant ? item.plantVariant?.plantSize : item.potVariant?.size;
+                const sku = isPlant ? item.plantVariant?.sku : item.potVariant?.sku;
+                const color = isPlant ? item.plantVariant?.color?.name : item.potVariant?.color?.name;
+                const material = isPlant ? null : item.potVariant?.material?.name;
+                const variantImage = isPlant 
+                    ? item.plantVariant?.plantVariantImages[0]?.mediaUrl 
+                    : item.potVariant?.images[0]?.mediaUrl;
+                const productType = item.productType;
+                const isAccepted = item.isAccepted;
+                // Return the new, simplified item object
+                return {
+                    id: item.id,
+                    variantImage,
+                    productType,
+                    variantName: `${variantName}-${variantSize}-${color}-${material}`,
+                    sku,
+                    material,
+                    requestedDate: order.requestedAt, // Date comes from the parent order
+                    unitCostPrice: item.unitCostPrice,
+                    unitRequested: item.unitsRequested,
+                    totalVariantCost: Number(item.unitsRequested) * Number(item.unitCostPrice),
+                    isAccepted,
+                };
+            });
         // Return the order with the transformed items array
+        console.log( paymentHistory, orderItems)
         return {
-            purchaseOrderDetails,
-            paymentHistory,
-            orderItems
+            // All top-level fields from the PurchaseOrder
+            id: order.id,
+            totalOrderCost: order.totalCost,
+            pendingAmount: order.pendingAmount,
+            paymentPercentage: order.paymentPercentage,
+            paymentStatus: order.status,
+            expectedDOA: order.expectedDateOfArrival,
+            orderStatus: order.status,
+            
+            // The two transformed arrays
+            orderItems: orderItems,
+            payments: paymentHistory,
         };
     });
+    transformedOrders.forEach(order => {
+    console.log(`\n--- Details for Order ID: ${order.id} ---`);
+
+    // --- THIS IS THE FIX ---
+    // Use util.inspect to print the entire object without truncation.
+    // 'depth: null' tells it to show all nested levels.
+    // 'colors: true' makes it much easier to read in the terminal.
+    console.log(util.inspect(order, { showHidden: false, depth: null, colors: true }));
+
+    console.log(`------------------------------------`);
+});
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
     return {
@@ -285,7 +300,7 @@ const listAllWarehouses = async () => {
         code: 200,
         message: "Order requests retrieved successfully.",
         data: {
-            orders: checkOrderItem,
+            orders: transformedOrders,
             totalPages,
             currentPage: parseInt(page, 10)
         }
