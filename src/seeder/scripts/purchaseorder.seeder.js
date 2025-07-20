@@ -1,17 +1,25 @@
 const prisma = require("../../config/prisma.config");
-const generatePurchaseOrderData = require("../data/purchaseorder.data");
+const {
+    generatePlantPurchaseOrderData,
+    generatePotPurchaseOrderData
+} = require("../data/purchaseorder.data");
+const generateCustomId = require("../../utils/generateCustomId");
 
 async function seedPurchaseOrders() {
     console.log("📦 Seeding Purchase Orders...");
 
     const plants = await prisma.plants.findMany();
-    const variants = await prisma.plantVariants.findMany();
+    const plantVariants = await prisma.plantVariants.findMany();
+    const potCategories = await prisma.potCategory.findMany();
+    const potVariants = await prisma.potVariants.findMany();
     const warehouses = await prisma.warehouse.findMany();
     const suppliers = await prisma.supplier.findMany();
 
     if (
         !plants.length ||
-        !variants.length ||
+        !plantVariants.length ||
+        !potCategories.length ||
+        !potVariants.length ||
         !warehouses.length ||
         !suppliers.length
     ) {
@@ -19,20 +27,34 @@ async function seedPurchaseOrders() {
     }
 
     const supplier = suppliers[0];
-    const orders = generatePurchaseOrderData(
+
+    const plantOrders = generatePlantPurchaseOrderData(
         plants,
-        variants,
+        plantVariants,
         warehouses,
         supplier
     );
 
-    for (const order of orders) {
+    const potOrders = generatePotPurchaseOrderData(
+        potCategories,
+        potVariants,
+        warehouses,
+        supplier
+    );
+
+    const allOrders = [...plantOrders, ...potOrders];
+
+    for (const order of allOrders) {
         try {
             await prisma.$transaction(
                 async tx => {
+                    const purchaseOrderId = await generateCustomId(
+                        tx,
+                        "PURCHASE_ORDER"
+                    );
                     await tx.purchaseOrder.create({
                         data: {
-                            id: order.id,
+                            id: purchaseOrderId,
                             warehouseId: order.warehouseId,
                             supplierId: order.supplierId,
                             deliveryCharges: order.deliveryCharges,
@@ -51,20 +73,26 @@ async function seedPurchaseOrders() {
                         }
                     });
 
-                    // 2. Create PurchaseOrderItems with same `purchaseOrderId`
-                    const itemsWithPOId = order.items.map(item => ({
-                        ...item,
-                        purchaseOrderId: order.id
-                    }));
-
                     await tx.purchaseOrderItems.createMany({
-                        data: itemsWithPOId,
+                        data: order.items.map(item => ({
+                            ...item,
+                            purchaseOrderId
+                        })),
                         skipDuplicates: true
                     });
+
+                    for (const payment of order.payments) {
+                        await tx.purchaseOrderPayment.create({
+                            data: {
+                                ...payment,
+                                orderId: purchaseOrderId
+                            }
+                        });
+                    }
                 },
                 {
-                    maxWait: 25000,
-                    timeout: 45000,
+                    maxWait: 99000,
+                    timeout: 100000,
                     isolationLevel: "ReadCommitted"
                 }
             );

@@ -26,6 +26,9 @@
         "seed:plants": "node src/seeder/scripts/plants.seeder.js",
         "seed:pots": "node src/seeder/scripts/pots.seeder.js",
         "seed:purchase_order": "node src/seeder/scripts/purchaseOrder.seeder.js",
+        "seed:variant_images": "node src/seeder/scripts/variantImages.seeder.js",
+        "seed:plant_inventory": "node src/seeder/scripts/plantWarehouseInventory.seeder.js",
+        "seed:pot_inventory": "node src/seeder/scripts/potWarehouseInventory.seeder.js",
         "postinstall": "prisma generate"
     },
     "prisma": {
@@ -43,8 +46,8 @@
         "hapi-swagger": "^17.3.2",
         "joi": "^17.13.3",
         "jsonwebtoken": "^9.0.2",
-        "multer": "^2.0.1",
-        "mysql2": "^3.14.1",
+        "multer": "^2.0.2",
+        "mysql2": "^3.14.2",
         "uuid": "^11.1.0"
     },
     "devDependencies": {
