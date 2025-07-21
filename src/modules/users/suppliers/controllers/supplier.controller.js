@@ -5,11 +5,9 @@ const {
 } = require("../../../../constants/responseCodes.constant.js");
 const SUCCESS_MESSAGES = require("../../../../constants/successMessages.constant.js.js");
 const SupplierService = require("../services/supplier.service.js");
-const uploadBufferToCloudinary = require("../../../../utils/mediaUpload.util.js");
-const { getMediaType } = require("../../../../utils/file.utils.js");
 const uploadMedia = require("../../../../utils/uploadMedia.js");
 
-// Profile 
+// Profile
 const showSupplierProfile = async (req, h) => {
     try {
         // const { userId } = req.auth;
@@ -40,29 +38,33 @@ const completeSupplierProfile = async (req, h) => {
     try {
         // const { userId } = req.auth;
         const { userId } = req.pre.credentials;
-        const { tradeLicenseImage, nurseryImages, profileImage, ...profileFields } =
-            req.payload;
+        const {
+            tradeLicenseImage,
+            nurseryImages,
+            profileImage,
+            ...profileFields
+        } = req.payload;
 
         console.log("Received payload fields:", {
             tradeLicenseImageType: typeof tradeLicenseImage,
             tradeLicenseHeaders: tradeLicenseImage?.hapi?.headers,
             profilePhotoType: typeof profileImage,
-            profilePhotoHeaders: profileImage?.hapi?.headers, 
+            profilePhotoHeaders: profileImage?.hapi?.headers,
             nurseryImagesType: typeof nurseryImages,
             nurseryImagesLength: nurseryImages?.length
         });
         const {
-        nurseryName,
-        streetAddress,
-        landmark,
-        city,
-        state,
-        country,
-        pinCode,
-        gstin,
-        businessCategory,
-        warehouseId,
-    } = profileFields;
+            nurseryName,
+            streetAddress,
+            landmark,
+            city,
+            state,
+            country,
+            pinCode,
+            gstin,
+            businessCategory,
+            warehouseId
+        } = profileFields;
         const requiredKeys = [
             "nurseryName",
             "streetAddress",
@@ -102,7 +104,7 @@ const completeSupplierProfile = async (req, h) => {
                 .takeover();
         }
 
-       // Trade License Upload
+        // Trade License Upload
         const licenseUpload = await uploadMedia({
             files: tradeLicenseImage,
             folder: "suppliers/trade_licenses",
@@ -203,10 +205,12 @@ const listWarehouses = async (req, h) => {
         return h.response(result).code(result.code);
     } catch (error) {
         console.error("List Warehouses Error:", error);
-        return h.response({
-            success: false,
-            message: error.message || "Failed to retrieve warehouses."
-        }).code(error.code || 500);
+        return h
+            .response({
+                success: false,
+                message: error.message || "Failed to retrieve warehouses."
+            })
+            .code(error.code || 500);
     }
 };
 
@@ -278,7 +282,7 @@ const updateSupplierProfile = async (req, h) => {
 const listOrderRequests = async (req, h) => {
     try {
         const { userId } = req.pre.credentials;
-        const { page = 1, search = '' } = req.query;
+        const { page = 1, search = "" } = req.query;
 
         // 1. Call the service. The service does all the complex work.
         const result = await SupplierService.listOrderRequests({
@@ -289,16 +293,64 @@ const listOrderRequests = async (req, h) => {
         // 2. Return the entire result object directly.
         //    The controller should not try to access 'purchaseOrderDetails' itself.
         return h.response(result).code(result.code);
-
     } catch (error) {
         console.error("Error in listOrderRequests controller:", error.message);
-        return h.response({
-            success: false,
-            message: "An error occurred while fetching order requests.",
-            error: error.message
-        })
-        .code(500)
-        .takeover();
+        return h
+            .response({
+                success: false,
+                message: "An error occurred while fetching order requests.",
+                error: error.message
+            })
+            .code(500)
+            .takeover();
+    }
+};
+
+const uploadQcMedia = async (req, h) => {
+    try {
+        const { userId } = req.pre.credentials;
+        const { orderId } = req.params;
+        const { qcMedia } = req.payload;
+
+        // The key 'qcMedia' should match the name attribute of your file input on the frontend.
+        // const files = payload.qcMedia;
+
+        if (!qcMedia) {
+            return h
+                .response({
+                    message:
+                        "No files uploaded. Please use the 'qcMedia' field."
+                })
+                .code(400);
+        }
+        const uploadResult = await uploadMedia({
+            files: qcMedia,
+            folder: `suppliers/profile_images`,
+            publicIdPrefix: `qc_${orderId}`
+        });
+        if (!uploadResult.success) {
+            return h
+                .response({ success: false, message: uploadResult.message })
+                .code(400)
+                .takeover();
+        }
+        console.log("xx", uploadResult)
+        // 2. Controller calls the simplified service with the upload results.
+        const result = await SupplierService.uploadQcMediaForOrder({
+            userId,
+            orderId,
+            uploadedMedia: uploadResult.data
+        });
+
+        return h.response(result).code(result.code);
+    } catch (error) {
+        console.error("QC Media Upload Controller Error:", error);
+        return h
+            .response({
+                success: false,
+                message: error.message || "Failed to upload QC media."
+            })
+            .code(error.code || 500);
     }
 };
 
@@ -351,6 +403,7 @@ module.exports = {
     completeSupplierProfile,
     listWarehouses,
     listOrderRequests,
+    uploadQcMedia,
     // getOrderRequestById,
     updateSupplierProfile
 };

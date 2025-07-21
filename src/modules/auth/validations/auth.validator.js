@@ -8,15 +8,20 @@ const loginUserValidation = {
                 "📩 Email is required if phone number is not provided.",
             "string.email": "📩 Please enter a valid email address."
         }),
-        password: Joi.string().trim().min(8).max(16)
+        password: Joi.string()
+            .trim()
+            .min(8)
+            .max(16)
             .pattern(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]+$/) // <-- COPIED THIS RULE
-            .required().messages({
+            .required()
+            .messages({
                 "string.base": "🔐 Password must be a string.",
                 "string.empty": "🔐 Password is required.",
                 "string.min": "🔐 Password must be at least 8 characters.",
                 "string.max": "🔐 Password must not exceed 16 characters.",
-                "string.pattern.base": "🔐 Password must include at least one letter and one number." // <-- ADDED THIS MESSAGE
-        })
+                "string.pattern.base":
+                    "🔐 Password must include at least one letter and one number." // <-- ADDED THIS MESSAGE
+            })
     })
         .xor("email", "phoneNumber")
         .messages({
@@ -31,8 +36,10 @@ const refreshTokenValidation = {
         // We are ensuring that the 'mv_refresh_token' cookie exists and is a non-empty string.
         mv_refresh_token: Joi.string().required().messages({
             "string.base": "🍪 Refresh token must be a string.",
-            "string.empty": "🍪 Refresh token cookie is missing. Please log in.",
-            "any.required": "🍪 Refresh token cookie is required for this operation. Please log in."
+            "string.empty":
+                "🍪 Refresh token cookie is missing. Please log in.",
+            "any.required":
+                "🍪 Refresh token cookie is required for this operation. Please log in."
         })
     }).unknown(true) // IMPORTANT: This allows other cookies to exist without causing a validation error.
 };

@@ -1,6 +1,10 @@
 const prisma = require("../../../config/prisma.config");
 const bcrypt = require("bcrypt");
-const { generateAccessToken, generateRefreshToken, verifyRefreshToken} = require("../../../utils/jwt.util");
+const {
+    generateAccessToken,
+    generateRefreshToken,
+    verifyRefreshToken
+} = require("../../../utils/jwt.util");
 const generateCustomId = require("../../../utils/generateCustomId");
 const { ROLES } = require("../../../constants/roles.constant");
 const ERROR_MESSAGES = require("../../../constants/errorMessages.constant");
@@ -129,7 +133,7 @@ const register = async data => {
 };
 
 const login = async (email, password) => {
-    console.log("In AuthService Page for Logging In")
+    console.log("In AuthService Page for Logging In");
     const user = await prisma.user.findUnique({
         where: { email },
         select: {
@@ -181,7 +185,7 @@ const login = async (email, password) => {
     }
 
     // <-- MODIFIED: Create two different payloads for our two tokens.
-    
+
     // 1. Access Token Payload: Contains data for stateless verification.
     // This data will be available in our middleware and controllers without a DB query.
     const accessTokenPayload = {
@@ -204,19 +208,18 @@ const login = async (email, password) => {
     // --- MERGE THE isVerified STATUS ---
     // Make sure to add the supplier's verification status to the final object.
     userProfile.isVerified = user.Supplier?.isVerified || false;
-    
+
     // <-- MODIFIED: Return all the necessary pieces for the controller.
     return { userProfile, accessToken, refreshToken };
 };
 
 // --- NEW FUNCTION: REFRESH USER TOKEN ---
 // This new service is called by the /auth/refresh-token endpoint.
-const refreshUserToken = async (token) => {
-
+const refreshUserToken = async token => {
     try {
         // 1. Verify the incoming refresh token. Throws an error if invalid/expired.
         const decoded = verifyRefreshToken(token);
-        console.log(decoded)
+        console.log(decoded);
         const userId = decoded.userId;
         // 2. IMPORTANT: Check the database to ensure the user is still valid.
         // This is our periodic security check. If a user was banned, this is where we catch it.
@@ -237,9 +240,14 @@ const refreshUserToken = async (token) => {
             }
         });
 
-    console.log("User Detail In AuthService Page for Refresh User Token:", user);
+        console.log(
+            "User Detail In AuthService Page for Refresh User Token:",
+            user
+        );
         if (!user) {
-            throw new Error("User associated with this token no longer exists.");
+            throw new Error(
+                "User associated with this token no longer exists."
+            );
         }
         if (!user.isActive || user.deletedAt) {
             throw new Error("User account is no longer active.");
@@ -343,7 +351,7 @@ const deactivateUser = async userId => {
  * @param {string} userId - The ID of the user to reactivate.
  * @returns {object} A success message.
  */
-const reactivateUserProfile = async (userId) => {
+const reactivateUserProfile = async userId => {
     // First, find the user to ensure they exist.
     const user = await prisma.user.findUnique({
         where: { userId }

@@ -139,14 +139,21 @@ const updateSupplierProfile = {
 const orderRequestValidation = {
     query: Joi.object({
         page: Joi.number().integer().min(1).default(1),
-        search: Joi.string().allow('').optional()
+        search: Joi.string().allow("").optional()
     })
 };
 
 const orderIdParamValidation = {
     params: Joi.object({
-        orderId: Joi.string().required().description('The ID of the purchase order')
+        orderId: Joi.string()
+            .required()
+            .description("The ID of the purchase order")
     })
 };
 
-module.exports = { completeSupplierProfile, updateSupplierProfile, orderRequestValidation, orderIdParamValidation };
+module.exports = {
+    completeSupplierProfile,
+    updateSupplierProfile,
+    orderRequestValidation,
+    orderIdParamValidation
+};

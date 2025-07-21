@@ -1,4 +1,4 @@
-const util = require('util');
+const util = require("util");
 const { v4: uuidv4 } = require("uuid");
 const prisma = require("../../../../config/prisma.config.js");
 const {
@@ -62,11 +62,13 @@ const showSupplierProfile = async userId => {
     };
 };
 
-const completeSupplierProfile = async (userId,
+const completeSupplierProfile = async (
+    userId,
     profileFields,
     tradeLicenseData,
     profileImageData,
-    nurseryMediaAssets) => {
+    nurseryMediaAssets
+) => {
     // --- MODIFIED: Destructure only the fields we receive from the controller ---
     const {
         nurseryName,
@@ -80,64 +82,67 @@ const completeSupplierProfile = async (userId,
         businessCategory,
         warehouseId
     } = profileFields;
-    return await prisma.$transaction(async (tx) => {
-        // --- REMOVED: Phone number validation ---
-        // This check is no longer needed here because the phone number was
-        // validated during the initial signup.
+    return await prisma.$transaction(
+        async tx => {
+            // --- REMOVED: Phone number validation ---
+            // This check is no longer needed here because the phone number was
+            // validated during the initial signup.
 
-        // This GSTIN check is still relevant and correct for this step.
-        if (gstin) {
-            const existingGSTIN = await tx.supplier.findFirst({
-                where: { gstin, NOT: { userId } }
-            });
-            if (existingGSTIN) {
-                throw {
-                    success: RESPONSE_FLAGS.FAILURE,
-                    code: RESPONSE_CODES.CONFLICT, // Use 409 Conflict for duplicates
-                    message: ERROR_MESSAGES.SUPPLIERS.GSTIN_ALREADY_EXISTS
-                };
+            // This GSTIN check is still relevant and correct for this step.
+            if (gstin) {
+                const existingGSTIN = await tx.supplier.findFirst({
+                    where: { gstin, NOT: { userId } }
+                });
+                if (existingGSTIN) {
+                    throw {
+                        success: RESPONSE_FLAGS.FAILURE,
+                        code: RESPONSE_CODES.CONFLICT, // Use 409 Conflict for duplicates
+                        message: ERROR_MESSAGES.SUPPLIERS.GSTIN_ALREADY_EXISTS
+                    };
+                }
             }
-        }
-        // --- MODIFIED: Update the User's address JSON blob ---
-        // We are only updating the address here, not other User fields. Here 
-        await tx.user.update({
-            where: { 
-                userId,
-                isActive: true,
-                deletedAt: null},
-            data: {
-                address: {
-                    streetAddress,
-                    landmark,
-                    city,
-                    state,
-                    country,
-                    pinCode,
+            // --- MODIFIED: Update the User's address JSON blob ---
+            // We are only updating the address here, not other User fields. Here
+            await tx.user.update({
+                where: {
+                    userId,
+                    isActive: true,
+                    deletedAt: null
                 },
-                ...(profileImageData && {
+                data: {
+                    address: {
+                        streetAddress,
+                        landmark,
+                        city,
+                        state,
+                        country,
+                        pinCode
+                    },
+                    ...(profileImageData && {
                         profileImageUrl: profileImageData.mediaUrl,
                         publicId: profileImageData.publicId
                     })
-            }
-        });
+                }
+            });
 
-        // This update to the Supplier table is correct.
-        const supplierProfile = await tx.supplier.update({
-            where: { 
-                userId,
-                isVerified: false,
-                deletedAt: null },
-            data: {
-                nurseryName,
-                gstin,
-                businessCategory,
-                warehouseId,
-                tradeLicenseUrl: tradeLicenseData.mediaUrl,
-                publicId: tradeLicenseData.publicId,
-                status: "UNDER_REVIEW", // Set status for admin verification
-                isVerified: false       // Explicitly set to false until admin approval
-            }
-        });
+            // This update to the Supplier table is correct.
+            const supplierProfile = await tx.supplier.update({
+                where: {
+                    userId,
+                    isVerified: false,
+                    deletedAt: null
+                },
+                data: {
+                    nurseryName,
+                    gstin,
+                    businessCategory,
+                    warehouseId,
+                    tradeLicenseUrl: tradeLicenseData.mediaUrl,
+                    publicId: tradeLicenseData.publicId,
+                    status: "UNDER_REVIEW", // Set status for admin verification
+                    isVerified: false // Explicitly set to false until admin approval
+                }
+            });
 
             if (
                 Array.isArray(nurseryMediaAssets) &&
@@ -179,7 +184,7 @@ const listAllWarehouses = async () => {
             name: true
         },
         orderBy: {
-            name: 'asc'
+            name: "asc"
         }
     });
 
@@ -195,78 +200,84 @@ const listAllWarehouses = async () => {
     };
 };
 
+const listOrderRequests = async ({ userId, page = 1, search = "" }) => {
+    const itemsPerPage = 8;
 
-    const listOrderRequests = async ({ userId, page = 1, search = '' }) => {
-        const itemsPerPage = 8;
-        
-        // 1. Call the repository to get the supplier ID.
-        const supplier = await fetchPurchaseOrderList.findSupplierByUserId(userId);
-        
-        // 2. Handle the business case where the user is not a supplier.
-        if (!supplier) {
-            return {
-                success: true,
-                code: 200,
-                message: "Supplier profile not found for this user.",
-                data: { orders: [], totalPages: 0, currentPage: page }
-            };
-        }
-        
-        // 3. Call the repository to get the purchase order data.
-        const [totalItems, rawOrders] = await fetchPurchaseOrderList.findPurchaseOrdersBySupplier(
+    // 1. Call the repository to get the supplier ID.
+    const supplier = await fetchPurchaseOrderList.findSupplierByUserId(userId);
+
+    // 2. Handle the business case where the user is not a supplier.
+    if (!supplier) {
+        return {
+            success: true,
+            code: 200,
+            message: "Supplier profile not found for this user.",
+            data: { orders: [], totalPages: 0, currentPage: page }
+        };
+    }
+
+    // 3. Call the repository to get the purchase order data.
+    const [totalItems, rawOrders] =
+        await fetchPurchaseOrderList.findPurchaseOrdersBySupplier(
             supplier.supplierId,
             { page, search, itemsPerPage }
         );
 
-        // --- Transform the raw database results into a clean, generic structure ---
-        const transformedOrders = rawOrders.map(order => {
-
-            // --- Object 2: For the "View Payments Modal" ---
-            let runningTotalPaid = 0;
-            const paymentHistory = order.payments.map(payment => {
-                runningTotalPaid += payment.amount;
-                return {
-                    paidAmount: payment.amount,
-                    pendingAmountAfterPayment: (order.totalCost || 0) - runningTotalPaid,
-                    paymentMethod: payment.paymentMethod,
-                    paymentRemarks: payment.remarks,
-                    receiptUrl: payment.receiptUrl,
-                    requestedAt: payment.requestedAt,
-                    paidAt: payment.paidAt,
-                };
-            });
-            // Determine the generic properties based on the productType
-            // --- Object 3: For the "Order Items Modal" ---
-            const orderItems = order.PurchaseOrderItems.map(item => {
-                const isPlant = item.productType === 'Plant';
-                
-                const variantName = isPlant ? item.plant?.name : item.potVariant?.potName;
-                const variantSize = isPlant ? item.plantVariant?.plantSize : item.potVariant?.size;
-                const sku = isPlant ? item.plantVariant?.sku : item.potVariant?.sku;
-                const color = isPlant ? item.plantVariant?.color?.name : item.potVariant?.color?.name;
-                const material = isPlant ? null : item.potVariant?.material?.name;
-                const variantImage = isPlant 
-                    ? item.plantVariant?.plantVariantImages[0]?.mediaUrl 
-                    : item.potVariant?.images[0]?.mediaUrl;
-                const productType = item.productType;
-                const isAccepted = item.isAccepted;
-                // Return the new, simplified item object
-                return {
-                    id: item.id,
-                    variantImage,
-                    productType,
-                    variantName: `${variantName}-${variantSize}-${color}-${material}`,
-                    sku,
-                    material,
-                    requestedDate: order.requestedAt, // Date comes from the parent order
-                    unitCostPrice: item.unitCostPrice,
-                    unitRequested: item.unitsRequested,
-                    totalVariantCost: Number(item.unitsRequested) * Number(item.unitCostPrice),
-                    isAccepted,
-                };
-            });
+    // --- Transform the raw database results into a clean, generic structure ---
+    const transformedOrders = rawOrders.map(order => {
+        // --- Object 2: For the "View Payments Modal" ---
+        let runningTotalPaid = 0;
+        const paymentHistory = order.payments.map(payment => {
+            runningTotalPaid += payment.amount;
+            return {
+                paidAmount: payment.amount,
+                pendingAmountAfterPayment:
+                    (order.totalCost || 0) - runningTotalPaid,
+                paymentMethod: payment.paymentMethod,
+                paymentRemarks: payment.remarks,
+                receiptUrl: payment.receiptUrl,
+                requestedAt: payment.requestedAt,
+                paidAt: payment.paidAt
+            };
+        });
+        // Determine the generic properties based on the productType
+        // --- Object 3: For the "Order Items Modal" ---
+        const orderItems = order.PurchaseOrderItems.map(item => {
+            const isPlant = item.productType === "Plant";
+            const productVariantName = isPlant ? item.plant?.name : "";
+            const productVariantSize = isPlant
+                ? item.plantVariant?.plantSize
+                : item.potVariant?.size;
+            const sku = isPlant ? item.plantVariant?.sku : item.potVariant?.sku;
+            const productVariantColor = isPlant
+                ? item.plantVariant?.color?.name
+                : item.potVariant?.color?.name;
+            const productVariantMaterial = isPlant
+                ? null
+                : item.potVariant?.material?.name;
+            const productVariantImage = isPlant
+                ? item.plantVariant?.plantVariantImages[0]?.mediaUrl
+                : item.potVariant?.images[0]?.mediaUrl;
+            const productVariantType = item.productType;
+            const isAccepted = item.isAccepted;
+            // Return the new, simplified item object
+            return {
+                id: item.id,
+                productVariantImage,
+                productVariantType,
+                productVariantName: `${productVariantName}-${productVariantSize}-${productVariantColor}-${productVariantMaterial}`,
+                sku,
+                productVariantMaterial,
+                requestedDate: order.requestedAt, // Date comes from the parent order
+                unitCostPrice: item.unitCostPrice,
+                unitRequested: item.unitsRequested,
+                totalVariantCost:
+                    Number(item.unitsRequested) * Number(item.unitCostPrice),
+                isAccepted
+            };
+        });
         // Return the order with the transformed items array
-        console.log( paymentHistory, orderItems)
+        console.log(paymentHistory, orderItems);
         return {
             // All top-level fields from the PurchaseOrder
             id: order.id,
@@ -276,23 +287,29 @@ const listAllWarehouses = async () => {
             paymentStatus: order.status,
             expectedDOA: order.expectedDateOfArrival,
             orderStatus: order.status,
-            
+
             // The two transformed arrays
             orderItems: orderItems,
-            payments: paymentHistory,
+            payments: paymentHistory
         };
     });
     transformedOrders.forEach(order => {
-    console.log(`\n--- Details for Order ID: ${order.id} ---`);
+        console.log(`\n--- Details for Order ID: ${order.id} ---`);
 
-    // --- THIS IS THE FIX ---
-    // Use util.inspect to print the entire object without truncation.
-    // 'depth: null' tells it to show all nested levels.
-    // 'colors: true' makes it much easier to read in the terminal.
-    console.log(util.inspect(order, { showHidden: false, depth: null, colors: true }));
+        // --- THIS IS THE FIX ---
+        // Use util.inspect to print the entire object without truncation.
+        // 'depth: null' tells it to show all nested levels.
+        // 'colors: true' makes it much easier to read in the terminal.
+        console.log(
+            util.inspect(order, {
+                showHidden: false,
+                depth: null,
+                colors: true
+            })
+        );
 
-    console.log(`------------------------------------`);
-});
+        console.log(`------------------------------------`);
+    });
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
     return {
@@ -413,6 +430,58 @@ const updateSupplierProfile = async (userId, updateData, profileImageUrl) => {
     });
 };
 
+function getMediaType(mimeType) {
+    if (!mimeType) return "UNKNOWN";
+    if (mimeType.startsWith("image/")) return "IMAGE";
+    if (mimeType.startsWith("video/")) return "VIDEO";
+    return "OTHER";
+}
+
+/**
+ * Saves QC media metadata to a Purchase Order after verifying ownership.
+ * @param {object} params
+ * @param {string} params.userId - The ID of the authenticated supplier user.
+ * @param {string} params.orderId - The ID of the Purchase Order.
+ * @param {Array<object>} params.uploadedMedia - An array of { url, publicId, mimeType } objects from the successful upload.
+ * @returns {Promise<object>} A success message and data.
+ */
+const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
+    // 1. Security Check: Ensure the order belongs to the logged-in supplier.
+    const supplier = await prisma.supplier.findUnique({ where: { userId } });
+    if (!supplier) {
+        throw { code: 404, message: "Supplier profile not found." };
+    }
+
+    const purchaseOrder = await prisma.purchaseOrder.findFirst({
+        where: { id: orderId, supplierId: supplier.supplierId }
+    });
+
+    if (!purchaseOrder) {
+        throw { code: 403, message: "Access denied. This purchase order does not belong to you." };
+    }
+
+    // 2. Prepare the data for the database.
+ const mediaArray = Array.isArray(uploadedMedia) ? uploadedMedia : [uploadedMedia];
+const mediaAssetsToCreate = mediaArray.map(media => ({
+        mediaUrl: media.mediaUrl,
+        publicId: media.publicId,
+        mediaType: media.mediaType,
+        resourceType: media.resourceType,
+        isPrimary: media.isPrimary || false,
+        uploadedBy: 'SUPPLIER',
+    }));
+
+    // 3. Save the URLs and public IDs to the database via the repository.
+    await fetchPurchaseOrderList.addMediaToPurchaseOrder(orderId, mediaAssetsToCreate);
+
+    return {
+        success: true,
+        code: 201,
+        message: "QC media uploaded successfully.",
+        // data: mediaAssetsToCreate
+    };
+};
+
 const searchWarehousesByName = async search => {
     const trimmedSearch = search?.trim();
 
@@ -457,5 +526,6 @@ module.exports = {
     completeSupplierProfile,
     listAllWarehouses,
     listOrderRequests,
+    uploadQcMediaForOrder,
     updateSupplierProfile
 };

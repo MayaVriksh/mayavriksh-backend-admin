@@ -1,6 +1,5 @@
 const { verifyAccessToken } = require("../utils/jwt.util");
 
-
 /**
  * Hapi middleware to verify a JWT Access Token from the Authorization header.
  * This is stateless and DOES NOT query the database, making it extremely fast.
@@ -8,16 +7,15 @@ const { verifyAccessToken } = require("../utils/jwt.util");
  */
 // --- Bouncer #1: The Wristband Checker ---
 const verifyAccessTokenMiddleware = {
-    // This is Hapi-specific. It means "whatever this function returns, 
+    // This is Hapi-specific. It means "whatever this function returns,
     // store it in the request object at 'req.pre.credentials' for later use".
-    assign: 'credentials', 
+    assign: "credentials",
 
     method: async (req, h) => {
-        
         try {
             // 1. Get the "Authorization" header from the incoming request.
             const authHeader = req.headers.authorization;
-            console.log(authHeader)
+            console.log(authHeader);
             // 2. Check if the header exists and is correctly formatted. It must start with "Bearer ".
             if (!authHeader) {
                 throw new Error("Token is missing or malformed.");
@@ -26,7 +24,7 @@ const verifyAccessTokenMiddleware = {
             // 4. THE MOST IMPORTANT STEP: Verify the token's signature.
             // The `verifyAccessToken` function uses the ACCESS_TOKEN_SECRET to check the "hologram".
             // If the token is expired, fake, or tampered with, this line will FAIL and throw an error.
-             // --- THIS IS THE NEW, BULLETPROOF LOGIC ---
+            // --- THIS IS THE NEW, BULLETPROOF LOGIC ---
             let token;
             // Check if the header is in the standard "Bearer <token>" format.
             if (authHeader.startsWith("Bearer ")) {
@@ -41,21 +39,22 @@ const verifyAccessTokenMiddleware = {
             if (!token) {
                 throw new Error("Token is missing after parsing header.");
             }
-            console.log("yoooooo")
+            console.log("yoooooo");
             // Now, we are guaranteed to be verifying only the token string.
             const decoded = verifyAccessToken(token);
-            console.log("xx",decoded)
+            console.log("xx", decoded);
             // 5. SUCCESS! The token is valid. We return the decoded payload.
             // Because of `assign: 'credentials'`, this object (`{ userId, role, username }`)
             // is now available at `req.pre.credentials`.
             return decoded;
-
         } catch (err) {
             // This 'catch' block runs if step 4 fails for any reason.
             // We immediately stop the request and send a 401 Unauthorized error.
             // .takeover() tells Hapi to not process anything further.
             return h
-                .response({ error: "Unauthorized: Session has expired or token is invalid." })
+                .response({
+                    error: "Unauthorized: Session has expired or token is invalid."
+                })
                 .code(401)
                 .takeover();
         }
@@ -69,17 +68,22 @@ const verifyAccessTokenMiddleware = {
  */
 // --- Bouncer #2: The VIP Section Guard ---
 // This is a "factory" that creates a middleware. You call it like `requireRole('admin')`.
-const requireRole = (allowedRoles) => ({
+const requireRole = allowedRoles => ({
     // We don't strictly need to assign its result, but it's good practice.
-    assign: 'roleCheck',
+    assign: "roleCheck",
 
     method: (req, h) => {
-        console.log(1)
+        console.log(1);
         // 1. This middleware RUNS AFTER `verifyAccessTokenMiddleware`.
         const userCredentials = req.pre.credentials;
         // This will now work because verifyAccessTokenMiddleware will correctly set credentials.
         if (!userCredentials || !userCredentials.role) {
-             return h.response({ error: "Authentication credentials not found. Middleware order might be incorrect." }).code(500).takeover();
+            return h
+                .response({
+                    error: "Authentication credentials not found. Middleware order might be incorrect."
+                })
+                .code(500)
+                .takeover();
         }
         // So, we can safely access `req.pre.credentials` because we know it exists.
         const { role } = userCredentials;
@@ -92,11 +96,12 @@ const requireRole = (allowedRoles) => ({
         // 3. The roles do not match. Deny access.
         // We use 403 Forbidden, which means "I know who you are, but you are not allowed here."
         return h
-            .response({ error: "Access Denied: You do not have permission to access this resource." })
+            .response({
+                error: "Access Denied: You do not have permission to access this resource."
+            })
             .code(403)
             .takeover();
     }
 });
-
 
 module.exports = { verifyAccessTokenMiddleware, requireRole };

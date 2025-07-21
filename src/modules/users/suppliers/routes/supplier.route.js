@@ -1,4 +1,6 @@
-const { handleValidationFailure } = require("../../../../utils/failActionValidation");
+const {
+    handleValidationFailure
+} = require("../../../../utils/failActionValidation");
 
 const ERROR_MESSAGES = require("../../../../constants/errorMessages.constant");
 const {
@@ -7,7 +9,10 @@ const {
 } = require("../../../../constants/responseCodes.constant");
 const SupplierController = require("../controllers/supplier.controller");
 const SupplierValidator = require("../validations/supplierProfile.validations");
-const { verifyAccessTokenMiddleware, requireRole } = require("../../../../middlewares/authenticate.middleware");
+const {
+    verifyAccessTokenMiddleware,
+    requireRole
+} = require("../../../../middlewares/authenticate.middleware");
 const { ROLES } = require("../../../../constants/roles.constant");
 
 module.exports = [
@@ -62,7 +67,7 @@ module.exports = [
     {
         method: "GET",
         // Using a general path as warehouses can be considered a shared resource.
-        path: "/warehouses", 
+        path: "/warehouses",
         options: {
             tags: ["api", "Supplier", "Warehouse"],
             description: "Get a list of all active warehouses for dropdowns.",
@@ -79,9 +84,14 @@ module.exports = [
             plugins: {
                 "hapi-swagger": {
                     responses: {
-                        200: { description: "List of warehouses retrieved successfully." },
+                        200: {
+                            description:
+                                "List of warehouses retrieved successfully."
+                        },
                         401: { description: "Unauthorized." },
-                        403: { description: "Forbidden (user role not permitted)." }
+                        403: {
+                            description: "Forbidden (user role not permitted)."
+                        }
                     }
                 }
             }
@@ -126,18 +136,51 @@ module.exports = [
         path: "/supplier/order-requests",
         options: {
             tags: ["api", "Supplier"],
-            description: "Get a list of order requests for the authenticated supplier.",
-            pre: [
-                verifyAccessTokenMiddleware,
-                requireRole([ROLES.SUPPLIER])
-            ],
+            description:
+                "Get a list of order requests for the authenticated supplier.",
+            pre: [verifyAccessTokenMiddleware, requireRole([ROLES.SUPPLIER])],
             validate: {
                 ...SupplierValidator.orderRequestValidation,
                 failAction: handleValidationFailure
             },
-            handler: SupplierController.listOrderRequests,
+            handler: SupplierController.listOrderRequests
         }
     },
+    {
+        method: "POST",
+        path: "/supplier/purchase-orders/{orderId}/qc-media",
+        options: {
+            tags: ["api", "Supplier", "Purchase Order"],
+            description:
+                "Upload Quality Check (QC) media for a purchase order.",
+            notes: "Allows a supplier to upload multiple images or videos for a specific order.",
+
+            pre: [verifyAccessTokenMiddleware, requireRole([ROLES.SUPPLIER])],
+
+            validate: {
+                ...SupplierValidator.orderIdParamValidation,
+                failAction: handleValidationFailure
+            },
+
+            // --- CRITICAL: Payload configuration for file uploads ---
+            payload: {
+                output: "stream",
+                parse: true,
+                multipart: true,
+                allow: "multipart/form-data",
+                maxBytes: 20 * 1024 * 1024 // Example: 20MB total payload size limit
+            },
+
+            handler: SupplierController.uploadQcMedia,
+
+            plugins: {
+                "hapi-swagger": {
+                    // This helps document the file upload in Swagger
+                    payloadType: "form"
+                }
+            }
+        }
+    }
     // {
     //     method: "GET",
     //     path: "/supplier/order-requests/{orderId}", // The path includes the ID
