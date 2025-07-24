@@ -8,6 +8,7 @@ const {
 const ERROR_MESSAGES = require("../../../../constants/errorMessages.constant");
 const SUCCESS_MESSAGES = require("../../../../constants/successMessages.constant.js");
 const fetchPurchaseOrderList = require("../repositories/supplier.repository.js");
+const orderEvents = require("../../../../events/order.events.js");
 
 const showSupplierProfile = async userId => {
     const profile = await prisma.supplier.findUnique({
@@ -430,20 +431,13 @@ const updateSupplierProfile = async (userId, updateData, profileImageUrl) => {
     });
 };
 
-function getMediaType(mimeType) {
-    if (!mimeType) return "UNKNOWN";
-    if (mimeType.startsWith("image/")) return "IMAGE";
-    if (mimeType.startsWith("video/")) return "VIDEO";
-    return "OTHER";
-}
-
 /**
  * Saves QC media metadata to a Purchase Order after verifying ownership.
  * @param {object} params
  * @param {string} params.userId - The ID of the authenticated supplier user.
  * @param {string} params.orderId - The ID of the Purchase Order.
  * @param {Array<object>} params.uploadedMedia - An array of { url, publicId, mimeType } objects from the successful upload.
- * @returns {Promise<object>} A success message and data.
+ * @returns {Promise<object>} A success message.
  */
 const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
     // 1. Security Check: Ensure the order belongs to the logged-in supplier.
@@ -451,35 +445,176 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
     if (!supplier) {
         throw { code: 404, message: "Supplier profile not found." };
     }
-
-    const purchaseOrder = await prisma.purchaseOrder.findFirst({
-        where: { id: orderId, supplierId: supplier.supplierId }
-    });
+    const purchaseOrder = fetchPurchaseOrderList.checkPurchaseOrderExist(
+        orderId,
+        supplier.supplierId
+    );
 
     if (!purchaseOrder) {
-        throw { code: 403, message: "Access denied. This purchase order does not belong to you." };
+        throw {
+            code: 403,
+            message:
+                "Access denied. This purchase order does not belong to you."
+        };
     }
 
+    /** Uploading Order status to SHipped */
+    fetchPurchaseOrderList.updateOrderStatus(orderId);
+
     // 2. Prepare the data for the database.
- const mediaArray = Array.isArray(uploadedMedia) ? uploadedMedia : [uploadedMedia];
-const mediaAssetsToCreate = mediaArray.map(media => ({
+    const mediaArray = Array.isArray(uploadedMedia)
+        ? uploadedMedia
+        : [uploadedMedia];
+    const mediaAssetsToCreate = mediaArray.map(media => ({
         mediaUrl: media.mediaUrl,
         publicId: media.publicId,
         mediaType: media.mediaType,
         resourceType: media.resourceType,
         isPrimary: media.isPrimary || false,
-        uploadedBy: 'SUPPLIER',
+        uploadedBy: "SUPPLIER"
     }));
 
     // 3. Save the URLs and public IDs to the database via the repository.
-    await fetchPurchaseOrderList.addMediaToPurchaseOrder(orderId, mediaAssetsToCreate);
+    await fetchPurchaseOrderList.addMediaToPurchaseOrder(
+        orderId,
+        mediaAssetsToCreate
+    );
 
     return {
         success: true,
         code: 201,
-        message: "QC media uploaded successfully.",
+        message: "QC media uploaded successfully."
         // data: mediaAssetsToCreate
     };
+};
+
+// Add this new function to your supplier service file
+
+const reviewPurchaseOrder = async ({ userId, orderId, items }) => {
+    // 1. Security Check: The repository will verify ownership ??
+    // --- 1. Security Check: Verify ownership of the Purchase Order ---
+    return await prisma.$transaction(async tx => {
+        const supplier = await prisma.supplier.findUnique({
+            where: { userId },
+            select: { supplierId: true }
+        });
+        if (!supplier) {
+            throw {
+                code: 403,
+                message: "Access Denied: Supplier profile not found."
+            };
+        }
+        const orderToReview = await fetchPurchaseOrderList.orderToReview(
+            orderId,
+            supplier.supplierId
+        );
+
+        if (!orderToReview) {
+            throw {
+                code: 404,
+                message:
+                    "Access Denied: Purchase Order not found or does not belong to you."
+            };
+        }
+
+        // Check to ensure the API request can't review an already processed order as status will not be PENDING anymore for them.
+        if (orderToReview.status !== "PENDING") {
+            throw {
+                code: 400,
+                message: `This order is already in '${orderToReview.status}' status and cannot be reviewed.`
+            };
+        }
+
+        // 2. Business Logic: Calculate the new total cost based on ACCEPTED items
+        const acceptedItems = items.filter(item => item.isAccepted === true);
+        // console.log(acceptedItems)
+
+        // Fetch the full item details to get their prices for calculation
+        const acceptedItemIds = acceptedItems.map(item => item.itemId);
+
+        // Here we didn't use the financial numbers fetched from Frontend, rather calling db to get the number against the Orders,
+        // because if somone tempers with the costs, then our logic will trust that and save in db. But if they tamper with
+        // purchase OrderId, and if its not there, it simply reject the request. Thus safe
+        const fullItemDetails =
+            await fetchPurchaseOrderList.findOrderItemsByIds(acceptedItemIds, tx);
+
+        const newTotalCost = fullItemDetails.reduce((sum, item) => {
+            return sum + Number(item.unitCostPrice) * item.unitsRequested;
+        }, 0);
+        // 3. Call the repository to update the database in a transaction
+        await fetchPurchaseOrderList.updateOrderAfterReview({
+            userId,
+            orderId,
+            itemsToUpdate: items,
+            newTotalCost,
+            tx
+        });
+
+        // 4. Trigger notification to Warehouse Manager (e.g., using an event emitter) will be implemented later
+        // orderEvents.emit('order.reviewed', { orderId, newTotalCost });
+
+        return {
+            success: true,
+            code: 200,
+            message: "Order review submitted successfully."
+        };
+    }, {
+        // Sets the maximum time Prisma will wait for a connection from the pool.
+        maxWait: 10000, // 10 seconds (default is 2s)
+        // Sets the maximum time the entire transaction is allowed to run.
+        timeout: 15000  // 15 seconds (default is 5s)
+    });
+};
+
+
+const getOrderRequestById = async ({ userId, orderId }) => {
+    // First, find the supplierId from the userId.
+    const supplier = await prisma.supplier.findUnique({
+        where: { userId: userId },
+        select: { supplierId: true }
+    });
+
+    if (!supplier) {
+        throw { code: 404, message: "Supplier profile not found for this user." };
+    }
+
+    // Now, find the purchase order, ensuring it matches BOTH the orderId AND the supplierId.
+    // This is a critical security check to prevent suppliers from viewing each other's orders.
+    const order = await prisma.purchaseOrder.findFirst({
+        where: {
+            id: orderId,
+            supplierId: supplier.supplierId
+        },
+        select: {
+            // Select all the fields you need for the details page
+            id: true,
+            status: true,
+            totalCost: true,
+            pendingAmount: true,
+            paymentPercentage: true,
+            expectedDateOfArrival: true,
+            PurchaseOrderItems: {
+                select: {
+                    id: true,
+                    productType: true,
+                    unitsRequested: true,
+                    unitCostPrice: true,
+                    plant: { select: { name: true } },
+                    isAccepted: true,
+                    // ... and all other nested details you need
+                }
+            },
+            payments: {
+                orderBy: { paidAt: 'asc' }
+            }
+        }
+    });
+
+    if (!order) {
+        throw { code: 404, message: "Purchase Order not found or you do not have permission to view it." };
+    }
+
+    return { success: true, code: 200, data: order };
 };
 
 const searchWarehousesByName = async search => {
@@ -527,5 +662,7 @@ module.exports = {
     listAllWarehouses,
     listOrderRequests,
     uploadQcMediaForOrder,
+    reviewPurchaseOrder,
+    getOrderRequestById,
     updateSupplierProfile
 };

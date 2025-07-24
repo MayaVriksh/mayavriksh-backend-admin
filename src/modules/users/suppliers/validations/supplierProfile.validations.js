@@ -143,6 +143,32 @@ const orderRequestValidation = {
     })
 };
 
+const reviewPurchaseOrderValidation = {
+    params: Joi.object({
+        orderId: Joi.string()
+            .required()
+            .description("The ID of the Purchase Order to review")
+    }),
+    // --- MODIFIED: The payload schema is updated ---
+    payload: Joi.object({
+        items: Joi.array()
+            .items(
+                Joi.object({
+                    itemId: Joi.string()
+                        .required()
+                        .description("The ID of the PurchaseOrderItem"),
+                    // Now expects a boolean `isAccepted` field instead of a `status` string.
+                    isAccepted: Joi.boolean()
+                        .required()
+                        .description("The new acceptance status for the item")
+                })
+            )
+            .min(1)
+            .required()
+            .description("An array of items with their new review status")
+    })
+};
+
 const orderIdParamValidation = {
     params: Joi.object({
         orderId: Joi.string()
@@ -151,9 +177,62 @@ const orderIdParamValidation = {
     })
 };
 
+// --- NEW: A detailed schema for the successful 200 OK response ---
+
+// --- 1. A reusable schema for a single transformed order item ---
+const orderItemSchema = Joi.object({
+    id: Joi.string().required(),
+    productType: Joi.string().valid('Plant', 'Pot').required(),
+    variantImage: Joi.string().uri().allow(null, ''),
+    variantName: Joi.string().required(),
+    sku: Joi.string().allow(null, ''),
+    material: Joi.string().allow(null, ''),
+    requestedDate: Joi.date().required(),
+    unitCostPrice: Joi.number().required(),
+    unitRequested: Joi.number().integer().required(),
+    totalVariantCost: Joi.number().required(),
+    isAccepted: Joi.boolean() // This may or may not be in the transformed object, so keep it flexible
+}).label('TransformedOrderItem');
+
+// --- 2. A reusable schema for a single payment history item ---
+const paymentItemSchema = Joi.object({
+    paidAmount: Joi.number().required(),
+    pendingAmountAfterPayment: Joi.number().required(),
+    paymentMethod: Joi.string().required(),
+    paymentRemarks: Joi.string().allow(null, ''),
+    receiptUrl: Joi.string().uri().allow(null, ''),
+    requestedAt: Joi.date(),
+    paidAt: Joi.date().allow(null)
+}).label('PaymentHistoryItem');
+
+// --- 3. The main schema for the entire API response ---
+// This combines the pieces above to validate the full structure.
+const getOrderByIdResponseSchema = Joi.object({
+    success: Joi.boolean().example(true).required(),
+    code: Joi.number().example(200).required(),
+    data: Joi.object({
+        // Top-level PurchaseOrder fields
+        id: Joi.string().required(),
+        status: Joi.string().required(),
+        totalCost: Joi.number().allow(null),
+        pendingAmount: Joi.number().allow(null),
+        paymentPercentage: Joi.number().integer().required(),
+        expectedDateOfArrival: Joi.date().required(),
+        requestedAt: Joi.date().required(),
+        isAccepted: Joi.boolean().required(),
+
+        // The nested array of transformed items
+        PurchaseOrderItems: Joi.array().items(orderItemSchema).required(),
+        
+        // The nested array of transformed payments
+        payments: Joi.array().items(paymentItemSchema).required()
+    })
+}).label('GetOrderByIdSuccessResponse');
+
 module.exports = {
     completeSupplierProfile,
     updateSupplierProfile,
     orderRequestValidation,
+    reviewPurchaseOrderValidation,
     orderIdParamValidation
 };

@@ -334,7 +334,7 @@ const uploadQcMedia = async (req, h) => {
                 .code(400)
                 .takeover();
         }
-        console.log("xx", uploadResult)
+        console.log("xx", uploadResult);
         // 2. Controller calls the simplified service with the upload results.
         const result = await SupplierService.uploadQcMediaForOrder({
             userId,
@@ -354,21 +354,51 @@ const uploadQcMedia = async (req, h) => {
     }
 };
 
-// const getOrderRequestById = async (req, h) => {
-//     try {
-//         const { userId } = req.pre.credentials;
-//         const { orderId } = req.params; // Get the orderId from the URL parameter
+// Add this new function to your supplier controller file
 
-//         const result = await SupplierService.getOrderRequestById({ userId, orderId });
-//         return h.response(result).code(result.code);
-//     } catch (error) {
-//         console.error("Error in getOrderRequestById controller:", error);
-//         return h.response({
-//             success: false,
-//             message: error.message || "Failed to retrieve order request."
-//         }).code(error.code || 500);
-//     }
-// };
+const reviewPurchaseOrder = async (req, h) => {
+    try {
+        const { userId } = req.pre.credentials;
+        const { orderId } = req.params;
+        const { items } = req.payload; // e.g., [{ itemId: "...", status: "ACCEPTED" }]
+
+        const result = await SupplierService.reviewPurchaseOrder({
+            userId,
+            orderId,
+            items
+        });
+        return h.response(result).code(result.code);
+    } catch (error) {
+        console.error("Review Purchase Order Controller Error:", error.message);
+
+        // Return a standardized error response to the client.
+        return h
+            .response({
+                success: false,
+                message:
+                    error.message ||
+                    "An error occurred while reviewing the order."
+            })
+            .code(error.code || 500) // Use the error's status code or default to 500
+            .takeover();
+    }
+};
+
+const getOrderRequestById = async (req, h) => {
+    try {
+        const { userId } = req.pre.credentials;
+        const { orderId } = req.params; // Get the orderId from the URL parameter
+
+        const result = await SupplierService.getOrderRequestById({ userId, orderId });
+        return h.response(result).code(result.code);
+    } catch (error) {
+        console.error("Error in getOrderRequestById controller:", error);
+        return h.response({
+            success: false,
+            message: error.message || "Failed to retrieve order request."
+        }).code(error.code || 500);
+    }
+};
 
 const searchWarehouses = async (req, h) => {
     try {
@@ -404,6 +434,7 @@ module.exports = {
     listWarehouses,
     listOrderRequests,
     uploadQcMedia,
-    // getOrderRequestById,
+    reviewPurchaseOrder,
+    getOrderRequestById,
     updateSupplierProfile
 };
