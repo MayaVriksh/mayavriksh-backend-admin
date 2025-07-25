@@ -182,28 +182,28 @@ const orderIdParamValidation = {
 // --- 1. A reusable schema for a single transformed order item ---
 const orderItemSchema = Joi.object({
     id: Joi.string().required(),
-    productType: Joi.string().valid('Plant', 'Pot').required(),
-    variantImage: Joi.string().uri().allow(null, ''),
+    productType: Joi.string().valid("Plant", "Pot").required(),
+    variantImage: Joi.string().uri().allow(null, ""),
     variantName: Joi.string().required(),
-    sku: Joi.string().allow(null, ''),
-    material: Joi.string().allow(null, ''),
+    sku: Joi.string().allow(null, ""),
+    material: Joi.string().allow(null, ""),
     requestedDate: Joi.date().required(),
     unitCostPrice: Joi.number().required(),
     unitRequested: Joi.number().integer().required(),
     totalVariantCost: Joi.number().required(),
     isAccepted: Joi.boolean() // This may or may not be in the transformed object, so keep it flexible
-}).label('TransformedOrderItem');
+}).label("TransformedOrderItem");
 
 // --- 2. A reusable schema for a single payment history item ---
 const paymentItemSchema = Joi.object({
     paidAmount: Joi.number().required(),
     pendingAmountAfterPayment: Joi.number().required(),
     paymentMethod: Joi.string().required(),
-    paymentRemarks: Joi.string().allow(null, ''),
-    receiptUrl: Joi.string().uri().allow(null, ''),
+    paymentRemarks: Joi.string().allow(null, ""),
+    receiptUrl: Joi.string().uri().allow(null, ""),
     requestedAt: Joi.date(),
     paidAt: Joi.date().allow(null)
-}).label('PaymentHistoryItem');
+}).label("PaymentHistoryItem");
 
 // --- 3. The main schema for the entire API response ---
 // This combines the pieces above to validate the full structure.
@@ -223,11 +223,11 @@ const getOrderByIdResponseSchema = Joi.object({
 
         // The nested array of transformed items
         PurchaseOrderItems: Joi.array().items(orderItemSchema).required(),
-        
+
         // The nested array of transformed payments
         payments: Joi.array().items(paymentItemSchema).required()
     })
-}).label('GetOrderByIdSuccessResponse');
+}).label("GetOrderByIdSuccessResponse");
 
 module.exports = {
     completeSupplierProfile,

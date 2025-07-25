@@ -9,6 +9,8 @@ const ERROR_MESSAGES = require("../../../../constants/errorMessages.constant");
 const SUCCESS_MESSAGES = require("../../../../constants/successMessages.constant.js");
 const fetchPurchaseOrderList = require("../repositories/supplier.repository.js");
 const orderEvents = require("../../../../events/order.events.js");
+const ORDER_STATUSES = require("../../../../constants/orderStatus.constant.js");
+const ROLES = require("../../../../constants/roles.constant.js");
 
 const showSupplierProfile = async userId => {
     const profile = await prisma.supplier.findUnique({
@@ -140,7 +142,7 @@ const completeSupplierProfile = async (
                     warehouseId,
                     tradeLicenseUrl: tradeLicenseData.mediaUrl,
                     publicId: tradeLicenseData.publicId,
-                    status: "UNDER_REVIEW", // Set status for admin verification
+                    status: ORDER_STATUSES.UNDER_REVIEW, // Set status for admin verification
                     isVerified: false // Explicitly set to false until admin approval
                 }
             });
@@ -223,7 +225,6 @@ const listOrderRequests = async ({ userId, page = 1, search = "" }) => {
             supplier.supplierId,
             { page, search, itemsPerPage }
         );
-
     // --- Transform the raw database results into a clean, generic structure ---
     const transformedOrders = rawOrders.map(order => {
         // --- Object 2: For the "View Payments Modal" ---
@@ -232,6 +233,7 @@ const listOrderRequests = async ({ userId, page = 1, search = "" }) => {
             runningTotalPaid += payment.amount;
             return {
                 paidAmount: payment.amount,
+                paymentStatus: order.payments.status,
                 pendingAmountAfterPayment:
                     (order.totalCost || 0) - runningTotalPaid,
                 paymentMethod: payment.paymentMethod,
@@ -285,7 +287,6 @@ const listOrderRequests = async ({ userId, page = 1, search = "" }) => {
             totalOrderCost: order.totalCost,
             pendingAmount: order.pendingAmount,
             paymentPercentage: order.paymentPercentage,
-            paymentStatus: order.status,
             expectedDOA: order.expectedDateOfArrival,
             orderStatus: order.status,
 
@@ -471,7 +472,7 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
         mediaType: media.mediaType,
         resourceType: media.resourceType,
         isPrimary: media.isPrimary || false,
-        uploadedBy: "SUPPLIER"
+        uploadedBy: ROLES.SUPPLIER
     }));
 
     // 3. Save the URLs and public IDs to the database via the repository.
@@ -493,79 +494,86 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
 const reviewPurchaseOrder = async ({ userId, orderId, items }) => {
     // 1. Security Check: The repository will verify ownership ??
     // --- 1. Security Check: Verify ownership of the Purchase Order ---
-    return await prisma.$transaction(async tx => {
-        const supplier = await prisma.supplier.findUnique({
-            where: { userId },
-            select: { supplierId: true }
-        });
-        if (!supplier) {
-            throw {
-                code: 403,
-                message: "Access Denied: Supplier profile not found."
+    return await prisma.$transaction(
+        async tx => {
+            const supplier = await prisma.supplier.findUnique({
+                where: { userId },
+                select: { supplierId: true }
+            });
+            if (!supplier) {
+                throw {
+                    code: 403,
+                    message: "Access Denied: Supplier profile not found."
+                };
+            }
+            const orderToReview = await fetchPurchaseOrderList.orderToReview(
+                orderId,
+                supplier.supplierId
+            );
+
+            if (!orderToReview) {
+                throw {
+                    code: 404,
+                    message:
+                        "Access Denied: Purchase Order not found or does not belong to you."
+                };
+            }
+
+            // Check to ensure the API request can't review an already processed order as status will not be PENDING anymore for them.
+            if (orderToReview.status !== ORDER_STATUSES.PENDING) {
+                throw {
+                    code: 400,
+                    message: `This order is already in '${orderToReview.status}' status and cannot be reviewed.`
+                };
+            }
+
+            // 2. Business Logic: Calculate the new total cost based on ACCEPTED items
+            const acceptedItems = items.filter(
+                item => item.isAccepted === true
+            );
+            // console.log(acceptedItems)
+
+            // Fetch the full item details to get their prices for calculation
+            const acceptedItemIds = acceptedItems.map(item => item.itemId);
+
+            // Here we didn't use the financial numbers fetched from Frontend, rather calling db to get the number against the Orders,
+            // because if somone tempers with the costs, then our logic will trust that and save in db. But if they tamper with
+            // purchase OrderId, and if its not there, it simply reject the request. Thus safe
+            const fullItemDetails =
+                await fetchPurchaseOrderList.findOrderItemsByIds(
+                    acceptedItemIds,
+                    tx
+                );
+
+            const newTotalCost = fullItemDetails.reduce((sum, item) => {
+                return sum + Number(item.unitCostPrice) * item.unitsRequested;
+            }, 0);
+            // 3. Call the repository to update the database in a transaction
+            await fetchPurchaseOrderList.updateOrderAfterReview({
+                userId,
+                orderId,
+                itemsToUpdate: items,
+                newTotalCost,
+                tx
+            });
+
+            // 4. Trigger notification to Warehouse Manager (e.g., using an event emitter) will be implemented later
+            // orderEvents.emit('order.reviewed', { orderId, newTotalCost });
+
+            return {
+                success: true,
+                code: 200,
+                message: "Order review submitted successfully."
             };
+        },
+        {
+            // Sets the maximum time Prisma will wait for a connection from the pool.
+            maxWait: 10000, // 10 seconds (default is 2s)
+            // Sets the maximum time the entire transaction is allowed to run.
+            timeout: 15000 // 15 seconds (default is 5s)
         }
-        const orderToReview = await fetchPurchaseOrderList.orderToReview(
-            orderId,
-            supplier.supplierId
-        );
-
-        if (!orderToReview) {
-            throw {
-                code: 404,
-                message:
-                    "Access Denied: Purchase Order not found or does not belong to you."
-            };
-        }
-
-        // Check to ensure the API request can't review an already processed order as status will not be PENDING anymore for them.
-        if (orderToReview.status !== "PENDING") {
-            throw {
-                code: 400,
-                message: `This order is already in '${orderToReview.status}' status and cannot be reviewed.`
-            };
-        }
-
-        // 2. Business Logic: Calculate the new total cost based on ACCEPTED items
-        const acceptedItems = items.filter(item => item.isAccepted === true);
-        // console.log(acceptedItems)
-
-        // Fetch the full item details to get their prices for calculation
-        const acceptedItemIds = acceptedItems.map(item => item.itemId);
-
-        // Here we didn't use the financial numbers fetched from Frontend, rather calling db to get the number against the Orders,
-        // because if somone tempers with the costs, then our logic will trust that and save in db. But if they tamper with
-        // purchase OrderId, and if its not there, it simply reject the request. Thus safe
-        const fullItemDetails =
-            await fetchPurchaseOrderList.findOrderItemsByIds(acceptedItemIds, tx);
-
-        const newTotalCost = fullItemDetails.reduce((sum, item) => {
-            return sum + Number(item.unitCostPrice) * item.unitsRequested;
-        }, 0);
-        // 3. Call the repository to update the database in a transaction
-        await fetchPurchaseOrderList.updateOrderAfterReview({
-            userId,
-            orderId,
-            itemsToUpdate: items,
-            newTotalCost,
-            tx
-        });
-
-        // 4. Trigger notification to Warehouse Manager (e.g., using an event emitter) will be implemented later
-        // orderEvents.emit('order.reviewed', { orderId, newTotalCost });
-
-        return {
-            success: true,
-            code: 200,
-            message: "Order review submitted successfully."
-        };
-    }, {
-        // Sets the maximum time Prisma will wait for a connection from the pool.
-        maxWait: 10000, // 10 seconds (default is 2s)
-        // Sets the maximum time the entire transaction is allowed to run.
-        timeout: 15000  // 15 seconds (default is 5s)
-    });
+    );
 };
-
 
 const getOrderRequestById = async ({ userId, orderId }) => {
     // First, find the supplierId from the userId.
@@ -575,7 +583,10 @@ const getOrderRequestById = async ({ userId, orderId }) => {
     });
 
     if (!supplier) {
-        throw { code: 404, message: "Supplier profile not found for this user." };
+        throw {
+            code: 404,
+            message: "Supplier profile not found for this user."
+        };
     }
 
     // Now, find the purchase order, ensuring it matches BOTH the orderId AND the supplierId.
@@ -600,21 +611,190 @@ const getOrderRequestById = async ({ userId, orderId }) => {
                     unitsRequested: true,
                     unitCostPrice: true,
                     plant: { select: { name: true } },
-                    isAccepted: true,
-                    // ... and all other nested details you need
+                    isAccepted: true
                 }
             },
             payments: {
-                orderBy: { paidAt: 'asc' }
+                orderBy: { paidAt: "asc" }
             }
         }
     });
 
     if (!order) {
-        throw { code: 404, message: "Purchase Order not found or you do not have permission to view it." };
+        throw {
+            code: 404,
+            message:
+                "Purchase Order not found or you do not have permission to view it."
+        };
     }
 
     return { success: true, code: 200, data: order };
+};
+
+const rejectEntireOrder = async ({ userId, orderId }) => {
+    // 1. Security & Business Logic: Check user and order status
+    const supplier = await prisma.supplier.findUnique({ where: { userId } });
+    if (!supplier) {
+        throw { code: 404, message: "Supplier profile not found." };
+    }
+
+    const orderToReject = await prisma.purchaseOrder.findFirst({
+        where: { id: orderId, supplierId: supplier.supplierId },
+        select: { status: true }
+    });
+
+    if (!orderToReject) {
+        throw {
+            code: 404,
+            message:
+                "Order not found or you do not have permission to reject it."
+        };
+    }
+
+    if (orderToReject.status !== ORDER_STATUSES.PENDING) {
+        throw {
+            code: 400,
+            message: `This order is already in '${orderToReject.status}' status and cannot be rejected.`
+        };
+    }
+
+    // 2. Call the repository to perform the database update
+    await fetchPurchaseOrderList.rejectPurchaseOrder(
+        orderId,
+        supplier.supplierId
+    );
+
+    // 3. (Optional) Trigger notification to the Warehouse Manager
+    // orderEvents.emit('order.rejected', { orderId });
+
+    return {
+        success: true,
+        code: 200,
+        message: "Purchase order has been rejected."
+    };
+};
+
+/**
+ * Retrieves a paginated list of historical purchase orders for a supplier.
+ */
+const listOrderHistory = async ({ userId, page = 1, search = "" }) => {
+    const itemsPerPage = 10;
+
+    // 1. Get the supplierId for the logged-in user.
+    const supplier = await fetchPurchaseOrderList.findSupplierByUserId(userId);
+    if (!supplier) {
+        return {
+            success: true,
+            code: 200,
+            message: "Supplier profile not found for this user.",
+            data: { orders: [], totalPages: 0, currentPage: page }
+        };
+    }
+
+    // 2. Call the NEW repository function for historical orders.
+    const [totalItems, rawOrders] =
+        await fetchPurchaseOrderList.findHistoricalPurchaseOrdersBySupplier(
+            supplier.supplierId,
+            { page, search, itemsPerPage }
+        );
+
+    // 3. Perform the EXACT SAME data transformation as listOrderRequests.
+    //    This provides a consistent data structure to the frontend.
+    const transformedOrders = rawOrders.map(order => {
+        // --- Object 2: For the "View Payments Modal" ---
+        let runningTotalPaid = 0;
+        // ... transform payment history ...
+        const paymentHistory = order.payments.map(payment => {
+            runningTotalPaid += payment.amount;
+            return {
+                paidAmount: payment.amount,
+                pendingAmountAfterPayment:
+                    (order.totalCost || 0) - runningTotalPaid,
+                paymentStatus: payment.status,
+                paymentMethod: payment.paymentMethod,
+                paymentRemarks: payment.remarks,
+                receiptUrl: payment.receiptUrl,
+                requestedAt: payment.requestedAt,
+                paidAt: payment.paidAt
+            };
+        });
+        const orderItems = order.PurchaseOrderItems.map(item => {
+            const isPlant = item.productType === "Plant";
+            const productVariantName = isPlant ? item.plant?.name : "";
+            const productVariantSize = isPlant
+                ? item.plantVariant?.plantSize
+                : item.potVariant?.size;
+            const sku = isPlant ? item.plantVariant?.sku : item.potVariant?.sku;
+            const productVariantColor = isPlant
+                ? item.plantVariant?.color?.name
+                : item.potVariant?.color?.name;
+            const productVariantMaterial = isPlant
+                ? null
+                : item.potVariant?.material?.name;
+            const productVariantImage = isPlant
+                ? item.plantVariant?.plantVariantImages[0]?.mediaUrl
+                : item.potVariant?.images[0]?.mediaUrl;
+            const productVariantType = item.productType;
+            const isAccepted = item.isAccepted;
+            // Return the new, simplified item object
+            return {
+                id: item.id,
+                productVariantImage,
+                productVariantType,
+                productVariantName: `${productVariantName}-${productVariantSize}-${productVariantColor}-${productVariantMaterial}`,
+                sku,
+                productVariantMaterial,
+                requestedDate: order.requestedAt, // Date comes from the parent order
+                unitCostPrice: item.unitCostPrice,
+                unitRequested: item.unitsRequested,
+                totalVariantCost:
+                    Number(item.unitsRequested) * Number(item.unitCostPrice),
+                isAccepted
+            };
+        });
+
+        // Return the final, structured object for this order
+        return {
+            // All top-level fields from the PurchaseOrder
+            id: order.id,
+            totalOrderCost: order.totalCost,
+            pendingAmount: order.pendingAmount,
+            paymentPercentage: order.paymentPercentage,
+            expectedDOA: order.expectedDateOfArrival,
+            orderStatus: order.status,
+            // The two transformed arrays
+            orderItems: orderItems,
+            payments: paymentHistory
+        };
+    });
+    transformedOrders.forEach(order => {
+        console.log(`\n--- Details for Order ID: ${order.id} ---`);
+
+        // --- THIS IS THE FIX ---
+        // Use util.inspect to print the entire object without truncation.
+        // 'depth: null' tells it to show all nested levels.
+        // 'colors: true' makes it much easier to read in the terminal.
+        console.log(
+            util.inspect(order, {
+                showHidden: false,
+                depth: null,
+                colors: true
+            })
+        );
+
+        console.log(`------------------------------------`);
+    });
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    return {
+        success: true,
+        code: 200,
+        message: "Order requests retrieved successfully.",
+        data: {
+            orders: transformedOrders,
+            totalPages,
+            currentPage: parseInt(page, 10)
+        }
+    };
 };
 
 const searchWarehousesByName = async search => {
@@ -664,5 +844,7 @@ module.exports = {
     uploadQcMediaForOrder,
     reviewPurchaseOrder,
     getOrderRequestById,
-    updateSupplierProfile
+    updateSupplierProfile,
+    rejectEntireOrder,
+    listOrderHistory
 };

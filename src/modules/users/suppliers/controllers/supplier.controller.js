@@ -389,14 +389,71 @@ const getOrderRequestById = async (req, h) => {
         const { userId } = req.pre.credentials;
         const { orderId } = req.params; // Get the orderId from the URL parameter
 
-        const result = await SupplierService.getOrderRequestById({ userId, orderId });
+        const result = await SupplierService.getOrderRequestById({
+            userId,
+            orderId
+        });
         return h.response(result).code(result.code);
     } catch (error) {
         console.error("Error in getOrderRequestById controller:", error);
-        return h.response({
-            success: false,
-            message: error.message || "Failed to retrieve order request."
-        }).code(error.code || 500);
+        return h
+            .response({
+                success: false,
+                message: error.message || "Failed to retrieve order request."
+            })
+            .code(error.code || 500);
+    }
+};
+
+const rejectPurchaseOrder = async (req, h) => {
+    try {
+        const { userId } = req.pre.credentials;
+        const { orderId } = req.params;
+
+        const result = await SupplierService.rejectEntireOrder({
+            userId,
+            orderId
+        });
+
+        return h.response(result).code(result.code);
+    } catch (error) {
+        console.error("Reject Purchase Order Controller Error:", error);
+        return h
+            .response({
+                success: false,
+                message:
+                    error.message ||
+                    "An error occurred while rejecting the order."
+            })
+            .code(error.code || 500);
+    }
+};
+const listOrderHistory = async (req, h) => {
+    try {
+        const { userId } = req.pre.credentials;
+        const { page = 1, search = "" } = req.query;
+
+        const result = await SupplierService.listOrderHistory({
+            userId,
+            page: parseInt(page, 10),
+            search
+        });
+
+        return h.response(result).code(result.code);
+    } catch (error) {
+        // Log the full error for server-side debugging
+        console.error("Error in listOrderHistory controller:", error.message);
+
+        // Return a standardized JSON error response to the client
+        return h
+            .response({
+                success: false,
+                message:
+                    error.message ||
+                    "An error occurred while fetching order history."
+            })
+            .code(error.code || 500) // Use the error's specific code or default to 500
+            .takeover(); // Tell Hapi to stop and send this response immediately
     }
 };
 
@@ -436,5 +493,7 @@ module.exports = {
     uploadQcMedia,
     reviewPurchaseOrder,
     getOrderRequestById,
-    updateSupplierProfile
+    updateSupplierProfile,
+    rejectPurchaseOrder,
+    listOrderHistory
 };

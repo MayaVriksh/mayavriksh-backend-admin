@@ -228,34 +228,120 @@ module.exports = [
         path: "/supplier/order-requests/{orderId}",
         options: {
             tags: ["api", "Supplier Purchase Order"],
-            description: "Get a single purchase order by its ID, including all of its items and payment history.",
+            description:
+                "Get a single purchase order by its ID, including all of its items and payment history.",
             notes: "This endpoint is used to fetch the detailed data needed to display the 'Review Items' or 'View Details' modal for a specific order.",
-            pre: [
-                verifyAccessTokenMiddleware,
-                requireRole([ROLES.SUPPLIER])
-            ],
-            
+            pre: [verifyAccessTokenMiddleware, requireRole([ROLES.SUPPLIER])],
+
             // This validation uses the schema from Step 1
             validate: {
                 ...SupplierValidator.orderIdParamValidation,
-                failAction: handleValidationFailure,
+                failAction: handleValidationFailure
             },
-            
+
             handler: SupplierController.getOrderRequestById,
 
             // --- ADDED: Full Swagger Documentation ---
             plugins: {
-                'hapi-swagger': {
+                "hapi-swagger": {
                     responses: {
                         200: {
-                            description: 'Purchase order details retrieved successfully.',
+                            description:
+                                "Purchase order details retrieved successfully.",
                             // This links our response schema to the 200 status code
                             schema: SupplierValidator.getOrderByIdResponseSchema
                         },
-                        400: { description: 'Bad Request: The orderId is invalid.' },
-                        401: { description: 'Unauthorized: Invalid or expired token.' },
-                        403: { description: 'Forbidden: You do not own this order.' },
-                        404: { description: 'Not Found: The purchase order does not exist.' }
+                        400: {
+                            description: "Bad Request: The orderId is invalid."
+                        },
+                        401: {
+                            description:
+                                "Unauthorized: Invalid or expired token."
+                        },
+                        403: {
+                            description: "Forbidden: You do not own this order."
+                        },
+                        404: {
+                            description:
+                                "Not Found: The purchase order does not exist."
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        method: "PUT",
+        path: "/supplier/purchase-orders/{orderId}/reject",
+        options: {
+            tags: ["api", "Supplier Purchase Order"],
+            description: "Reject an entire Purchase Order.",
+            notes: "This is a shortcut for a supplier to cancel an entire incoming order. It will update the order status to 'REJECTED'.",
+            pre: [verifyAccessTokenMiddleware, requireRole([ROLES.SUPPLIER])],
+            validate: {
+                ...SupplierValidator.orderIdParamValidation,
+                failAction: handleValidationFailure
+            },
+            handler: SupplierController.rejectPurchaseOrder,
+            plugins: {
+                "hapi-swagger": {
+                    responses: {
+                        200: { description: "Order rejected successfully." },
+                        400: {
+                            description:
+                                "Bad Request (e.g., order is not in a rejectable state)."
+                        },
+                        401: { description: "Unauthorized." },
+                        403: {
+                            description:
+                                "Forbidden (user does not own this order)."
+                        },
+                        404: {
+                            description:
+                                "Not Found: The specified order does not exist."
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        method: "GET",
+        path: "/supplier/order-history",
+        options: {
+            tags: ["api", "Supplier Purchase Order"],
+            description:
+                "Get a list of historical (completed or rejected) order requests for the authenticated supplier.",
+            notes: "This fetches a paginated list of orders that are in a terminal state, such as 'DELIVERED' (and paid) or 'REJECTED'.",
+            pre: [verifyAccessTokenMiddleware, requireRole([ROLES.SUPPLIER])],
+            validate: {
+                // This correctly validates query params like '?page=2'
+                ...SupplierValidator.orderRequestValidation,
+                failAction: handleValidationFailure
+            },
+            handler: SupplierController.listOrderHistory,
+
+            // --- ADDED: Full Swagger Documentation ---
+            plugins: {
+                "hapi-swagger": {
+                    responses: {
+                        200: {
+                            description:
+                                "Order history retrieved successfully.",
+                            // This links our response schema to the 200 status code
+                            schema: SupplierValidator.listOrdersResponseSchema
+                        },
+                        400: {
+                            description:
+                                "Bad Request: Invalid query parameters."
+                        },
+                        401: {
+                            description:
+                                "Unauthorized: Invalid or expired token."
+                        },
+                        403: {
+                            description: "Forbidden: User is not a supplier."
+                        }
                     }
                 }
             }

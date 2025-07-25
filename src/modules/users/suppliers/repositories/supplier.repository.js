@@ -214,7 +214,7 @@ const updateOrderAfterReview = async ({
         if (!order) throw new Error("Order not found or access denied.");
 
         // Update each item's isAccepted status
-         // Instead of a sequential for-loop, we create an array of all update promises.
+        // Instead of a sequential for-loop, we create an array of all update promises.
         const updatePromises = itemsToUpdate.map(item =>
             tx.purchaseOrderItems.update({
                 where: { id: item.itemId },
@@ -229,7 +229,7 @@ const updateOrderAfterReview = async ({
             data: {
                 totalCost: newTotalCost,
                 pendingAmount: newTotalCost,
-                status: "PROCESSING",
+                status: ORDER_STATUSES.PROCESSING,
                 isAccepted: true,
                 acceptedAt: new Date()
             }
@@ -237,6 +237,166 @@ const updateOrderAfterReview = async ({
     });
 };
 
+const rejectPurchaseOrder = async (orderId, supplierId) => {
+    return await prisma.$transaction(async tx => {
+        // First, confirm the order exists and belongs to the supplier within the transaction
+        const order = await tx.purchaseOrder.findFirst({
+            where: { id: orderId, supplierId: supplierId }
+        });
+
+        if (!order) {
+            throw new Error("Order not found or access denied.");
+        }
+
+        // Update the status of all items within the order to REJECTED
+        await tx.purchaseOrderItems.updateMany({
+            where: { purchaseOrderId: orderId },
+            data: { isAccepted: false }
+        });
+
+        // Update the parent order's status to a final REJECTED state
+        return await tx.purchaseOrder.update({
+            where: { id: orderId },
+            data: {
+                status: ORDER_STATUSES.REJECTED,
+                isAccepted: false
+                // You might add a review note here if the frontend sends one
+            }
+        });
+    });
+};
+
+/**
+ * Fetches historical (completed or rejected) purchase orders for a given supplier.
+ * @param {string} supplierId - The ID of the supplier.
+ * @param {object} options - Pagination and search options.
+ * @returns {Promise<[number, object[]]>} A tuple with the total count and the list of orders.
+ */
+const findHistoricalPurchaseOrdersBySupplier = async (
+    supplierId,
+    { page, search, itemsPerPage }
+) => {
+    const whereClause = {
+        supplierId: supplierId,
+        status: "DELIVERED",
+        pendingAmount: 0,
+        isAccepted: true,
+        ...(search && {
+            id: {
+                contains: search,
+                mode: "insensitive"
+            }
+        })
+    };
+
+    // The data fetching transaction is identical to the active orders one.
+    return await prisma.$transaction([
+        prisma.purchaseOrder.count({ where: whereClause }),
+        prisma.purchaseOrder.findMany({
+            where: whereClause,
+            skip: (page - 1) * itemsPerPage,
+            take: itemsPerPage,
+            orderBy: { requestedAt: "desc" },
+            // We select all the same detailed information as before.
+            select: {
+                id: true,
+                totalCost: true,
+                pendingAmount: true,
+                paymentPercentage: true,
+                status: true,
+                isAccepted: true,
+                expectedDateOfArrival: true,
+                requestedAt: true,
+                deliveredAt: true,
+                supplierReviewNotes: true,
+                warehouseManagerReviewNotes: true,
+                PurchaseOrderItems: {
+                    where: {
+                        isAccepted: true
+                    },
+                    select: {
+                        id: true,
+                        productType: true,
+                        unitsRequested: true,
+                        unitCostPrice: true,
+                        isAccepted: true,
+                        plant: { select: { name: true } },
+                        plantVariant: {
+                            select: {
+                                plantSize: true,
+                                sku: true,
+                                /** mediaUrl:true */
+                                color: {
+                                    select: {
+                                        name: true,
+                                        hexCode: true
+                                    }
+                                },
+                                plantVariantImages: {
+                                    // This is the relation name
+                                    where: { isPrimary: true }, // Filter for the primary image
+                                    take: 1, // We only need one
+                                    select: { mediaUrl: true } // Select just the URL
+                                }
+                            }
+                        },
+                        potCategory: { select: { name: true } },
+                        potVariant: {
+                            select: {
+                                potName: true,
+                                size: true,
+                                sku: true,
+                                // --- ADDED: Include the nested material name for pots ---
+                                material: {
+                                    select: {
+                                        name: true
+                                    }
+                                },
+                                color: {
+                                    select: {
+                                        name: true,
+                                        hexCode: true
+                                    }
+                                },
+                                images: {
+                                    // This is the relation name for pot variant images
+                                    where: { isPrimary: true },
+                                    take: 1,
+                                    select: { mediaUrl: true }
+                                }
+                            }
+                        }
+                    }
+                },
+                payments: {
+                    where: {
+                        status: {
+                            in: ["PAID", "REJECTED"] // Use 'in' to get an array of statuses
+                        }
+                    },
+                    select: {
+                        paymentId: true,
+                        amount: true,
+                        paymentMethod: true,
+                        status: true,
+                        receiptUrl: true,
+                        paidAt: true,
+                        remarks: true
+                    }
+                    // orderBy: {
+                    //     // Show the payments in chronological order
+                    //     requestedAt: 'asc'
+                    // }
+                }
+            }
+        })
+    ]);
+};
+
+module.exports = {
+    findHistoricalPurchaseOrdersBySupplier
+    // ... your other repository functions
+};
 
 module.exports = {
     findSupplierByUserId,
@@ -246,5 +406,7 @@ module.exports = {
     updateOrderStatus,
     findOrderItemsByIds,
     orderToReview,
-    updateOrderAfterReview
+    updateOrderAfterReview,
+    rejectPurchaseOrder,
+    findHistoricalPurchaseOrdersBySupplier
 };
