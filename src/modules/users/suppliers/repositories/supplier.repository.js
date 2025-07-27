@@ -196,75 +196,52 @@ const orderToReview = async ({ orderId, supplierId }) => {
 };
 
 const updateOrderAfterReview = async ({
-    userId,
     orderId,
-    itemsToUpdate,
-    newTotalCost
+    rejectedItemIds,
+    newTotalCost,
+    tx
 }) => {
-    // ????? Immediately fix Awaiting payment for payment status in payment isSchema, and order status should be chnaged to processing.
-    const supplier = await prisma.supplier.findUnique({ where: { userId } });
-    if (!supplier) throw new Error("Supplier not found.");
-
-    return await prisma.$transaction(async tx => {
-        // Security check inside the transaction
-        const order = await tx.purchaseOrder.findFirst({
-            where: { id: orderId, supplierId: supplier.supplierId }
-        });
-
-        if (!order) throw new Error("Order not found or access denied.");
-
-        // Update each item's isAccepted status
-        // Instead of a sequential for-loop, we create an array of all update promises.
-        const updatePromises = itemsToUpdate.map(item =>
-            tx.purchaseOrderItems.update({
-                where: { id: item.itemId },
-                data: { isAccepted: item.isAccepted }
-            })
-        );
-        // Execute all the update promises concurrently. This is much faster.
-        await Promise.all(updatePromises);
-        // Update the parent order's total cost and isAccepted
-        await tx.purchaseOrder.update({
-            where: { id: orderId },
-            data: {
-                totalCost: newTotalCost,
-                pendingAmount: newTotalCost,
-                status: ORDER_STATUSES.PROCESSING,
-                isAccepted: true,
-                acceptedAt: new Date()
-            }
-        });
+    // Mark rejected items as not accepted
+    await tx.purchaseOrderItems.updateMany({
+        where: { id: { in: rejectedItemIds }, purchaseOrderId: orderId },
+        data: { isAccepted: false }
     });
-};
 
-const rejectPurchaseOrder = async (orderId, supplierId) => {
-    return await prisma.$transaction(async tx => {
-        // First, confirm the order exists and belongs to the supplier within the transaction
-        const order = await tx.purchaseOrder.findFirst({
-            where: { id: orderId, supplierId: supplierId }
-        });
+    // Mark all other items as accepted. Can be removed, as in DB they all will be marked as accepted by default
+    await tx.purchaseOrderItems.updateMany({
+        where: { id: { notIn: rejectedItemIds }, purchaseOrderId: orderId },
+        data: { isAccepted: true }
+    });
 
-        if (!order) {
-            throw new Error("Order not found or access denied.");
+    // Update the parent order's total cost and status
+    return await tx.purchaseOrder.update({
+        where: { id: orderId },
+        data: {
+            totalCost: newTotalCost,
+            pendingAmount: newTotalCost,
+            status: ORDER_STATUSES.PROCESSING,
+            isAccepted: true,
+            acceptedAt: new Date(),
         }
-
-        // Update the status of all items within the order to REJECTED
-        await tx.purchaseOrderItems.updateMany({
-            where: { purchaseOrderId: orderId },
-            data: { isAccepted: false }
-        });
-
-        // Update the parent order's status to a final REJECTED state
-        return await tx.purchaseOrder.update({
-            where: { id: orderId },
-            data: {
-                status: ORDER_STATUSES.REJECTED,
-                isAccepted: false
-                // You might add a review note here if the frontend sends one
-            }
-        });
     });
 };
+
+/**
+ * Updates an order and all its items to a REJECTED status.
+ */
+const rejectEntireOrder = async (orderId, tx) => {
+    // Update all items to be not accepted.
+    await tx.purchaseOrderItems.updateMany({
+        where: { purchaseOrderId: orderId },
+        data: { isAccepted: false },
+    });
+    // Update the parent order status.
+    return await tx.purchaseOrder.update({
+        where: { id: orderId },
+        data: { status: 'REJECTED', isAccepted: false }
+    });
+};
+
 
 /**
  * Fetches historical (completed or rejected) purchase orders for a given supplier.
@@ -281,6 +258,7 @@ const findHistoricalPurchaseOrdersBySupplier = async (
         status: "DELIVERED",
         pendingAmount: 0,
         isAccepted: true,
+        // paymentPercentage: 0,
         ...(search && {
             id: {
                 contains: search,
@@ -407,6 +385,6 @@ module.exports = {
     findOrderItemsByIds,
     orderToReview,
     updateOrderAfterReview,
-    rejectPurchaseOrder,
+    rejectEntireOrder,
     findHistoricalPurchaseOrdersBySupplier
 };

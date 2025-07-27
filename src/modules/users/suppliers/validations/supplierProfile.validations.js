@@ -143,32 +143,18 @@ const orderRequestValidation = {
     })
 };
 
+
 const reviewPurchaseOrderValidation = {
     params: Joi.object({
-        orderId: Joi.string()
-            .required()
-            .description("The ID of the Purchase Order to review")
+        orderId: Joi.string().required().description("The ID of the Purchase Order being reviewed."),
     }),
-    // --- MODIFIED: The payload schema is updated ---
     payload: Joi.object({
-        items: Joi.array()
-            .items(
-                Joi.object({
-                    itemId: Joi.string()
-                        .required()
-                        .description("The ID of the PurchaseOrderItem"),
-                    // Now expects a boolean `isAccepted` field instead of a `status` string.
-                    isAccepted: Joi.boolean()
-                        .required()
-                        .description("The new acceptance status for the item")
-                })
-            )
-            .min(1)
-            .required()
-            .description("An array of items with their new review status")
-    })
+        status: Joi.string().valid('PROCESSING', 'REJECTED').required()
+            .description("Set to 'PROCESSING' for partial acceptance, or 'REJECTED' for full rejection."),
+        rejectedOrderItemsIdArr: Joi.array().items(Joi.string().required())
+            .description("An array of PurchaseOrderItem IDs that are being rejected.")
+    }),
 };
-
 const orderIdParamValidation = {
     params: Joi.object({
         orderId: Joi.string()

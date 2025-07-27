@@ -360,12 +360,13 @@ const reviewPurchaseOrder = async (req, h) => {
     try {
         const { userId } = req.pre.credentials;
         const { orderId } = req.params;
-        const { items } = req.payload; // e.g., [{ itemId: "...", status: "ACCEPTED" }]
+        // The payload now contains the status and the array of rejected IDs
+        const reviewData = req.payload;
 
         const result = await SupplierService.reviewPurchaseOrder({
             userId,
             orderId,
-            items
+            reviewData
         });
         return h.response(result).code(result.code);
     } catch (error) {

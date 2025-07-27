@@ -1,0 +1,226 @@
+{
+  "originWarehousePincode": "712501",
+  "originWarehouseLocation": "Jirat, Hooghly",
+  "shippingZones": [
+    {
+      "districtName": "Hooghly",
+      "representativePincodes": [
+        {
+          "pincode": "712103",
+          "zoneRepresented": "Chinsurah / Bandel",
+          "justification": "Hyper-Local Zone. Represents the core urban belt of your home district."
+        },
+        {
+          "pincode": "712514",
+          "zoneRepresented": "Serampore / Uttarpara",
+          "justification": "Southern Hooghly Zone. Covers the dense industrial area towards Kolkata."
+        },
+        {
+          "pincode": "712601",
+          "zoneRepresented": "Arambagh",
+          "justification": "Remote West Zone. Represents the distant, rural sub-division of your district."
+        }
+      ]
+    },
+    {
+      "districtName": "Howrah",
+      "representativePincodes": [
+        {
+          "pincode": "711101",
+          "zoneRepresented": "Howrah City / Bally",
+          "justification": "Metro Zone. Core urban area, easily accessible. This single PIN covers the main city."
+        },
+        {
+          "pincode": "711303",
+          "zoneRepresented": "Uluberia",
+          "justification": "Southern Highway Zone. Represents towns along the NH16 corridor, a distinct route."
+        }
+      ]
+    },
+    {
+      "districtName": "North 24 Parganas",
+      "representativePincodes": [
+        {
+          "pincode": "700124",
+          "zoneRepresented": "Barasat",
+          "justification": "Near-Metro Zone. District HQ, a major junction for routes going north of Kolkata."
+        },
+        {
+          "pincode": "743122",
+          "zoneRepresented": "Barrackpore",
+          "justification": "Industrial Belt Zone. Covers the dense industrial towns along the Hooghly river."
+        },
+        {
+          "pincode": "743221",
+          "zoneRepresented": "Bongaon",
+          "justification": "Border Zone. Requires a specific long-haul route towards the Bangladesh border."
+        }
+      ]
+    },
+    {
+      "districtName": "Kolkata",
+      "representativePincodes": [
+        {
+          "pincode": "700001",
+          "zoneRepresented": "Central Kolkata",
+          "justification": "Core Metro Zone. Represents the central business district."
+        },
+        {
+          "pincode": "700091",
+          "zoneRepresented": "Salt Lake / New Town",
+          "justification": "East Metro Zone. Logistically distinct IT and residential hub."
+        }
+      ]
+    },
+    {
+      "districtName": "South 24 Parganas",
+      "representativePincodes": [
+        {
+          "pincode": "700104",
+          "zoneRepresented": "Baruipur / Sonarpur",
+          "justification": "South-Metro Zone. Covers the southern suburbs of Kolkata."
+        },
+        {
+          "pincode": "743337",
+          "zoneRepresented": "Diamond Harbour",
+          "justification": "Remote South Zone. Requires a significantly longer route southwards."
+        }
+      ]
+    },
+    {
+      "districtName": "Paschim Medinipur",
+      "representativePincodes": [
+        {
+          "pincode": "721101",
+          "zoneRepresented": "Medinipur Town",
+          "justification": "Southern Plains Zone. Primary hub for the district."
+        },
+        {
+          "pincode": "721301",
+          "zoneRepresented": "Kharagpur",
+          "justification": "Southern Industrial Zone. A critical railway and industrial hub."
+        }
+      ]
+    },
+    {
+      "districtName": "Purba Medinipur",
+      "representativePincodes": [
+        {
+          "pincode": "721601",
+          "zoneRepresented": "Tamluk",
+          "justification": "South-East Zone. District HQ, lies on the route towards Haldia."
+        },
+        {
+          "pincode": "721401",
+          "zoneRepresented": "Haldia",
+          "justification": "Major Port Zone. A key industrial and port city requiring a dedicated route."
+        }
+      ]
+    },
+    {
+      "districtName": "Paschim Bardhaman",
+      "representativePincodes": [
+        {
+          "pincode": "713301",
+          "zoneRepresented": "Asansol",
+          "justification": "Western Industrial Zone. The main hub for the western industrial corridor."
+        },
+        {
+          "pincode": "713201",
+          "zoneRepresented": "Durgapur",
+          "justification": "Central Industrial Zone. Major steel city, slightly closer to you than Asansol."
+        }
+      ]
+    },
+    {
+      "districtName": "Purba Bardhaman",
+      "representativePincodes": [
+        {
+          "pincode": "713101",
+          "zoneRepresented": "Bardhaman",
+          "justification": "Adjacent North Zone. The main city in the district directly north of you."
+        },
+        {
+          "pincode": "713502",
+          "zoneRepresented": "Kalna",
+          "justification": "River-Side Zone. A major town, but on a different route than Bardhaman city."
+        }
+      ]
+    },
+    {
+      "districtName": "Nadia",
+      "representativePincodes": [
+        {
+          "pincode": "741101",
+          "zoneRepresented": "Krishnanagar",
+          "justification": "Central Bengal Zone. Primary hub for the district."
+        },
+        {
+          "pincode": "741235",
+          "zoneRepresented": "Kalyani",
+          "justification": "Southern Nadia Zone. An industrial city closer to you, on a different route."
+        }
+      ]
+    },
+    {
+      "districtName": "Murshidabad",
+      "representativePincodes": [
+        {
+          "pincode": "742101",
+          "zoneRepresented": "Berhampore",
+          "justification": "Central Bengal Zone. The main hub, requiring a long-haul route north."
+        }
+      ]
+    },
+    {
+      "districtName": "Birbhum",
+      "representativePincodes": [
+        {
+          "pincode": "731101",
+          "zoneRepresented": "Suri",
+          "justification": "Western Plains Zone."
+        },
+        {
+          "pincode": "731204",
+          "zoneRepresented": "Bolpur (Santiniketan)",
+          "justification": "Western Tourist Zone. A major town, logistically distinct from Suri."
+        }
+      ]
+    },
+    {
+      "districtName": "Bankura & Purulia",
+      "representativePincodes": [
+        {
+          "pincode": "722101",
+          "zoneRepresented": "Bankura Town",
+          "justification": "Far West Zone 1. Represents the main entry point to this entire western region."
+        },
+        {
+          "pincode": "723101",
+          "zoneRepresented": "Purulia Town",
+          "justification": "Far West Zone 2. Represents the most remote district HQ in the south."
+        }
+      ]
+    },
+    {
+      "districtName": "North Bengal",
+      "representativePincodes": [
+        {
+          "pincode": "732101",
+          "zoneRepresented": "Malda",
+          "justification": "Gateway to North Zone. The first major hub for all North Bengal deliveries."
+        },
+        {
+          "pincode": "734001",
+          "zoneRepresented": "Siliguri",
+          "justification": "North Bengal Hub. The single most important logistical hub for all northern districts."
+        },
+        {
+          "pincode": "734101",
+          "zoneRepresented": "Darjeeling",
+          "justification": "Hills Zone. Represents all high-altitude, difficult delivery areas."
+        }
+      ]
+    }
+  ]
+}

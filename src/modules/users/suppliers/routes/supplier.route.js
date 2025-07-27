@@ -147,7 +147,7 @@ module.exports = [
         }
     },
     {
-        method: "POST",
+        method: "PUT",
         path: "/supplier/purchase-orders/{orderId}/qc-media",
         options: {
             tags: ["api", "Supplier Purchase Order"],
@@ -181,15 +181,49 @@ module.exports = [
             }
         }
     },
-    // Add this new route definition to your supplier.route.js file
     {
         method: "PUT",
         path: "/supplier/purchase-orders/{orderId}/review",
         options: {
             tags: ["api", "Supplier Purchase Order"],
-            description:
-                "Submit an item-by-item review (Accept/Reject) for a Purchase Order.",
-            notes: "The payload should be an object with an 'items' key, which is an array of item objects. Each item object must contain the 'itemId' and its new 'status' ('ACCEPTED' or 'REJECTED').",
+            description: "Submit an Order Items review (Accept/Reject) for a Purchase Order.",
+            
+            // --- MODIFIED: Added detailed notes with examples ---
+            notes: `
+                This endpoint handles a supplier's review of a purchase order. It supports two main scenarios:
+
+                ### Case 1: Partial Rejection (Accepting some items)
+                Use this when the supplier can fulfill most of the order but needs to reject specific items.
+                -   Set \`status\` to \`"PROCESSING"\`.
+                -   The \`rejectedOrderItemsIdArr\` array should contain the IDs of **only the items being rejected**.
+
+                **Example Payload:**
+                \`\`\`json
+                {
+                "status": "PROCESSING",
+                "rejectedOrderItemsIdArr": [
+                    "f0c933e8-a65f-469e-ba08-bab0553f0257"
+                ]
+                }
+                \`\`\`
+
+                ### Case 2: Full Rejection (Rejecting the entire order)
+                Use this when the supplier cannot fulfill any part of the order.
+                -   Set \`status\` to \`"REJECTED"\`.
+                -   The \`rejectedOrderItemsIdArr\` array should contain the IDs of **all items** in the order.
+
+                **Example Payload:**
+                \`\`\`json
+                {
+                "status": "REJECTED",
+                "rejectedOrderItemsIdArr": [
+                    "552caf41-55fd-4944-8022-1b61a4289f50",
+                    "812150c6-d231-423b-94f6-945b0d4df4e0",
+                    "f0c933e8-a65f-469e-ba08-bab0553f0257"
+                ]
+                }
+                \`\`\`
+            `,
             pre: [verifyAccessTokenMiddleware, requireRole([ROLES.SUPPLIER])],
             validate: {
                 ...SupplierValidator.reviewPurchaseOrderValidation,
@@ -198,26 +232,13 @@ module.exports = [
             handler: SupplierController.reviewPurchaseOrder,
             plugins: {
                 "hapi-swagger": {
-                    payloadType: "json", // Let Swagger know to expect a JSON payload
+                    payloadType: "json",
                     responses: {
-                        200: {
-                            description: "Order review submitted successfully."
-                        },
-                        400: {
-                            description: "Bad Request: Invalid input data."
-                        },
-                        401: {
-                            description:
-                                "Unauthorized: Invalid or expired token."
-                        },
-                        403: {
-                            description:
-                                "Forbidden: User does not own this order."
-                        },
-                        404: {
-                            description:
-                                "Not Found: The specified order does not exist."
-                        }
+                        200: { description: "Order review submitted successfully." },
+                        400: { description: "Bad Request: Invalid input data." },
+                        401: { description: "Unauthorized: Invalid or expired token." },
+                        403: { description: "Forbidden: User does not own this order." },
+                        404: { description: "Not Found: The specified order does not exist." }
                     }
                 }
             }
@@ -264,41 +285,6 @@ module.exports = [
                         404: {
                             description:
                                 "Not Found: The purchase order does not exist."
-                        }
-                    }
-                }
-            }
-        }
-    },
-    {
-        method: "PUT",
-        path: "/supplier/purchase-orders/{orderId}/reject",
-        options: {
-            tags: ["api", "Supplier Purchase Order"],
-            description: "Reject an entire Purchase Order.",
-            notes: "This is a shortcut for a supplier to cancel an entire incoming order. It will update the order status to 'REJECTED'.",
-            pre: [verifyAccessTokenMiddleware, requireRole([ROLES.SUPPLIER])],
-            validate: {
-                ...SupplierValidator.orderIdParamValidation,
-                failAction: handleValidationFailure
-            },
-            handler: SupplierController.rejectPurchaseOrder,
-            plugins: {
-                "hapi-swagger": {
-                    responses: {
-                        200: { description: "Order rejected successfully." },
-                        400: {
-                            description:
-                                "Bad Request (e.g., order is not in a rejectable state)."
-                        },
-                        401: { description: "Unauthorized." },
-                        403: {
-                            description:
-                                "Forbidden (user does not own this order)."
-                        },
-                        404: {
-                            description:
-                                "Not Found: The specified order does not exist."
                         }
                     }
                 }

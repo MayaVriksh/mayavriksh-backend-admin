@@ -491,87 +491,66 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
 
 // Add this new function to your supplier service file
 
-const reviewPurchaseOrder = async ({ userId, orderId, items }) => {
+const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
     // 1. Security Check: The repository will verify ownership ??
     // --- 1. Security Check: Verify ownership of the Purchase Order ---
-    return await prisma.$transaction(
-        async tx => {
-            const supplier = await prisma.supplier.findUnique({
-                where: { userId },
-                select: { supplierId: true }
+    return await prisma.$transaction(async (tx) => {
+        // 1. Security Check: Verify the supplier owns this order.
+        const supplier = await tx.supplier.findUnique({ where: { userId } });
+        if (!supplier) throw { code: 403, message: "Access Denied: Supplier profile not found." };
+
+        const orderToReview = await tx.purchaseOrder.findFirst({
+            where: { id: orderId, supplierId: supplier.supplierId }
+        });
+        if (!orderToReview) throw { code: 404, message: "Access Denied: Order not found." };
+
+        // Check to ensure the API request can't review an already processed order as status will not be PENDING anymore for them.
+        if (orderToReview.status !== ORDER_STATUSES.PENDING) {
+            throw {
+                code: 400,
+                message: `This order is already in '${orderToReview.status}' status and cannot be reviewed.`
+            };
+        }
+        // 2. Handle the "Reject Entire Order" case
+        if (reviewData.status === 'REJECTED') {
+            await fetchPurchaseOrderList.rejectEntireOrder(orderId, tx);
+            return { success: true, code: 200, message: "Order has been rejected successfully." };
+        }
+
+        // 3. Handle the "Processing" (Full or Partial Accept) case
+        if (reviewData.status === 'PROCESSING') {
+            // Get ALL items for this order from the database to ensure data integrity.
+            const allItemsInOrder = await tx.purchaseOrderItems.findMany({
+                where: { purchaseOrderId: orderId }
             });
-            if (!supplier) {
-                throw {
-                    code: 403,
-                    message: "Access Denied: Supplier profile not found."
-                };
-            }
-            const orderToReview = await fetchPurchaseOrderList.orderToReview(
-                orderId,
-                supplier.supplierId
-            );
 
-            if (!orderToReview) {
-                throw {
-                    code: 404,
-                    message:
-                        "Access Denied: Purchase Order not found or does not belong to you."
-                };
-            }
-
-            // Check to ensure the API request can't review an already processed order as status will not be PENDING anymore for them.
-            if (orderToReview.status !== ORDER_STATUSES.PENDING) {
-                throw {
-                    code: 400,
-                    message: `This order is already in '${orderToReview.status}' status and cannot be reviewed.`
-                };
-            }
-
-            // 2. Business Logic: Calculate the new total cost based on ACCEPTED items
-            const acceptedItems = items.filter(
-                item => item.isAccepted === true
-            );
-            // console.log(acceptedItems)
-
-            // Fetch the full item details to get their prices for calculation
-            const acceptedItemIds = acceptedItems.map(item => item.itemId);
-
-            // Here we didn't use the financial numbers fetched from Frontend, rather calling db to get the number against the Orders,
-            // because if somone tempers with the costs, then our logic will trust that and save in db. But if they tamper with
-            // purchase OrderId, and if its not there, it simply reject the request. Thus safe
-            const fullItemDetails =
-                await fetchPurchaseOrderList.findOrderItemsByIds(
-                    acceptedItemIds,
-                    tx
-                );
-
-            const newTotalCost = fullItemDetails.reduce((sum, item) => {
-                return sum + Number(item.unitCostPrice) * item.unitsRequested;
+            // Securely recalculate the new total cost on the backend.
+            // We NEVER trust a total cost sent from the frontend.
+            const newTotalCost = allItemsInOrder.reduce((sum, item) => {
+                // If the item's ID is NOT in the rejected list, add its cost to the total.
+                if (!reviewData.rejectedOrderItemsIdArr.includes(item.id)) {
+                    return sum + (Number(item.unitCostPrice) * item.unitsRequested);
+                }
+                return sum;
             }, 0);
-            // 3. Call the repository to update the database in a transaction
             await fetchPurchaseOrderList.updateOrderAfterReview({
-                userId,
                 orderId,
-                itemsToUpdate: items,
+                rejectedItemIds: reviewData.rejectedOrderItemsIdArr,
                 newTotalCost,
                 tx
             });
 
             // 4. Trigger notification to Warehouse Manager (e.g., using an event emitter) will be implemented later
             // orderEvents.emit('order.reviewed', { orderId, newTotalCost });
-
-            return {
-                success: true,
-                code: 200,
-                message: "Order review submitted successfully."
-            };
-        },
-        {
-            // Sets the maximum time Prisma will wait for a connection from the pool.
-            maxWait: 10000, // 10 seconds (default is 2s)
-            // Sets the maximum time the entire transaction is allowed to run.
-            timeout: 15000 // 15 seconds (default is 5s)
+            return { success: true, code: 200, message: "Order review submitted successfully." };
         }
+    }//,
+        // {
+        //     // Sets the maximum time Prisma will wait for a connection from the pool.
+        //     maxWait: 10000, // 10 seconds (default is 2s)
+        //     // Sets the maximum time the entire transaction is allowed to run.
+        //     timeout: 15000 // 15 seconds (default is 5s)
+        // }
     );
 };
 
@@ -629,49 +608,6 @@ const getOrderRequestById = async ({ userId, orderId }) => {
     }
 
     return { success: true, code: 200, data: order };
-};
-
-const rejectEntireOrder = async ({ userId, orderId }) => {
-    // 1. Security & Business Logic: Check user and order status
-    const supplier = await prisma.supplier.findUnique({ where: { userId } });
-    if (!supplier) {
-        throw { code: 404, message: "Supplier profile not found." };
-    }
-
-    const orderToReject = await prisma.purchaseOrder.findFirst({
-        where: { id: orderId, supplierId: supplier.supplierId },
-        select: { status: true }
-    });
-
-    if (!orderToReject) {
-        throw {
-            code: 404,
-            message:
-                "Order not found or you do not have permission to reject it."
-        };
-    }
-
-    if (orderToReject.status !== ORDER_STATUSES.PENDING) {
-        throw {
-            code: 400,
-            message: `This order is already in '${orderToReject.status}' status and cannot be rejected.`
-        };
-    }
-
-    // 2. Call the repository to perform the database update
-    await fetchPurchaseOrderList.rejectPurchaseOrder(
-        orderId,
-        supplier.supplierId
-    );
-
-    // 3. (Optional) Trigger notification to the Warehouse Manager
-    // orderEvents.emit('order.rejected', { orderId });
-
-    return {
-        success: true,
-        code: 200,
-        message: "Purchase order has been rejected."
-    };
 };
 
 /**
@@ -845,6 +781,5 @@ module.exports = {
     reviewPurchaseOrder,
     getOrderRequestById,
     updateSupplierProfile,
-    rejectEntireOrder,
     listOrderHistory
 };
