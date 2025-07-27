@@ -189,40 +189,40 @@ module.exports = [
             description: "Submit an Order Items review (Accept/Reject) for a Purchase Order.",
             
             // --- MODIFIED: Added detailed notes with examples ---
-            notes: `
-                This endpoint handles a supplier's review of a purchase order. It supports two main scenarios:
+             notes: `
+This endpoint handles a supplier's review of a purchase order. It supports two main scenarios:
 
-                ### Case 1: Partial Rejection (Accepting some items)
-                Use this when the supplier can fulfill most of the order but needs to reject specific items.
-                -   Set \`status\` to \`"PROCESSING"\`.
-                -   The \`rejectedOrderItemsIdArr\` array should contain the IDs of **only the items being rejected**.
+### Case 1: Partial Rejection (Accepting some items)
+Use this when the supplier can fulfill most of the order but needs to reject specific items.
+-   Set \`status\` to \`"PROCESSING"\`.
+-   The \`rejectedOrderItemsIdArr\` array should contain the IDs of **only the items being rejected**.
 
-                **Example Payload:**
-                \`\`\`json
-                {
-                "status": "PROCESSING",
-                "rejectedOrderItemsIdArr": [
-                    "f0c933e8-a65f-469e-ba08-bab0553f0257"
-                ]
-                }
-                \`\`\`
+**Example Payload:**
+\`\`\`json
+{
+  "status": "PROCESSING",
+  "rejectedOrderItemsIdArr": [
+    "f0c933e8-a65f-469e-ba08-bab0553f0257"
+  ]
+}
+\`\`\`
 
-                ### Case 2: Full Rejection (Rejecting the entire order)
-                Use this when the supplier cannot fulfill any part of the order.
-                -   Set \`status\` to \`"REJECTED"\`.
-                -   The \`rejectedOrderItemsIdArr\` array should contain the IDs of **all items** in the order.
+### Case 2: Full Rejection (Rejecting the entire order)
+Use this when the supplier cannot fulfill any part of the order.
+-   Set \`status\` to \`"REJECTED"\`.
+-   The \`rejectedOrderItemsIdArr\` array should contain the IDs of **all items** in the order.
 
-                **Example Payload:**
-                \`\`\`json
-                {
-                "status": "REJECTED",
-                "rejectedOrderItemsIdArr": [
-                    "552caf41-55fd-4944-8022-1b61a4289f50",
-                    "812150c6-d231-423b-94f6-945b0d4df4e0",
-                    "f0c933e8-a65f-469e-ba08-bab0553f0257"
-                ]
-                }
-                \`\`\`
+**Example Payload:**
+\`\`\`json
+{
+  "status": "REJECTED",
+  "rejectedOrderItemsIdArr": [
+    "552caf41-55fd-4944-8022-1b61a4289f50",
+    "812150c6-d231-423b-94f6-945b0d4df4e0",
+    "f0c933e8-a65f-469e-ba08-bab0553f0257"
+  ]
+}
+\`\`\`
             `,
             pre: [verifyAccessTokenMiddleware, requireRole([ROLES.SUPPLIER])],
             validate: {
@@ -298,7 +298,23 @@ module.exports = [
             tags: ["api", "Supplier Purchase Order"],
             description:
                 "Get a list of historical (completed or rejected) order requests for the authenticated supplier.",
-            notes: "This fetches a paginated list of orders that are in a terminal state, such as 'DELIVERED' (and paid) or 'REJECTED'.",
+             notes: `
+This endpoint fetches a paginated list of orders that are in a final state. The structure of the returned order objects can vary based on whether the order was completed or rejected.
+
+### Case 1: Completed Orders
+A successfully completed order will have the following characteristics:
+-   \`orderStatus\`: \`"DELIVERED"\`
+-   \`paymentPercentage\`: \`100\`
+-   \`isAccepted\`: \`"true"\`
+-   The \`orderItems\` will show only those items whose \`isAccepted\` : will be \`"true"\` and \`payments\` arrays will be fully populated with the final details of the transaction.
+
+### Case 2: Rejected/Cancelled Orders
+A rejected or cancelled order will have these characteristics:
+-   \`orderStatus\`: \`"REJECTED"\` or \`"CANCELLED"\`
+-   The \`payments\` array will typically be empty as no payment was processed.
+-   The \`orderItems\` array will still be present, showing all the originally requested items. The frontend can inspect the \`isAccepted: false\` status on these items if needed.
+            `,
+
             pre: [verifyAccessTokenMiddleware, requireRole([ROLES.SUPPLIER])],
             validate: {
                 // This correctly validates query params like '?page=2'

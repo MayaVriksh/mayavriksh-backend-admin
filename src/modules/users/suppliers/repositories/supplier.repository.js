@@ -255,10 +255,19 @@ const findHistoricalPurchaseOrdersBySupplier = async (
 ) => {
     const whereClause = {
         supplierId: supplierId,
-        status: "DELIVERED",
-        pendingAmount: 0,
-        isAccepted: true,
-        // paymentPercentage: 0,
+        OR: [
+        // Condition 1: The order was rejected (paymentPercentage would be 0)
+            {
+                status: { in: ['REJECTED'] }
+            },
+            
+            // Condition 2: The order was successfully DELIVERED and 100% PAID
+            {
+                status: 'DELIVERED',
+                paymentPercentage: 100,
+                pendingAmount: 0
+            }
+        ],
         ...(search && {
             id: {
                 contains: search,
@@ -347,11 +356,6 @@ const findHistoricalPurchaseOrdersBySupplier = async (
                     }
                 },
                 payments: {
-                    where: {
-                        status: {
-                            in: ["PAID", "REJECTED"] // Use 'in' to get an array of statuses
-                        }
-                    },
                     select: {
                         paymentId: true,
                         amount: true,
@@ -371,10 +375,6 @@ const findHistoricalPurchaseOrdersBySupplier = async (
     ]);
 };
 
-module.exports = {
-    findHistoricalPurchaseOrdersBySupplier
-    // ... your other repository functions
-};
 
 module.exports = {
     findSupplierByUserId,
