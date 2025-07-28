@@ -432,11 +432,15 @@ const rejectPurchaseOrder = async (req, h) => {
 const listOrderHistory = async (req, h) => {
     try {
         const { userId } = req.pre.credentials;
-        const { page = 1, search = "" } = req.query;
-
+        const { page = 1, limit, search, sortBy, order } = req.query;
+        console.log(limit);
         const result = await SupplierService.listOrderHistory({
             userId,
-            page: parseInt(page, 10),
+            page,
+            limit,
+            search,
+            sortBy,
+            order,
             search
         });
 

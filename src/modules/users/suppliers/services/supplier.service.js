@@ -494,57 +494,76 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
 const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
     // 1. Security Check: The repository will verify ownership ??
     // --- 1. Security Check: Verify ownership of the Purchase Order ---
-    return await prisma.$transaction(async (tx) => {
-        // 1. Security Check: Verify the supplier owns this order.
-        const supplier = await tx.supplier.findUnique({ where: { userId } });
-        if (!supplier) throw { code: 403, message: "Access Denied: Supplier profile not found." };
-
-        const orderToReview = await tx.purchaseOrder.findFirst({
-            where: { id: orderId, supplierId: supplier.supplierId }
-        });
-        if (!orderToReview) throw { code: 404, message: "Access Denied: Order not found." };
-
-        // Check to ensure the API request can't review an already processed order as status will not be PENDING anymore for them.
-        if (orderToReview.status !== ORDER_STATUSES.PENDING) {
-            throw {
-                code: 400,
-                message: `This order is already in '${orderToReview.status}' status and cannot be reviewed.`
-            };
-        }
-        // 2. Handle the "Reject Entire Order" case
-        if (reviewData.status === 'REJECTED') {
-            await fetchPurchaseOrderList.rejectEntireOrder(orderId, tx);
-            return { success: true, code: 200, message: "Order has been rejected successfully." };
-        }
-
-        // 3. Handle the "Processing" (Full or Partial Accept) case
-        if (reviewData.status === 'PROCESSING') {
-            // Get ALL items for this order from the database to ensure data integrity.
-            const allItemsInOrder = await tx.purchaseOrderItems.findMany({
-                where: { purchaseOrderId: orderId }
+    return await prisma.$transaction(
+        async tx => {
+            // 1. Security Check: Verify the supplier owns this order.
+            const supplier = await tx.supplier.findUnique({
+                where: { userId }
             });
+            if (!supplier)
+                throw {
+                    code: 403,
+                    message: "Access Denied: Supplier profile not found."
+                };
 
-            // Securely recalculate the new total cost on the backend.
-            // We NEVER trust a total cost sent from the frontend.
-            const newTotalCost = allItemsInOrder.reduce((sum, item) => {
-                // If the item's ID is NOT in the rejected list, add its cost to the total.
-                if (!reviewData.rejectedOrderItemsIdArr.includes(item.id)) {
-                    return sum + (Number(item.unitCostPrice) * item.unitsRequested);
-                }
-                return sum;
-            }, 0);
-            await fetchPurchaseOrderList.updateOrderAfterReview({
-                orderId,
-                rejectedItemIds: reviewData.rejectedOrderItemsIdArr,
-                newTotalCost,
-                tx
+            const orderToReview = await tx.purchaseOrder.findFirst({
+                where: { id: orderId, supplierId: supplier.supplierId }
             });
+            if (!orderToReview)
+                throw { code: 404, message: "Access Denied: Order not found." };
 
-            // 4. Trigger notification to Warehouse Manager (e.g., using an event emitter) will be implemented later
-            // orderEvents.emit('order.reviewed', { orderId, newTotalCost });
-            return { success: true, code: 200, message: "Order review submitted successfully." };
-        }
-    }//,
+            // Check to ensure the API request can't review an already processed order as status will not be PENDING anymore for them.
+            if (orderToReview.status !== ORDER_STATUSES.PENDING) {
+                throw {
+                    code: 400,
+                    message: `This order is already in '${orderToReview.status}' status and cannot be reviewed.`
+                };
+            }
+            // 2. Handle the "Reject Entire Order" case
+            if (reviewData.status === "REJECTED") {
+                await fetchPurchaseOrderList.rejectEntireOrder(orderId, tx);
+                return {
+                    success: true,
+                    code: 200,
+                    message: "Order has been rejected successfully."
+                };
+            }
+
+            // 3. Handle the "Processing" (Full or Partial Accept) case
+            if (reviewData.status === "PROCESSING") {
+                // Get ALL items for this order from the database to ensure data integrity.
+                const allItemsInOrder = await tx.purchaseOrderItems.findMany({
+                    where: { purchaseOrderId: orderId }
+                });
+
+                // Securely recalculate the new total cost on the backend.
+                // We NEVER trust a total cost sent from the frontend.
+                const newTotalCost = allItemsInOrder.reduce((sum, item) => {
+                    // If the item's ID is NOT in the rejected list, add its cost to the total.
+                    if (!reviewData.rejectedOrderItemsIdArr.includes(item.id)) {
+                        return (
+                            sum +
+                            Number(item.unitCostPrice) * item.unitsRequested
+                        );
+                    }
+                    return sum;
+                }, 0);
+                await fetchPurchaseOrderList.updateOrderAfterReview({
+                    orderId,
+                    rejectedItemIds: reviewData.rejectedOrderItemsIdArr,
+                    newTotalCost,
+                    tx
+                });
+
+                // 4. Trigger notification to Warehouse Manager (e.g., using an event emitter) will be implemented later
+                // orderEvents.emit('order.reviewed', { orderId, newTotalCost });
+                return {
+                    success: true,
+                    code: 200,
+                    message: "Order review submitted successfully."
+                };
+            }
+        } //,
         // {
         //     // Sets the maximum time Prisma will wait for a connection from the pool.
         //     maxWait: 10000, // 10 seconds (default is 2s)
@@ -613,9 +632,14 @@ const getOrderRequestById = async ({ userId, orderId }) => {
 /**
  * Retrieves a paginated list of historical purchase orders for a supplier.
  */
-const listOrderHistory = async ({ userId, page = 1, search = "" }) => {
-    const itemsPerPage = 10;
-
+const listOrderHistory = async ({
+    userId,
+    page,
+    limit,
+    search,
+    sortBy,
+    order
+}) => {
     // 1. Get the supplierId for the logged-in user.
     const supplier = await fetchPurchaseOrderList.findSupplierByUserId(userId);
     if (!supplier) {
@@ -626,12 +650,11 @@ const listOrderHistory = async ({ userId, page = 1, search = "" }) => {
             data: { orders: [], totalPages: 0, currentPage: page }
         };
     }
-
     // 2. Call the NEW repository function for historical orders.
     const [totalItems, rawOrders] =
         await fetchPurchaseOrderList.findHistoricalPurchaseOrdersBySupplier(
             supplier.supplierId,
-            { page, search, itemsPerPage }
+            { page, limit, search, sortBy, order }
         );
 
     // 3. Perform the EXACT SAME data transformation as listOrderRequests.
@@ -720,7 +743,7 @@ const listOrderHistory = async ({ userId, page = 1, search = "" }) => {
 
         console.log(`------------------------------------`);
     });
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const totalPages = Math.ceil(totalItems / limit);
     return {
         success: true,
         code: 200,
@@ -728,7 +751,7 @@ const listOrderHistory = async ({ userId, page = 1, search = "" }) => {
         data: {
             orders: transformedOrders,
             totalPages,
-            currentPage: parseInt(page, 10)
+            currentPage: page
         }
     };
 };

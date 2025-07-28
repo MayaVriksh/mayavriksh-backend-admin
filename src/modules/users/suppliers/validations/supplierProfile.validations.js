@@ -143,17 +143,25 @@ const orderRequestValidation = {
     })
 };
 
-
 const reviewPurchaseOrderValidation = {
     params: Joi.object({
-        orderId: Joi.string().required().description("The ID of the Purchase Order being reviewed."),
+        orderId: Joi.string()
+            .required()
+            .description("The ID of the Purchase Order being reviewed.")
     }),
     payload: Joi.object({
-        status: Joi.string().valid('PROCESSING', 'REJECTED').required()
-            .description("Set to 'PROCESSING' for partial acceptance, or 'REJECTED' for full rejection."),
-        rejectedOrderItemsIdArr: Joi.array().items(Joi.string().required())
-            .description("An array of PurchaseOrderItem IDs that are being rejected.")
-    }),
+        status: Joi.string()
+            .valid("PROCESSING", "REJECTED")
+            .required()
+            .description(
+                "Set to 'PROCESSING' for partial acceptance, or 'REJECTED' for full rejection."
+            ),
+        rejectedOrderItemsIdArr: Joi.array()
+            .items(Joi.string().required())
+            .description(
+                "An array of PurchaseOrderItem IDs that are being rejected."
+            )
+    })
 };
 const orderIdParamValidation = {
     params: Joi.object({
@@ -215,10 +223,51 @@ const getOrderByIdResponseSchema = Joi.object({
     })
 }).label("GetOrderByIdSuccessResponse");
 
+// A schema for a single order SUMMARY in the list
+const orderSummarySchema = Joi.object({
+    id: Joi.string().required(),
+    totalCost: Joi.number().allow(null),
+    pendingAmount: Joi.number().allow(null),
+    paymentPercentage: Joi.number().integer().required(),
+    status: Joi.string().required(),
+    expectedDateOfArrival: Joi.date().required(),
+    _count: Joi.object({
+        media: Joi.number().integer().required()
+    })
+}).label("OrderSummary");
+
+// The schema for the entire successful response payload
+const listOrdersResponseSchema = Joi.object({
+    success: Joi.boolean().example(true),
+    code: Joi.number().example(200),
+    message: Joi.string(),
+    data: Joi.object({
+        orders: Joi.array().items(orderSummarySchema),
+        totalPages: Joi.number().integer().example(10),
+        currentPage: Joi.number().integer().example(1)
+    })
+}).label("ListOrdersResponse");
+
+const listHistoryValidation = {
+    query: Joi.object({
+        page: Joi.number().integer().min(1).default(1),
+        limit: Joi.number().integer().min(1).max(100).default(10), // Set a max limit for security
+        search: Joi.string().allow("").optional(),
+        // Whitelist the fields the user is allowed to sort by
+        sortBy: Joi.string()
+            .valid("requestedAt", "totalCost", "status")
+            .default("requestedAt"),
+        // Allow only 'asc' or 'desc' for the order
+        order: Joi.string().lowercase().valid("asc", "desc").default("desc")
+    })
+};
+
 module.exports = {
     completeSupplierProfile,
     updateSupplierProfile,
     orderRequestValidation,
     reviewPurchaseOrderValidation,
-    orderIdParamValidation
+    orderIdParamValidation,
+    listOrdersResponseSchema,
+    listHistoryValidation
 };

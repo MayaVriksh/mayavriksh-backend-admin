@@ -221,7 +221,7 @@ const updateOrderAfterReview = async ({
             pendingAmount: newTotalCost,
             status: ORDER_STATUSES.PROCESSING,
             isAccepted: true,
-            acceptedAt: new Date(),
+            acceptedAt: new Date()
         }
     });
 };
@@ -233,15 +233,14 @@ const rejectEntireOrder = async (orderId, tx) => {
     // Update all items to be not accepted.
     await tx.purchaseOrderItems.updateMany({
         where: { purchaseOrderId: orderId },
-        data: { isAccepted: false },
+        data: { isAccepted: false }
     });
     // Update the parent order status.
     return await tx.purchaseOrder.update({
         where: { id: orderId },
-        data: { status: 'REJECTED', isAccepted: false }
+        data: { status: "REJECTED", isAccepted: false }
     });
 };
-
 
 /**
  * Fetches historical (completed or rejected) purchase orders for a given supplier.
@@ -251,39 +250,39 @@ const rejectEntireOrder = async (orderId, tx) => {
  */
 const findHistoricalPurchaseOrdersBySupplier = async (
     supplierId,
-    { page, search, itemsPerPage }
+    { page, limit, search, sortBy, order }
 ) => {
     const whereClause = {
         supplierId: supplierId,
         OR: [
-        // Condition 1: The order was rejected (paymentPercentage would be 0)
+            { status: { in: ["REJECTED"] } },
             {
-                status: { in: ['REJECTED'] }
-            },
-            
-            // Condition 2: The order was successfully DELIVERED and 100% PAID
-            {
-                status: 'DELIVERED',
-                paymentPercentage: 100,
-                pendingAmount: 0
+                AND: [
+                    { status: "DELIVERED" },
+                    { paymentPercentage: 100 },
+                    { pendingAmount: 0 }
+                ]
             }
         ],
         ...(search && {
-            id: {
-                contains: search,
-                mode: "insensitive"
-            }
+            id: { contains: search, mode: "insensitive" }
         })
     };
-
+    const orderBy = {};
+    if (sortBy && order) {
+        orderBy[sortBy] = order;
+    } else {
+        // Default sort if none is provided
+        orderBy["requestedAt"] = "desc";
+    }
     // The data fetching transaction is identical to the active orders one.
     return await prisma.$transaction([
         prisma.purchaseOrder.count({ where: whereClause }),
         prisma.purchaseOrder.findMany({
             where: whereClause,
-            skip: (page - 1) * itemsPerPage,
-            take: itemsPerPage,
-            orderBy: { requestedAt: "desc" },
+            skip: (page - 1) * limit,
+            take: limit,
+            orderBy: orderBy,
             // We select all the same detailed information as before.
             select: {
                 id: true,
@@ -374,7 +373,6 @@ const findHistoricalPurchaseOrdersBySupplier = async (
         })
     ]);
 };
-
 
 module.exports = {
     findSupplierByUserId,

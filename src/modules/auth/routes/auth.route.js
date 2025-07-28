@@ -65,7 +65,7 @@ module.exports = [
         options: {
             tags: ["api", "Auth"],
             description: "Login to your account",
-            notes: "Allows a user to log in using email/username and password.",
+            notes: "Allows a user to log in using email/username and password. Email: restaurant@gmail.com, pass: res@12345",
             handler: AuthController.signin,
             validate: {
                 ...AuthValidator.loginUserValidation,

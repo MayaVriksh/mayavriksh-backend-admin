@@ -130,20 +130,51 @@ module.exports = [
             }
         }
     },
-
     {
         method: "GET",
         path: "/supplier/order-requests",
         options: {
             tags: ["api", "Supplier Purchase Order"],
             description:
-                "Get a list of order requests for the authenticated supplier.",
+                "Get a list of active order requests for the authenticated supplier.",
+
+            // --- MODIFIED: Detailed notes for frontend developers ---
+            notes: `
+This endpoint fetches a paginated list of **active** purchase orders for the supplier. Active orders are those that require action or are in transit (e.g., \`PENDING\`, \`AWAITING_PAYMENT\`, \`PROCESSING\`, \`SHIPPED\`).
+
+### UI Logic & Lazy Loading
+This endpoint provides the summary data needed to render the main "Purchase Order Request" table.
+
+-   The \`status\` and \`paymentPercentage\` fields should be used to display the correct status badges and progress bars.
+-   The \`_count.media\` field (which counts the number of QC images) should be used to conditionally show either an **"Upload Img for QC"** button (if count is 0) or an **"Edit QC Images"** button (if count is > 0).
+
+This endpoint intentionally **does not** return the detailed \`PurchaseOrderItems\` or \`payments\` arrays to keep the initial page load fast. To view the details of an order, the frontend must use the order's \`id\` from this response to make a separate call to the \`GET /supplier/order-requests/{orderId}\` endpoint.
+            `,
+
             pre: [verifyAccessTokenMiddleware, requireRole([ROLES.SUPPLIER])],
             validate: {
-                ...SupplierValidator.orderRequestValidation,
+                ...SupplierValidator.orderRequestValidation, // Validates query params like ?page=1
                 failAction: handleValidationFailure
             },
-            handler: SupplierController.listOrderRequests
+            handler: SupplierController.listOrderRequests,
+            plugins: {
+                "hapi-swagger": {
+                    responses: {
+                        200: {
+                            description:
+                                "A paginated list of active purchase orders retrieved successfully.",
+                            schema: SupplierValidator.listOrdersResponseSchema
+                        },
+                        401: {
+                            description:
+                                "Unauthorized: Invalid or expired token."
+                        },
+                        403: {
+                            description: "Forbidden: User is not a supplier."
+                        }
+                    }
+                }
+            }
         }
     },
     {
@@ -186,10 +217,11 @@ module.exports = [
         path: "/supplier/purchase-orders/{orderId}/review",
         options: {
             tags: ["api", "Supplier Purchase Order"],
-            description: "Submit an Order Items review (Accept/Reject) for a Purchase Order.",
-            
+            description:
+                "Submit an Order Items review (Accept/Reject) for a Purchase Order.",
+
             // --- MODIFIED: Added detailed notes with examples ---
-             notes: `
+            notes: `
 This endpoint handles a supplier's review of a purchase order. It supports two main scenarios:
 
 ### Case 1: Partial Rejection (Accepting some items)
@@ -234,11 +266,24 @@ Use this when the supplier cannot fulfill any part of the order.
                 "hapi-swagger": {
                     payloadType: "json",
                     responses: {
-                        200: { description: "Order review submitted successfully." },
-                        400: { description: "Bad Request: Invalid input data." },
-                        401: { description: "Unauthorized: Invalid or expired token." },
-                        403: { description: "Forbidden: User does not own this order." },
-                        404: { description: "Not Found: The specified order does not exist." }
+                        200: {
+                            description: "Order review submitted successfully."
+                        },
+                        400: {
+                            description: "Bad Request: Invalid input data."
+                        },
+                        401: {
+                            description:
+                                "Unauthorized: Invalid or expired token."
+                        },
+                        403: {
+                            description:
+                                "Forbidden: User does not own this order."
+                        },
+                        404: {
+                            description:
+                                "Not Found: The specified order does not exist."
+                        }
                     }
                 }
             }
@@ -251,7 +296,28 @@ Use this when the supplier cannot fulfill any part of the order.
             tags: ["api", "Supplier Purchase Order"],
             description:
                 "Get a single purchase order by its ID, including all of its items and payment history.",
-            notes: "This endpoint is used to fetch the detailed data needed to display the 'Review Items' or 'View Details' modal for a specific order.",
+            notes: `
+This endpoint fetches the complete, detailed state of a single Purchase Order. The frontend UI should change its appearance and available actions based on the \`status\` fields returned in this response.
+
+### Understanding the Response Data
+
+The API returns the main order details, a nested \`PurchaseOrderItems\` array, and a nested \`payments\` array.
+
+#### Interpreting the Order Status
+-   **If \`status\` is \`PENDING\`:** This is a new order awaiting review.
+    -   The UI should open the **interactive "Review Items" modal** where the supplier can Accept/Reject each item.
+    -   The \`isAccepted\` field on all items will be \`true\` by default.
+    -   The \`payments\` array will be empty.
+
+-   **If \`status\` is \`AWAITING_PAYMENT\`, \`PARTIALLY_PAID\`, or \`PAID\`:** The order has already been reviewed and is locked.
+    -   The UI should open a **read-only "View Order Items" modal**.
+    -   Inside the modal, you must read the \`isAccepted\` boolean for each item to show whether it was **Accepted** or **Rejected** by the supplier during the review step.
+
+-   **If \`status\` is \`REJECTED\` or \`CANCELLED\`:** The order is in a final, terminated state. The UI should simply display this status.
+
+#### The \`payments\` Array
+This array contains the full payment history for the order. It will be empty until the Warehouse Manager starts making payments. Use this data to populate the "View Payments" modal.
+            `,
             pre: [verifyAccessTokenMiddleware, requireRole([ROLES.SUPPLIER])],
 
             // This validation uses the schema from Step 1
@@ -298,7 +364,7 @@ Use this when the supplier cannot fulfill any part of the order.
             tags: ["api", "Supplier Purchase Order"],
             description:
                 "Get a list of historical (completed or rejected) order requests for the authenticated supplier.",
-             notes: `
+            notes: `
 This endpoint fetches a paginated list of orders that are in a final state. The structure of the returned order objects can vary based on whether the order was completed or rejected.
 
 ### Case 1: Completed Orders
@@ -318,7 +384,7 @@ A rejected or cancelled order will have these characteristics:
             pre: [verifyAccessTokenMiddleware, requireRole([ROLES.SUPPLIER])],
             validate: {
                 // This correctly validates query params like '?page=2'
-                ...SupplierValidator.orderRequestValidation,
+                ...SupplierValidator.listHistoryValidation,
                 failAction: handleValidationFailure
             },
             handler: SupplierController.listOrderHistory,
