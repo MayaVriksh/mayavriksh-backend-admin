@@ -136,13 +136,34 @@ const updateSupplierProfile = {
     }).min(1)
 };
 
+// A single, powerful validation schema for the order list endpoint
 const orderRequestValidation = {
     query: Joi.object({
-        page: Joi.number().integer().min(1).default(1),
-        search: Joi.string().allow("").optional()
+        // For pagination
+        page: Joi.number().integer().min(1).default(1).description('The page number to retrieve'),
+        limit: Joi.number().integer().min(1).max(100).default(10).description('The number of items to return per page (max 100)'),
+        
+        // For searching
+        search: Joi.string().allow('').optional().description('A search term to filter orders by ID'),
+
+        // For sorting
+        sortBy: Joi.string().valid('requestedAt', 'totalCost', 'status').default('requestedAt').description('The field to sort by'),
+        order: Joi.string().lowercase().valid('asc', 'desc').default('desc').description('The sort order ("asc" or "desc")')
     })
 };
-
+const listHistoryValidation = {
+    query: Joi.object({
+        page: Joi.number().integer().min(1).default(1),
+        limit: Joi.number().integer().min(1).max(100).default(10), // Set a max limit for security
+        search: Joi.string().allow("").optional(),
+        // Whitelist the fields the user is allowed to sort by
+        sortBy: Joi.string()
+            .valid("requestedAt", "totalCost", "status")
+            .default("requestedAt"),
+        // Allow only 'asc' or 'desc' for the order
+        order: Joi.string().lowercase().valid("asc", "desc").default("desc")
+    })
+};
 const reviewPurchaseOrderValidation = {
     params: Joi.object({
         orderId: Joi.string()
@@ -248,19 +269,6 @@ const listOrdersResponseSchema = Joi.object({
     })
 }).label("ListOrdersResponse");
 
-const listHistoryValidation = {
-    query: Joi.object({
-        page: Joi.number().integer().min(1).default(1),
-        limit: Joi.number().integer().min(1).max(100).default(10), // Set a max limit for security
-        search: Joi.string().allow("").optional(),
-        // Whitelist the fields the user is allowed to sort by
-        sortBy: Joi.string()
-            .valid("requestedAt", "totalCost", "status")
-            .default("requestedAt"),
-        // Allow only 'asc' or 'desc' for the order
-        order: Joi.string().lowercase().valid("asc", "desc").default("desc")
-    })
-};
 
 module.exports = {
     completeSupplierProfile,

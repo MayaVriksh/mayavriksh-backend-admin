@@ -282,13 +282,16 @@ const updateSupplierProfile = async (req, h) => {
 const listOrderRequests = async (req, h) => {
     try {
         const { userId } = req.pre.credentials;
-        const { page = 1, search = "" } = req.query;
+        const { page, limit, search, sortBy, order} = req.query;
 
         // 1. Call the service. The service does all the complex work.
         const result = await SupplierService.listOrderRequests({
             userId,
-            page: parseInt(page, 10),
-            search
+            page,
+            limit,
+            search,
+            sortBy,
+            order
         });
         // 2. Return the entire result object directly.
         //    The controller should not try to access 'purchaseOrderDetails' itself.

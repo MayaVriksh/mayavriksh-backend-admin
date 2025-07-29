@@ -21,23 +21,30 @@ const findSupplierByUserId = async userId => {
  */
 const findPurchaseOrdersBySupplier = async (
     supplierId,
-    { page, search, itemsPerPage }
+    { page, limit, search, sortBy, order }
 ) => {
+    console.log(page, limit)
     const whereClause = {
         supplierId: supplierId,
         ...(search && {
             id: { contains: search, mode: "insensitive" }
         })
     };
-
+    const orderBy = {};
+    if (sortBy && order) {
+        orderBy[sortBy] = order;
+    } else {
+        // Default sort if none is provided
+        orderBy["requestedAt"] = "desc";
+    }
     // Use a transaction to run both queries at the same time for efficiency.
     return await prisma.$transaction([
         prisma.purchaseOrder.count({ where: whereClause }),
         prisma.purchaseOrder.findMany({
             where: whereClause,
-            skip: (page - 1) * itemsPerPage,
-            take: itemsPerPage,
-            orderBy: { requestedAt: "desc" },
+            skip: (page - 1) * limit,
+            take: limit,
+            orderBy: orderBy,
             select: {
                 // This is the complete select statement from our previous discussion
                 id: true,

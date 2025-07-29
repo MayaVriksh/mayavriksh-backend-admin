@@ -203,8 +203,7 @@ const listAllWarehouses = async () => {
     };
 };
 
-const listOrderRequests = async ({ userId, page = 1, search = "" }) => {
-    const itemsPerPage = 8;
+const listOrderRequests = async ({ userId, page, limit, search, sortBy, order}) => {
 
     // 1. Call the repository to get the supplier ID.
     const supplier = await fetchPurchaseOrderList.findSupplierByUserId(userId);
@@ -223,7 +222,7 @@ const listOrderRequests = async ({ userId, page = 1, search = "" }) => {
     const [totalItems, rawOrders] =
         await fetchPurchaseOrderList.findPurchaseOrdersBySupplier(
             supplier.supplierId,
-            { page, search, itemsPerPage }
+            { page, limit, search, sortBy, order }
         );
     // --- Transform the raw database results into a clean, generic structure ---
     const transformedOrders = rawOrders.map(order => {
@@ -312,7 +311,7 @@ const listOrderRequests = async ({ userId, page = 1, search = "" }) => {
 
         console.log(`------------------------------------`);
     });
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const totalPages = Math.ceil(totalItems / limit);
 
     return {
         success: true,
@@ -321,6 +320,9 @@ const listOrderRequests = async ({ userId, page = 1, search = "" }) => {
         data: {
             orders: transformedOrders,
             totalPages,
+            totalItems,
+            limit,
+            skip: (page - 1) * limit,
             currentPage: parseInt(page, 10)
         }
     };
@@ -750,8 +752,10 @@ const listOrderHistory = async ({
         message: "Order requests retrieved successfully.",
         data: {
             orders: transformedOrders,
-            totalPages,
-            currentPage: page
+            totalPages,totalItems,
+            limit,
+            skip: (page - 1) * limit,
+            currentPage: parseInt(page, 10)
         }
     };
 };

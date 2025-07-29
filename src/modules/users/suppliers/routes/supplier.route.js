@@ -163,7 +163,7 @@ This endpoint intentionally **does not** return the detailed \`PurchaseOrderItem
                         200: {
                             description:
                                 "A paginated list of active purchase orders retrieved successfully.",
-                            schema: SupplierValidator.listOrdersResponseSchema
+                            // schema: SupplierValidator.listOrdersResponseSchema
                         },
                         401: {
                             description:
