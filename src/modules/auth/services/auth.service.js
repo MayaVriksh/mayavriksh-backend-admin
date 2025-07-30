@@ -139,6 +139,7 @@ const login = async (email, password) => {
         select: {
             userId: true,
             fullName: true,
+            email: true,
             password: true,
             isActive: true,
             profileImageUrl: true,
@@ -183,7 +184,16 @@ const login = async (email, password) => {
             message: ERROR_MESSAGES.AUTH.PASSWORD_WRONG
         };
     }
-
+// 3. Determine the final 'isVerified' status based on the user's role.
+    let finalIsVerified = false;
+    if (user.role.role === 'SUPPLIER') {
+        // If the user is a supplier, their status comes from the database.
+        finalIsVerified = user.Supplier?.isVerified || false;
+    } else if (user.role.role === 'ADMIN') {
+        // For any other role (ADMIN, SUPER_ADMIN, etc.), they are always considered verified.
+        finalIsVerified = true;
+    }
+    
     // <-- MODIFIED: Create two different payloads for our two tokens.
 
     // 1. Access Token Payload: Contains data for stateless verification.
@@ -193,7 +203,7 @@ const login = async (email, password) => {
         role: user.role.role,
         // Including a name is useful for the frontend.
         username: user.fullName.firstName,
-        isVerified: user.Supplier?.isVerified || false
+        isVerified: finalIsVerified
     };
     // 2. Refresh Token Payload: Should be minimal, only what's needed to identify the user session.
     const refreshTokenPayload = {
@@ -207,7 +217,7 @@ const login = async (email, password) => {
     const { password: _, deletedAt: __, ...userProfile } = user;
     // --- MERGE THE isVerified STATUS ---
     // Make sure to add the supplier's verification status to the final object.
-    userProfile.isVerified = user.Supplier?.isVerified || false;
+    userProfile.isVerified = finalIsVerified
 
     // <-- MODIFIED: Return all the necessary pieces for the controller.
     return { userProfile, accessToken, refreshToken };
