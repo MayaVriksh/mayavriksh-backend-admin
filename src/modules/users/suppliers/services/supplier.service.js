@@ -567,33 +567,43 @@ const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
                 });
             // --- Step 3 (NEW): Re-fetch and return the updated order's full state ---
                 // After the transaction is successful, fetch the final, authoritative state of the order.
-                // const updatedOrder = await prisma.purchaseOrder.findUnique({
-                //     where: { id: orderId },
-                //     // Use the same comprehensive select as your 'getOrderById' function
-                //     select: {
-                //         id: true,
-                //         totalCost: true,
-                //         pendingAmount: true,
-                //         isAccepted: true,
-                //         // ... all other fields and nested items/payments your UI needs
-                //     }
-                // });
+                const updatedOrder = await prisma.purchaseOrder.findUnique({
+                    where: { id: orderId },
+                    // Use the same comprehensive select as your 'getOrderById' function
+                    select: {
+                        id: true,
+                        totalCost: true,
+                        pendingAmount: true,
+                        paymentPercentage: true,
+                        status: true,
+                        isAccepted: true,
+                        /// Include the full list of items with their new statuses
+                        PurchaseOrderItems: {
+                            select: {
+                                id: true,
+                                isAccepted: true, // This will be the new true/false value
+                                productType: true,
+                                // Add any other item fields your 'View Items' modal needs
+                            }
+                        }
+                    }
+                });
                 // 4. Trigger notification to Warehouse Manager (e.g., using an event emitter) will be implemented later
                 // orderEvents.emit('order.reviewed', { orderId, newTotalCost });
                 return {
                     success: true,
                     code: 200,
                     message: "Order review submitted successfully.",
-                    // data: updatedOrder // Return the single, fresh object
+                    data: updatedOrder // Return the single, fresh object
                 };
             }
-        } //,
-        // {
-        //     // Sets the maximum time Prisma will wait for a connection from the pool.
-        //     maxWait: 10000, // 10 seconds (default is 2s)
-        //     // Sets the maximum time the entire transaction is allowed to run.
-        //     timeout: 15000 // 15 seconds (default is 5s)
-        // }
+        } ,
+        {
+            // Sets the maximum time Prisma will wait for a connection from the pool.
+            maxWait: 10000, // 10 seconds (default is 2s)
+            // Sets the maximum time the entire transaction is allowed to run.
+            timeout: 15000 // 15 seconds (default is 5s)
+        }
     );
 };
 
