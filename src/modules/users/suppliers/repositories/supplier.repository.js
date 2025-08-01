@@ -23,9 +23,24 @@ const findPurchaseOrdersBySupplier = async (
     supplierId,
     { page, limit, search, sortBy, order }
 ) => {
-    console.log(page, limit)
+    console.log(page, limit);
     const whereClause = {
         supplierId: supplierId,
+        // Add a NOT clause to exclude all historical orders.
+        NOT: {
+            OR: [
+                // Exclude orders that were rejected or cancelled.
+                { status: { in: ["REJECTED", "CANCELLED"] } },
+                // Exclude orders that are both DELIVERED and 100% paid.
+                {
+                    AND: [
+                        { status: "DELIVERED" },
+                        { paymentPercentage: 100 },
+                        { pendingAmount: 0 }
+                    ]
+                }
+            ]
+        },
         ...(search && {
             id: { contains: search, mode: "insensitive" }
         })

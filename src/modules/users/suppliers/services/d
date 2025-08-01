@@ -1,0 +1,82 @@
+const PurchaseOrderRepository = require("../repositories/purchaseOrder.repository.js");
+const prisma = require("../../../../config/prisma.config.js");
+const orderEvents = require("../../../events/order.events.js");
+
+const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
+    // --- The entire operation is wrapped in a single transaction ---
+    await prisma.$transaction(async (tx) => {
+        // Step 1: Security Check inside the transaction
+        const supplier = await tx.supplier.findUnique({ where: { userId } });
+        if (!supplier) throw { code: 403, message: "Access Denied: Supplier profile not found." };
+
+        const orderToReview = await tx.purchaseOrder.findFirst({
+            where: { id: orderId, supplierId: supplier.supplierId }
+        });
+        if (!orderToReview) throw { code: 404, message: "Access Denied: Order not found." };
+        if (orderToReview.status !== 'PENDING') {
+            throw { code: 400, message: `This order is already in '${orderToReview.status}' status.` };
+        }
+
+        // Step 2: Handle the "Reject Entire Order" vs "Processing" cases
+        if (reviewData.status === 'REJECTED') {
+            // Update all items to be not accepted
+            await tx.purchaseOrderItems.updateMany({
+                where: { purchaseOrderId: orderId },
+                data: { isAccepted: false },
+            });
+            // Update the parent order status
+            await tx.purchaseOrder.update({
+                where: { id: orderId },
+                data: { status: 'REJECTED', isAccepted: false }
+            });
+        } else if (reviewData.status === 'PROCESSING') {
+            // Get ALL items for this order from the database for a secure calculation.
+            const allItemsInOrder = await tx.purchaseOrderItems.findMany({
+                where: { purchaseOrderId: orderId }
+            });
+
+            // Securely recalculate the new total cost on the backend.
+            const newTotalCost = allItemsInOrder.reduce((sum, item) => {
+                if (!reviewData.rejectedOrderItemsIdArr.includes(item.id)) {
+                    return sum + (Number(item.unitCostPrice) * item.unitsRequested);
+                }
+                return sum;
+            }, 0);
+
+            // Call the repository to perform the final database updates.
+            await PurchaseOrderRepository.updateOrderAfterReview({
+                orderId,
+                rejectedItemIds: reviewData.rejectedOrderItemsIdArr,
+                newTotalCost,
+                tx // Pass the transaction client
+            });
+        }
+    });
+
+    // --- Step 3 (NEW): Re-fetch and return the updated order's full state ---
+    // After the transaction is successful, fetch the final, authoritative state of the order.
+    const updatedOrder = await prisma.purchaseOrder.findUnique({
+        where: { id: orderId },
+        // Use the same comprehensive select as your 'getOrderById' function
+        select: {
+            id: true,
+            totalCost: true,
+            pendingAmount: true,
+            paymentPercentage: true,
+            status: true,
+            isAccepted: true,
+            // ... all other fields and nested items/payments your UI needs
+        }
+    });
+    
+    // You can also re-apply your data transformation logic here if needed
+    // const transformedOrder = transformOrderForUI(updatedOrder);
+
+    // orderEvents.emit('order.reviewed', { orderId });
+    return {
+        success: true,
+        code: 200,
+        message: "Order review submitted successfully.",
+        data: updatedOrder // Return the single, fresh object
+    };
+};

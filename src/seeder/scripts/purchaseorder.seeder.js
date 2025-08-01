@@ -34,6 +34,7 @@ async function seedPurchaseOrders() {
                         data: {
                             id: order.id,
                             warehouseId: order.warehouseId,
+                            adminId: order.adminId,
                             supplierId: order.supplierId,
                             deliveryCharges: order.deliveryCharges,
                             totalCost: order.totalCost,

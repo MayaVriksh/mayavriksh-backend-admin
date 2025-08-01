@@ -138,7 +138,7 @@ module.exports = [
             description:
                 "Get a list of active order requests for the authenticated supplier.",
 
-            // --- MODIFIED: Detailed notes for frontend developers ---
+            // ---: Detailed notes for frontend developers ---
             notes: `
 This endpoint fetches a paginated list of **active** purchase orders for the supplier. Active orders are those that require action or are in transit (e.g., \`PENDING\`, \`AWAITING_PAYMENT\`, \`PROCESSING\`, \`SHIPPED\`).
 
@@ -162,7 +162,7 @@ This endpoint intentionally **does not** return the detailed \`PurchaseOrderItem
                     responses: {
                         200: {
                             description:
-                                "A paginated list of active purchase orders retrieved successfully.",
+                                "A paginated list of active purchase orders retrieved successfully."
                             // schema: SupplierValidator.listOrdersResponseSchema
                         },
                         401: {

@@ -140,15 +140,34 @@ const updateSupplierProfile = {
 const orderRequestValidation = {
     query: Joi.object({
         // For pagination
-        page: Joi.number().integer().min(1).default(1).description('The page number to retrieve'),
-        limit: Joi.number().integer().min(1).max(100).default(10).description('The number of items to return per page (max 100)'),
-        
+        page: Joi.number()
+            .integer()
+            .min(1)
+            .default(1)
+            .description("The page number to retrieve"),
+        limit: Joi.number()
+            .integer()
+            .min(1)
+            .max(100)
+            .default(10)
+            .description("The number of items to return per page (max 100)"),
+
         // For searching
-        search: Joi.string().allow('').optional().description('A search term to filter orders by ID'),
+        search: Joi.string()
+            .allow("")
+            .optional()
+            .description("A search term to filter orders by ID"),
 
         // For sorting
-        sortBy: Joi.string().valid('requestedAt', 'totalCost', 'status').default('requestedAt').description('The field to sort by'),
-        order: Joi.string().lowercase().valid('asc', 'desc').default('desc').description('The sort order ("asc" or "desc")')
+        sortBy: Joi.string()
+            .valid("requestedAt", "totalCost", "status")
+            .default("requestedAt")
+            .description("The field to sort by"),
+        order: Joi.string()
+            .lowercase()
+            .valid("asc", "desc")
+            .default("desc")
+            .description('The sort order ("asc" or "desc")')
     })
 };
 const listHistoryValidation = {
@@ -269,7 +288,6 @@ const listOrdersResponseSchema = Joi.object({
     })
 }).label("ListOrdersResponse");
 
-
 module.exports = {
     completeSupplierProfile,
     updateSupplierProfile,
@@ -277,5 +295,6 @@ module.exports = {
     reviewPurchaseOrderValidation,
     orderIdParamValidation,
     listOrdersResponseSchema,
-    listHistoryValidation
+    listHistoryValidation,
+    getOrderByIdResponseSchema
 };

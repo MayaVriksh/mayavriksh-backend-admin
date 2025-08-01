@@ -7,7 +7,7 @@ const {
 } = require("../../../../constants/responseCodes.constant");
 const ERROR_MESSAGES = require("../../../../constants/errorMessages.constant");
 const SUCCESS_MESSAGES = require("../../../../constants/successMessages.constant.js");
-const fetchPurchaseOrderList = require("../repositories/supplier.repository.js");
+const supplierRepository = require("../repositories/supplier.repository.js");
 const orderEvents = require("../../../../events/order.events.js");
 const ORDER_STATUSES = require("../../../../constants/orderStatus.constant.js");
 const ROLES = require("../../../../constants/roles.constant.js");
@@ -203,10 +203,16 @@ const listAllWarehouses = async () => {
     };
 };
 
-const listOrderRequests = async ({ userId, page, limit, search, sortBy, order}) => {
-
+const listOrderRequests = async ({
+    userId,
+    page,
+    limit,
+    search,
+    sortBy,
+    order
+}) => {
     // 1. Call the repository to get the supplier ID.
-    const supplier = await fetchPurchaseOrderList.findSupplierByUserId(userId);
+    const supplier = await supplierRepository.findSupplierByUserId(userId);
 
     // 2. Handle the business case where the user is not a supplier.
     if (!supplier) {
@@ -220,7 +226,7 @@ const listOrderRequests = async ({ userId, page, limit, search, sortBy, order}) 
 
     // 3. Call the repository to get the purchase order data.
     const [totalItems, rawOrders] =
-        await fetchPurchaseOrderList.findPurchaseOrdersBySupplier(
+        await supplierRepository.findPurchaseOrdersBySupplier(
             supplier.supplierId,
             { page, limit, search, sortBy, order }
         );
@@ -448,7 +454,7 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
     if (!supplier) {
         throw { code: 404, message: "Supplier profile not found." };
     }
-    const purchaseOrder = fetchPurchaseOrderList.checkPurchaseOrderExist(
+    const purchaseOrder = supplierRepository.checkPurchaseOrderExist(
         orderId,
         supplier.supplierId
     );
@@ -462,7 +468,7 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
     }
 
     /** Uploading Order status to SHipped */
-    fetchPurchaseOrderList.updateOrderStatus(orderId);
+    supplierRepository.updateOrderStatus(orderId);
 
     // 2. Prepare the data for the database.
     const mediaArray = Array.isArray(uploadedMedia)
@@ -478,7 +484,7 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
     }));
 
     // 3. Save the URLs and public IDs to the database via the repository.
-    await fetchPurchaseOrderList.addMediaToPurchaseOrder(
+    await supplierRepository.addMediaToPurchaseOrder(
         orderId,
         mediaAssetsToCreate
     );
@@ -508,9 +514,11 @@ const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
                     message: "Access Denied: Supplier profile not found."
                 };
 
+            console.log(supplier, orderId)
             const orderToReview = await tx.purchaseOrder.findFirst({
                 where: { id: orderId, supplierId: supplier.supplierId }
             });
+            console.log(orderToReview)
             if (!orderToReview)
                 throw { code: 404, message: "Access Denied: Order not found." };
 
@@ -523,7 +531,7 @@ const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
             }
             // 2. Handle the "Reject Entire Order" case
             if (reviewData.status === "REJECTED") {
-                await fetchPurchaseOrderList.rejectEntireOrder(orderId, tx);
+                await supplierRepository.rejectEntireOrder(orderId, tx);
                 return {
                     success: true,
                     code: 200,
@@ -550,19 +558,33 @@ const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
                     }
                     return sum;
                 }, 0);
-                await fetchPurchaseOrderList.updateOrderAfterReview({
+                console.log(newTotalCost)
+                await supplierRepository.updateOrderAfterReview({
                     orderId,
                     rejectedItemIds: reviewData.rejectedOrderItemsIdArr,
                     newTotalCost,
                     tx
                 });
-
+            // --- Step 3 (NEW): Re-fetch and return the updated order's full state ---
+                // After the transaction is successful, fetch the final, authoritative state of the order.
+                // const updatedOrder = await prisma.purchaseOrder.findUnique({
+                //     where: { id: orderId },
+                //     // Use the same comprehensive select as your 'getOrderById' function
+                //     select: {
+                //         id: true,
+                //         totalCost: true,
+                //         pendingAmount: true,
+                //         isAccepted: true,
+                //         // ... all other fields and nested items/payments your UI needs
+                //     }
+                // });
                 // 4. Trigger notification to Warehouse Manager (e.g., using an event emitter) will be implemented later
                 // orderEvents.emit('order.reviewed', { orderId, newTotalCost });
                 return {
                     success: true,
                     code: 200,
-                    message: "Order review submitted successfully."
+                    message: "Order review submitted successfully.",
+                    // data: updatedOrder // Return the single, fresh object
                 };
             }
         } //,
@@ -643,7 +665,7 @@ const listOrderHistory = async ({
     order
 }) => {
     // 1. Get the supplierId for the logged-in user.
-    const supplier = await fetchPurchaseOrderList.findSupplierByUserId(userId);
+    const supplier = await supplierRepository.findSupplierByUserId(userId);
     if (!supplier) {
         return {
             success: true,
@@ -654,7 +676,7 @@ const listOrderHistory = async ({
     }
     // 2. Call the NEW repository function for historical orders.
     const [totalItems, rawOrders] =
-        await fetchPurchaseOrderList.findHistoricalPurchaseOrdersBySupplier(
+        await supplierRepository.findHistoricalPurchaseOrdersBySupplier(
             supplier.supplierId,
             { page, limit, search, sortBy, order }
         );
@@ -752,7 +774,8 @@ const listOrderHistory = async ({
         message: "Order requests retrieved successfully.",
         data: {
             orders: transformedOrders,
-            totalPages,totalItems,
+            totalPages,
+            totalItems,
             limit,
             skip: (page - 1) * limit,
             currentPage: parseInt(page, 10)

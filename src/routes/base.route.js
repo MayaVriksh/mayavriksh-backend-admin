@@ -5,6 +5,11 @@ const adminRoutes = require("../modules/users/admins/routes/index.route");
 module.exports = {
     name: "base-router-v1",
     register: async (server, _) => {
-        server.route([...testRoute, ...authRoutes, ...supplierRoutes, ...adminRoutes]);
+        server.route([
+            ...testRoute,
+            ...authRoutes,
+            ...supplierRoutes,
+            ...adminRoutes
+        ]);
     }
 };

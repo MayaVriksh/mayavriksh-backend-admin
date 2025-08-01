@@ -282,7 +282,7 @@ const updateSupplierProfile = async (req, h) => {
 const listOrderRequests = async (req, h) => {
     try {
         const { userId } = req.pre.credentials;
-        const { page, limit, search, sortBy, order} = req.query;
+        const { page, limit, search, sortBy, order } = req.query;
 
         // 1. Call the service. The service does all the complex work.
         const result = await SupplierService.listOrderRequests({
