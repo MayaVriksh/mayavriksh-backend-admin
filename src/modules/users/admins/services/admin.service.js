@@ -10,6 +10,7 @@ const ERROR_MESSAGES = require("../../../../constants/errorMessages.constant");
 const SUCCESS_MESSAGES = require("../../../../constants/successMessages.constant.js");
 const ORDER_STATUSES = require("../../../../constants/orderStatus.constant.js");
 const ROLES = require("../../../../constants/roles.constant.js");
+const uploadMedia = require("../../../../utils/uploadMedia.js");
 
 const showAdminProfile = async userId => {
     const profile = await prisma.admin.findUnique({
@@ -243,8 +244,110 @@ const listOrderRequests = async ({
     };
 };
 
+
+const deleteFromCloudinary = async (publicId) => {
+    // You should implement this using your Cloudinary SDK or utility
+    // Example:
+    // const cloudinary = require('cloudinary').v2;
+    // await cloudinary.uploader.destroy(publicId);
+    // For now, just log for placeholder
+    console.log(`Deleting orphaned file from Cloudinary: ${publicId}`);
+};
+
+const recordPaymentForOrder = async ({ orderId, paidByUserId, paymentDetails, receiptFile }) => {
+    let receiptUrl = null;
+    let publicId = null;
+    try {
+        // Step 1: Upload the receipt file (if any) BEFORE the transaction
+        if (receiptFile) {
+            const uploadResult = await uploadMedia({
+                files: receiptFile,
+                folder: `admins/receipts/PCOD_${orderId}`,
+                publicIdPrefix: `receipt_${Date.now()}`
+            });
+            if (!uploadResult.success) throw new Error("Receipt upload failed.");
+            receiptUrl = uploadResult.data.mediaUrl;
+            console.log(receiptUrl)
+        }
+
+        // Step 2: Run the transaction for all DB operations
+        return await prisma.$transaction(async (tx) => {
+            const order = await tx.purchaseOrder.findUnique({
+                where: { id: orderId },
+                select: { totalCost: true, pendingAmount: true, status: true, isAccepted: true }
+            });
+            const checkUserActive = await tx.User.findUnique({
+                where: { userId: paidByUserId },
+                select: { isActive: true }
+            });
+            if (!checkUserActive) throw { code: 404, message: "User is not active or doesnot exist." };
+            if (!order) throw { code: 404, message: "Purchase Order not found." };
+            if ((order.pendingAmount || 0) <= 0) throw { code: 400, message: "This order is already fully paid." };
+            if (order.status === "PENDING") throw { code: 400, message: "The Order is to be accepted yet by Supplier for Payment" };
+            if (order.isAccepted === false) throw { code: 400, message: "Trying to make payment on an order that has not been accepted by supplier" };
+
+            const existingPaymentCount = await tx.purchaseOrderPayment.count({
+                where: {
+                    orderId: orderId,
+                    status: 'PARTIALLY_PAID'
+                }
+            });
+
+            const newTotalPaid = (order.totalCost - order.pendingAmount) + paymentDetails.amount;
+            const newPendingAmount = order.totalCost - newTotalPaid;
+            const newPaymentPercentage = Math.min(100, Math.round((newTotalPaid / order.totalCost) * 100));
+            const newPaymentStatus = newPendingAmount <= 0 ? 'PAID' : 'PARTIALLY_PAID';
+            const finalRemarks = (newPendingAmount <= 0 && finalRemarks === 'INSTALLMENT') ? 'COMPLETED' : `INSTALLMENT_${existingPaymentCount + 1}`;
+
+            let newOrderStatus = order.status;
+            if (order.status === 'PROCESSING') {
+                newOrderStatus = 'SHIPPING';
+            }
+
+            await tx.purchaseOrderPayment.create({
+                data: {
+                    paymentId: uuidv4(),
+                    orderId: orderId,
+                    paidBy: paidByUserId,
+                    amount: paymentDetails.amount,
+                    paymentMethod: paymentDetails.paymentMethod,
+                    transactionId: paymentDetails.transactionId,
+                    remarks: finalRemarks,
+                    receiptUrl: receiptUrl,
+                    status: newPaymentStatus,
+                    paidAt: new Date()
+                }
+            });
+
+            const updatedPurchaseOrder = await tx.purchaseOrder.update({
+                where: { id: orderId },
+                data: {
+                    pendingAmount: newPendingAmount,
+                    paymentPercentage: newPaymentPercentage,
+                    status: newOrderStatus,
+                }
+            });
+
+            console.log(newPaymentStatus, finalRemarks);
+            return {
+                success: true,
+                code: 201,
+                message: "Payment recorded successfully.",
+                data: updatedPurchaseOrder
+            };
+        });
+    } catch (err) {
+        // If transaction fails and file was uploaded, delete from Cloudinary
+        if (publicId) {
+            await deleteFromCloudinary(publicId);
+        }
+        throw err;
+    }
+};
+
 module.exports = {
     showAdminProfile,
     listOrderRequests,
-    getOrderRequestById
+    getOrderRequestById,
+    recordPaymentForOrder
 };

@@ -145,6 +145,41 @@ This array contains the full payment history for the order. It will be empty unt
                 }
             }
         }
+    },
+     {
+        method: "POST",
+        path: "/admin/purchase-orders/{orderId}/payments",
+        options: {
+            tags: ["api", "Admin Purchase Order"],
+            description: "Record a new payment (full or partial) for a Purchase Order.",
+            pre: [
+                verifyAccessTokenMiddleware,
+                requireRole([ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.WAREHOUSE_MANAGER])
+            ],
+            validate: {
+                ...AdminValidator.recordPaymentValidation,
+                failAction: handleValidationFailure,
+            },
+            // Payload configuration for file uploads
+            payload: {
+                output: 'stream',
+                parse: true,
+                multipart: true,
+                allow: 'multipart/form-data',
+            },
+            handler: AdminController.recordPayment,
+            plugins: {
+                "hapi-swagger": {
+                    payloadType: 'form',
+                    responses: {
+                        201: { description: "Payment recorded successfully." },
+                        400: { description: "Bad Request or validation error." },
+                        403: { description: "Forbidden." },
+                        404: { description: "Purchase Order not found." }
+                    }
+                }
+            }
+        }
     }
     // {
     //         method: "PUT",

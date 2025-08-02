@@ -328,8 +328,8 @@ const uploadQcMedia = async (req, h) => {
         }
         const uploadResult = await uploadMedia({
             files: qcMedia,
-            folder: `suppliers/profile_images`,
-            publicIdPrefix: `qc_${orderId}`
+            folder: `suppliers/QC_${orderId}`,
+            publicIdPrefix: `qc_${Date.now()}`
         });
         if (!uploadResult.success) {
             return h

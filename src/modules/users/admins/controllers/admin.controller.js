@@ -117,9 +117,42 @@ const listOrderHistory = async (req, h) => {
     }
 };
 
+const recordPayment = async (req, h) => {
+    try {
+        const { userId } = req.pre.credentials;
+        const { orderId } = req.params;
+        // Destructure the payload to separate the file from the text fields
+        const { receipt, ...paymentDetails } = req.payload;
+
+        const result = await AdminService.recordPaymentForOrder({
+            orderId,
+            paidByUserId: userId,
+            paymentDetails,
+            receiptFile: receipt
+        });
+        return h.response(result).code(result.code);
+
+    } catch (error) {
+        // Log the full error for server-side debugging
+        console.error("Error in listOrderHistory controller:", error.message);
+
+        // Return a standardized JSON error response to the client
+        return h
+            .response({
+                success: false,
+                message:
+                    error.message ||
+                    "An error occurred while fetching order history."
+            })
+            .code(error.code || 500) // Use the error's specific code or default to 500
+            .takeover(); // Tell Hapi to stop and send this response immediately
+    }
+};
+
 module.exports = {
     showAdminProfile,
     listOrderRequests,
     getOrderRequestById,
-    listOrderHistory
+    listOrderHistory,
+    recordPayment
 };

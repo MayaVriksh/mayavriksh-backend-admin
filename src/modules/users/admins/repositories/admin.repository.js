@@ -150,7 +150,38 @@ const findPurchaseOrdersByAdmin = async (
     ]);
 };
 
+/**
+ * Creates a payment record and updates the parent Purchase Order's financial status.
+ * @param {object} params
+ * @param {object} params.tx - The Prisma transaction client.
+ * @param {string} params.orderId - The ID of the parent order.
+ * @param {object} params.paymentData - Data for the new payment record.
+ * @param {object} params.newTotals - Calculated totals { newTotalPaid, newRemainingAmount, newPaymentPercentage, newPaymentStatus }.
+ */
+const createPaymentAndUpdateOrder = async ({ tx, orderId, paymentData, newTotals }) => {
+    // Step 1: Create the new payment record.
+    await tx.purchaseOrderPayment.create({
+        data: {
+            paymentId: uuidv4(),
+            orderId: orderId,
+            ...paymentData
+        }
+    });
+
+    // Step 2: Update the parent Purchase Order with the new aggregate status.
+    return await tx.purchaseOrder.update({
+        where: { id: orderId },
+        data: {
+            totalPaid: newTotals.newTotalPaid,
+            remainingAmount: newTotals.newRemainingAmount,
+            paymentPercentage: newTotals.newPaymentPercentage,
+            paymentStatus: newTotals.newPaymentStatus,
+        }
+    });
+};
+
 module.exports = {
     findAdminByUserId,
-    findPurchaseOrdersByAdmin
+    findPurchaseOrdersByAdmin,
+    createPaymentAndUpdateOrder
 };
