@@ -89,7 +89,7 @@ const listOrderHistory = async (req, h) => {
         const { userId } = req.pre.credentials;
         const { page = 1, limit, search, sortBy, order } = req.query;
         console.log(limit);
-        const result = await SupplierService.listOrderHistory({
+        const result = await AdminService.listOrderHistory({
             userId,
             page,
             limit,
@@ -149,10 +149,86 @@ const recordPayment = async (req, h) => {
     }
 };
 
+const uploadQcMedia = async (req, h) => {
+    try {
+        const { userId } = req.pre.credentials;
+        const { orderId } = req.params;
+        const { qcMedia } = req.payload;
+
+        // The key 'qcMedia' should match the name attribute of your file input on the frontend.
+        // const files = payload.qcMedia;
+
+        if (!qcMedia) {
+            return h
+                .response({
+                    message:
+                        "No files uploaded. Please use the 'qcMedia' field."
+                })
+                .code(400);
+        }
+        const uploadResult = await uploadMedia({
+            files: qcMedia,
+            folder: `admin/QC_Images/QC_${orderId}`,
+            publicIdPrefix: `qc_${Date.now()}`
+        });
+        if (!uploadResult.success) {
+            return h
+                .response({ success: false, message: uploadResult.message })
+                .code(400)
+                .takeover();
+        }
+        console.log("xx", uploadResult);
+        // 2. Controller calls the simplified service with the upload results.
+        const result = await AdminService.uploadQcMediaForOrder({
+            userId,
+            orderId,
+            uploadedMedia: uploadResult.data
+        });
+
+        return h.response(result).code(result.code);
+    } catch (error) {
+        console.error("QC Media Upload Controller Error:", error);
+        return h
+            .response({
+                success: false,
+                message: error.message || "Failed to upload QC media."
+            })
+            .code(error.code || 500);
+    }
+};
+const restockInventory = async (req, h) => {
+    try {
+        const { userId } = req.pre.credentials;
+        const { orderId } = req.params;
+        const payload = req.payload;
+        const result = await AdminService.restockInventory({
+            orderId,
+            receivedByUserId: userId,
+            payload: payload
+        });
+        return h.response(result).code(result.code);
+    } catch (error) {
+        console.error("Error in restockPurchaseOrder controller:", error.message);
+
+        // Return a standardized JSON error response to the client
+        return h
+            .response({
+                success: false,
+                message:
+                    error.message ||
+                    "An error occurred while Refilling Inentory stocks."
+            })
+            .code(error.code || 500) // Use the error's specific code or default to 500
+            .takeover(); // Tell Hapi to stop and send this response immediately
+    }
+};
+
 module.exports = {
     showAdminProfile,
     listOrderRequests,
     getOrderRequestById,
     listOrderHistory,
-    recordPayment
+    recordPayment,
+    uploadQcMedia,
+    restockInventory,
 };

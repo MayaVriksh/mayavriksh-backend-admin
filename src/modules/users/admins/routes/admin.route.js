@@ -180,40 +180,65 @@ This array contains the full payment history for the order. It will be empty unt
                 }
             }
         }
+    },
+    {
+            method: "PUT",
+            path: "/admin/purchase-orders/{orderId}/qc-media",
+            options: {
+                tags: ["api", "Admin Purchase Order"],
+                description:
+                    "Upload Quality Check (QC) media for a purchase order.",
+                notes: "Allows a admin to upload multiple images or videos for a specific order.",
+
+                pre: [verifyAccessTokenMiddleware, requireRole([ROLES.ADMIN])],
+
+                validate: {
+                    ...AdminValidator.qcMediaUploadValidation,
+                    failAction: handleValidationFailure
+                },
+
+                // --- Payload configuration for file uploads ---
+                payload: {
+                    output: "stream",
+                    parse: true,
+                    multipart: true,
+                    allow: "multipart/form-data",
+                    maxBytes: 20 * 1024 * 1024 // Example: 20MB total payload size limit
+                },
+
+                handler: AdminController.uploadQcMedia,
+
+                plugins: {
+                    "hapi-swagger": {
+                        // This helps document the file upload in Swagger
+                        payloadType: "form"
+                    }
+                }
+            }
+        },
+        {
+        method: "POST",
+        path: "/warehouse/purchase-orders/{orderId}/restock",
+        options: {
+            tags: ["api", "Admin Purchase Order"],
+            description: "Confirm delivery of a purchase order and update warehouse stock.",
+            pre: [
+                verifyAccessTokenMiddleware,
+                requireRole([ROLES.WAREHOUSE_MANAGER, ROLES.ADMIN, ROLES.SUPER_ADMIN])
+            ],
+            validate: {
+                ...AdminValidator.restockOrderValidation,
+                failAction: handleValidationFailure,
+            },
+            // Payload configuration to handle file uploads (e.g., damage photos)
+            payload: {
+                output: 'stream',
+                parse: true,
+                multipart: true,
+                allow: 'multipart/form-data',
+                maxBytes: 20 * 1024 * 1024, // 20MB limit
+            },
+            handler: AdminController.restockInventory,
+        }
     }
-    // {
-    //         method: "PUT",
-    //         path: "/admin/purchase-orders/{orderId}/qc-media",
-    //         options: {
-    //             tags: ["api", "Admin Purchase Order"],
-    //             description:
-    //                 "Upload Quality Check (QC) media for a purchase order.",
-    //             notes: "Allows a admin to upload multiple images or videos for a specific order.",
-
-    //             pre: [verifyAccessTokenMiddleware, requireRole([ROLES.ADMIN])],
-
-    //             validate: {
-    //                 ...AdminValidator.orderIdParamValidation,
-    //                 failAction: handleValidationFailure
-    //             },
-
-    //             // --- Payload configuration for file uploads ---
-    //             payload: {
-    //                 output: "stream",
-    //                 parse: true,
-    //                 multipart: true,
-    //                 allow: "multipart/form-data",
-    //                 maxBytes: 20 * 1024 * 1024 // Example: 20MB total payload size limit
-    //             },
-
-    //             handler: AdminController.uploadQcMedia,
-
-    //             plugins: {
-    //                 "hapi-swagger": {
-    //                     // This helps document the file upload in Swagger
-    //                     payloadType: "form"
-    //                 }
-    //             }
-    //         }
-    //     },
 ];

@@ -40,6 +40,27 @@ const orderIdParamValidation = {
             .required()
             .description("The ID of the purchase order")
     })
+    
+};
+const restockOrderValidation = {
+    params: Joi.object({
+        orderId: Joi.string().required().description('The ID of the Purchase Order to restock'),
+    })
+};
+const qcMediaUploadValidation = {
+    // 1. Validate the orderId from the URL parameter
+    params: Joi.object({
+        orderId: Joi.string().required().description('The ID of the purchase order')
+    }),
+    
+    payload: Joi.object({
+        // The key 'qcMedia' must match what your controller expects.
+        // Joi.any().meta({ swaggerType: 'file' }) tells Swagger to render a file input.
+        // Using Joi.array().items() allows for multiple file uploads.
+        qcMedia: Joi.array().items(
+            Joi.any().meta({ swaggerType: 'file' })
+        ).required().description('One or more image/video files for QC.')
+    })
 };
 const listHistoryValidation = {
     query: Joi.object({
@@ -103,22 +124,6 @@ const getOrderByIdResponseSchema = Joi.object({
     })
 }).label("GetOrderByIdSuccessResponse");
 
-// const recordPaymentValidation = {
-//     // Validate the orderId from the URL
-//     params: Joi.object({
-//         orderId: Joi.string().required().description('The ID of the purchase order'),
-//     }),
-//     // Validate the multipart/form-data payload
-//     payload: Joi.object({
-//         amount: Joi.number().positive().required().description('The amount being paid'),
-//         paymentMethod: Joi.string().required().description('e.g., NEFT, UPI, Cash'),
-//         transactionId: Joi.string().optional().allow('').description('Reference ID for the transaction'),
-//         remarks: Joi.string().optional().allow('').description('Notes about the payment'),
-//         // Define the receipt as an optional file upload
-//         receipt: Joi.any().meta({ swaggerType: 'file' }).optional().description('The payment receipt image or PDF')
-//     })
-// };
-
 const recordPaymentValidation = {
     params: Joi.object({
         orderId: Joi.string().required().description('The ID of the purchase order'),
@@ -145,7 +150,9 @@ const recordPaymentValidation = {
 module.exports = {
     orderRequestValidation,
     listHistoryValidation,
+    qcMediaUploadValidation,
     orderIdParamValidation,
+    restockOrderValidation,
     getOrderByIdResponseSchema,
     recordPaymentValidation
 };

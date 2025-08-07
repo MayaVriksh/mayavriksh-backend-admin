@@ -1441,12 +1441,15 @@ model PlantStockAuditLog {
 
 model PlantDamagedProduct {
   damageId       String    @id
+  handledById    String
   plantId        String
+  orderId        String
+  orderItemsId   String
   plantVariantId String?
   warehouseId    String
   units          Int
   reportDate     DateTime  @default(now())
-  price          Decimal
+  price          Decimal // unitPrice
   reason         String
   handledBy      String
   notes          String?
@@ -1649,7 +1652,7 @@ model PlantWarehouseInventory {
 
   stockIn             Int
   stockOut            Int
-  stockLossCount      Int
+  stockLossCount      Int //for tracking all stocks, and to calculate currentStock
   latestQuantityAdded Int
   currentStock        Int
   reservedUnit        Int
@@ -1860,7 +1863,8 @@ model PurchaseOrderPayment {
   transactionId String? // for online payments (optional)
   remarks       String? // Initial Payment || Final Payment
   receiptUrl    String?
-
+  publicId      String
+  resourceType String?
   requestedAt DateTime  @default(now())
   paidAt      DateTime?
 

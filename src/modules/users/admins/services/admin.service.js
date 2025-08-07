@@ -284,7 +284,7 @@ const recordPaymentForOrder = async ({ orderId, paidByUserId, paymentDetails, re
             if (!order) throw { code: 404, message: "Purchase Order not found." };
             if ((order.pendingAmount || 0) <= 0) throw { code: 400, message: "This order is already fully paid." };
             if (order.status === "PENDING") throw { code: 400, message: "The Order is to be accepted yet by Supplier for Payment" };
-            if (order.isAccepted === false) throw { code: 400, message: "Trying to make payment on an order that has not been accepted by supplier" };
+            if (order.isAccepted === false) throw { code: 400, message: "Trying to make payment on an order that has not been accepted by admin" };
 
             const existingPaymentCount = await tx.purchaseOrderPayment.count({
                 where: {
@@ -345,9 +345,133 @@ const recordPaymentForOrder = async ({ orderId, paidByUserId, paymentDetails, re
     }
 };
 
+
+/**
+ * Saves QC media metadata to a Purchase Order after verifying ownership.
+ * @param {object} params
+ * @param {string} params.userId - The ID of the authenticated admin user.
+ * @param {string} params.orderId - The ID of the Purchase Order.
+ * @param {Array<object>} params.uploadedMedia - An array of { url, publicId, mimeType } objects from the successful upload.
+ * @returns {Promise<object>} A success message.
+ */
+const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
+    // 1. Security Check: Ensure the order belongs to the logged-in admin.
+    const admin = await prisma.admin.findUnique({ where: { userId } });
+    if (!admin) {
+        throw { code: 404, message: "Admin profile not found." };
+    }
+    const purchaseOrder = adminRepo.checkPurchaseOrderExist(
+        orderId
+    );
+
+    if (!purchaseOrder) {
+        throw {
+            code: 403,
+            message:
+                "Access denied. This purchase order does not belong to you."
+        };
+    }
+
+    /** Uploading Order status to SHipped */
+    adminRepo.updateOrderStatus(orderId);
+
+    // 2. Prepare the data for the database.
+    const mediaArray = Array.isArray(uploadedMedia)
+        ? uploadedMedia
+        : [uploadedMedia];
+    const mediaAssetsToCreate = mediaArray.map(media => ({
+        mediaUrl: media.mediaUrl,
+        publicId: media.publicId,
+        mediaType: media.mediaType,
+        resourceType: media.resourceType,
+        isPrimary: media.isPrimary || false,
+        uploadedBy: ROLES.ROLES.ADMIN
+    }));
+
+    // 3. Save the URLs and public IDs to the database via the repository.
+    await adminRepo.addMediaToPurchaseOrder(
+        orderId,
+        mediaAssetsToCreate
+    );
+
+    return {
+        success: true,
+        code: 201,
+        message: "QC media uploaded successfully."
+        // data: mediaAssetsToCreate
+    };
+};
+
+
+const restockInventory = async ({ orderId, receivedByUserId, payload }) => {
+    return await prisma.$transaction(async (tx) => {
+        // 1. Fetch the order and all its accepted items to ensure data is trusted.
+        const order = await tx.purchaseOrder.findUnique({
+            where: { id: orderId },
+            include: {
+                PurchaseOrderItems: {
+                    where: { isAccepted: true } // Only process accepted items
+                }
+            }
+        });
+        // warehouse entry -> orderItems wise any damaged/missing items, then its marked. How?
+        // only 1 modal -> calc potDamagedProduct -> add OrderId in potDamagedProduct -> individual OrderItems damaged
+        // PurchaseOrderItems has now unitRequested, unitsMissing, unitsaDamaged.
+        // what purpose does prisma.plantRestockEventLog and PurchaseOrder and OrderItems server, understand that?? 
+        // 2. Business Logic Checks
+        if (!order) throw { code: 404, message: "Purchase Order not found." };
+        if (order.status !== 'SHIPPING') throw { code: 400, message: "Order must be in 'SHIPPING' status to be restocked." };
+        // Add more checks here, e.g., does the userId have permission for this warehouse?
+
+        // 3. Loop through each accepted item and update inventory & create logs.
+        for (const item of order.PurchaseOrderItems) {
+            if (item.productType === 'Plant') {
+                // Update the main warehouse inventory
+                await adminRepo.updatePlantWarehouseInventory({
+                    warehouseId: order.warehouseId,//For tracking warehouse inventory of which Location to update
+                    plantId: item.plantId,
+                    variantId: item.plantVariantId,
+                    units: item.unitsRequested,
+                    unitCostPrice: item.unitCostPrice,
+                    totalCost: item.totalCost,
+                }, tx);
+
+                // Create an immutable log of the event
+                await adminRepo.createPlantRestockLog({
+                    restockId: uuidv4(),
+                    purchaseOrderId: order.id,
+                    supplierId: order.supplierId,
+                    warehouseId: order.warehouseId,
+                    plantId: item.plantId,
+                    plantVariantId: item.plantVariantId,
+                    units: item.unitsRequested,
+                    unitCostPrice: item.unitCostPrice,
+                    totalCost: Number(item.unitsRequested) * Number(item.unitCostPrice)
+                }, tx);
+            } 
+            // else if (item.productType === 'Pot') {
+            //     // Add similar logic for pots here
+            // }
+        }
+
+        // 4. Update the final status of the Purchase Order to DELIVERED.
+        await tx.purchaseOrder.update({
+            where: { id: orderId },
+            data: {
+                status: 'DELIVERED',
+                deliveredAt: new Date()
+            }
+        });
+
+        return { success: true, code: 200, message: "Stock has been successfully updated and order is marked as delivered." };
+    });
+};
+
 module.exports = {
     showAdminProfile,
     listOrderRequests,
     getOrderRequestById,
-    recordPaymentForOrder
+    recordPaymentForOrder,
+    uploadQcMediaForOrder,
+    restockInventory,
 };

@@ -3,9 +3,9 @@ const { v4: uuidv4 } = require("uuid");
 const ORDER_STATUSES = require("../../../../constants/orderStatus.constant.js");
 
 /**
- * Finds a supplier's ID based on their user ID.
+ * Finds a admin's ID based on their user ID.
  * @param {string} userId - The user's unique ID.
- * @returns {Promise<object|null>} The supplier object with their ID, or null if not found.
+ * @returns {Promise<object|null>} The admin object with their ID, or null if not found.
  */
 const findAdminByUserId = async userId => {
     return await prisma.admin.findUnique({
@@ -180,8 +180,94 @@ const createPaymentAndUpdateOrder = async ({ tx, orderId, paymentData, newTotals
     });
 };
 
+
+const checkPurchaseOrderExist = async (orderId) => {
+    return await prisma.purchaseOrder.findFirst({
+        where: { id: orderId}
+    });
+};
+
+const updateOrderStatus = async orderId => {
+    return await prisma.purchaseOrder.update({
+        where: { id: orderId },
+        data: {
+            status: ORDER_STATUSES.DELIVERED
+        }
+    });
+};
+
+/**
+ * Creates multiple PurchaseOrderMedia records and links them to a PurchaseOrder.
+ * @param {string} purchaseOrderId - The ID of the parent order.
+ * @returns {Promise<object>} The result of the Prisma createMany operation.
+ */
+const addMediaToPurchaseOrder = async (
+    purchaseOrderId,
+    mediaAssetsToCreate
+) => {
+    console.log(purchaseOrderId)
+    // Prepare the data for Prisma by adding the required IDs to each asset.
+    const dataToCreate = mediaAssetsToCreate.map(asset => ({
+        id: uuidv4(),
+        purchaseOrderId: purchaseOrderId,
+        mediaUrl: asset.mediaUrl,
+        publicId: asset.publicId,
+        mediaType: asset.mediaType,
+        resourceType: asset.resourceType,
+        isPrimary: asset.isPrimary,
+        uploadedBy: asset.uploadedBy
+    }));
+
+    console.log(dataToCreate)
+    // Use createMany for an efficient bulk-insert into the database.
+    return await prisma.purchaseOrderMedia.createMany({
+        data: dataToCreate
+    });
+};
+
+/**
+ * Creates a log entry for a plant restock event.
+ * @param {object} logData - The data for the log entry.
+ * @param {object} tx - The Prisma transaction client.
+ */
+const createPlantRestockLog = async (logData, tx) => {
+    return await tx.plantRestockEventLog.create({ data: logData });
+};
+
+/**
+ * Updates the inventory for a specific plant variant in a specific warehouse.
+ * Uses upsert to create a record if it doesn't exist.
+ * @param {object} inventoryData - Data for the inventory update.
+ * @param {object} tx - The Prisma transaction client.
+ */
+const updatePlantWarehouseInventory = async (inventoryData, tx) => {
+    const { warehouseId, plantId, variantId, units } = inventoryData;
+    return await tx.plantWarehouseInventory.upsert({
+        where: { variantId }, // Assumes variantId is unique in this table
+        update: {
+            stockIn: { increment: units },
+            currentStock: { increment: units },
+            lastRestocked: new Date()
+        },
+        create: {
+            warehouseId,
+            plantId,
+            variantId,
+            stockIn: units,
+            currentStock: units,
+            lastRestocked: new Date(),
+            // Set other initial values as needed
+        }
+    });
+};
+
 module.exports = {
     findAdminByUserId,
     findPurchaseOrdersByAdmin,
-    createPaymentAndUpdateOrder
+    createPaymentAndUpdateOrder,
+    checkPurchaseOrderExist,
+    updateOrderStatus,
+    addMediaToPurchaseOrder,
+    createPlantRestockLog,
+    updatePlantWarehouseInventory,
 };
