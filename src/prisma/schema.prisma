@@ -36,6 +36,12 @@ enum PaymentMethod {
   BANK_TRANSFER
 }
 
+enum DamageType {
+  USER_DELIVERY // Damage during delivery to customer
+  SUPPLIER_DELIVERY // Damage during delivery from supplier
+  WAREHOUSE_IN_HOUSE // Damage occurring inside the warehouse
+}
+
 // ---------------------- User & Role Management ----------------------
 
 model User {
@@ -901,7 +907,7 @@ model PotVariants {
   categoryId   String
   colorId      String
   materialId   String
-  
+
   potName String
   size    String
   height  Decimal?
@@ -1138,14 +1144,15 @@ model Order {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  customer         Customer           @relation(name: "CustomerToOrder", fields: [customerId], references: [customerId])
-  promoCode        PromoCode?         @relation(name: "PromoCodeToOrder", fields: [promoCodeId], references: [promoCodeId])
-  Payment          Payment[]          @relation(name: "PaymentToOrder")
-  shipping         Shipping?          @relation(name: "OrderToShipping")
-  returnsRefunds   ReturnsRefunds[]   @relation(name: "OrderToReturns")
-  OrderCostDetails OrderCostDetails[] @relation(name: "OrderToOrderCost")
-  PlantOrderItem   PlantOrderItem[]   @relation(name: "PlantOrderItemToOrder")
-  PotOrderItem     PotOrderItem[]     @relation(name: "PotOrderItemToOrder")
+  customer         Customer             @relation(name: "CustomerToOrder", fields: [customerId], references: [customerId])
+  promoCode        PromoCode?           @relation(name: "PromoCodeToOrder", fields: [promoCodeId], references: [promoCodeId])
+  Payment          Payment[]            @relation(name: "PaymentToOrder")
+  shipping         Shipping?            @relation(name: "OrderToShipping")
+  returnsRefunds   ReturnsRefunds[]     @relation(name: "OrderToReturns")
+  OrderCostDetails OrderCostDetails[]   @relation(name: "OrderToOrderCost")
+  PlantOrderItem   PlantOrderItem[]     @relation(name: "PlantOrderItemToOrder")
+  PotOrderItem     PotOrderItem[]       @relation(name: "PotOrderItemToOrder")
+  damagedProduct   PlantDamagedProduct? @relation(name: "OrderToDamagedProduct")
 }
 
 model PlantOrderItem {
@@ -1166,10 +1173,11 @@ model PlantOrderItem {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  plant        Plants        @relation(name: "PlantOrderItemToPlant", fields: [plantId], references: [plantId])
-  plantVariant PlantVariants @relation(name: "PlantOrderItemToPlantVariant", fields: [plantVariantId], references: [variantId])
-  order        Order         @relation(name: "PlantOrderItemToOrder", fields: [orderId], references: [orderId])
-  promoCode    PromoCode?    @relation(name: "PlantOrderItemToPromoCode", fields: [promoCodeId], references: [promoCodeId])
+  plant          Plants               @relation(name: "PlantOrderItemToPlant", fields: [plantId], references: [plantId])
+  plantVariant   PlantVariants        @relation(name: "PlantOrderItemToPlantVariant", fields: [plantVariantId], references: [variantId])
+  order          Order                @relation(name: "PlantOrderItemToOrder", fields: [orderId], references: [orderId])
+  promoCode      PromoCode?           @relation(name: "PlantOrderItemToPromoCode", fields: [promoCodeId], references: [promoCodeId])
+  damagedProduct PlantDamagedProduct? @relation(name: "PlantOrderItemToDamagedProduct")
 
   @@index([orderId])
 }
@@ -1440,28 +1448,43 @@ model PlantStockAuditLog {
 }
 
 model PlantDamagedProduct {
-  damageId       String    @id
-  handledById    String //The User, whether warehouse mNager, or customer, or admin, who reported th damaged product
+  damageId String @id
+
   plantId        String
-  orderId        String // NEW
-  orderItemsId   String // NEW
   plantVariantId String?
   warehouseId    String
-  unitsDamaged   Int
-  reportDate     DateTime  @default(now())
-  unitsDamagedPrice    Decimal
-  reason         String
-  handledBy      String
-  notes          String?
-  publicId       String
-  mediaUrl       String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
+
+  purchaseOrderId     String? @unique
+  purchaseOrderItemId String? @unique
+
+  orderId          String? @unique
+  plantOrderItemId String? @unique
+
+  handledById String // The user (warehouse manager, customer, or admin) who reported the damaged product
+
+  damageType        DamageType
+  unitsDamaged      Int
+  unitsDamagedPrice Decimal
+  totalAmount       Decimal // unitsDamaged * unitsDamagedPrice
+  reason            String
+  notes             String?
+  handledBy         String
+  reportDate        DateTime   @default(now())
+
+  publicId String
+  mediaUrl String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   plants       Plants         @relation(name: "ProductToDamage", fields: [plantId], references: [plantId])
   plantVariant PlantVariants? @relation(name: "PlantVariantToDamage", fields: [plantVariantId], references: [variantId])
   warehouse    Warehouse      @relation(name: "WarehouseToDamage", fields: [warehouseId], references: [warehouseId])
+  purchaseOrder     PurchaseOrder?      @relation(name: "PurchaseOrderToDamagedProduct", fields: [purchaseOrderId], references: [id])
+  purchaseOrderItem PurchaseOrderItems? @relation(name: "PurchaseOrderItemToDamagedProduct", fields: [purchaseOrderItemId], references: [id])
+  order          Order?          @relation(name: "OrderToDamagedProduct", fields: [orderId], references: [orderId])
+  plantOrderItem PlantOrderItem? @relation(name: "PlantOrderItemToDamagedProduct", fields: [plantOrderItemId], references: [orderItemId])
 }
 
 model PotStockAuditLog {
@@ -1808,16 +1831,16 @@ model PurchaseOrderItems {
   unitCostPrice   Decimal?
   totalCost       Decimal? // Needed for Plant Inventory, to update total CP
   isAccepted      Boolean  @default(false) // Items whose isAccepted isFalse, their total cost will not be fetched from UI and stored in DB, only true ones are added & stored
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  purchaseOrder PurchaseOrder  @relation(name: "PurchaseOrderToPurchaseOrderItem", fields: [purchaseOrderId], references: [id])
-  plant         Plants?        @relation(name: "PlantToPurchaseOrder", fields: [plantId], references: [plantId])
-  plantVariant  PlantVariants? @relation(name: "PlantVariantToPurchaseOrder", fields: [plantVariantId], references: [variantId])
-  potCategory   PotCategory?   @relation(name: "PotCategoryToPurchaseOrder", fields: [potCategoryId], references: [categoryId])
-  potVariant    PotVariants?   @relation(name: "PotVariantToPurchaseOrder", fields: [potVariantId], references: [potVariantId])
+  purchaseOrder  PurchaseOrder        @relation(name: "PurchaseOrderToPurchaseOrderItem", fields: [purchaseOrderId], references: [id])
+  plant          Plants?              @relation(name: "PlantToPurchaseOrder", fields: [plantId], references: [plantId])
+  plantVariant   PlantVariants?       @relation(name: "PlantVariantToPurchaseOrder", fields: [plantVariantId], references: [variantId])
+  potCategory    PotCategory?         @relation(name: "PotCategoryToPurchaseOrder", fields: [potCategoryId], references: [categoryId])
+  potVariant     PotVariants?         @relation(name: "PotVariantToPurchaseOrder", fields: [potVariantId], references: [potVariantId])
+  damagedProduct PlantDamagedProduct? @relation(name: "PurchaseOrderItemToDamagedProduct")
 }
-
 
 model PurchaseOrder {
   id          String @id
@@ -1826,8 +1849,8 @@ model PurchaseOrder {
 
   deliveryCharges   Decimal? // optional
   totalCost         Decimal? // units * negotiated price + delivery charge
-  pendingAmount    Decimal?
-  paymentPercentage  Int      @default(0)
+  pendingAmount     Decimal?
+  paymentPercentage Int      @default(0)
   status            String   @default("PENDING")
   isAccepted        Boolean  @default(false)
   invoiceUrl        String? // uploaded by warehouse manager only
@@ -1841,17 +1864,19 @@ model PurchaseOrder {
   supplierReviewNotes         String?
   warehouseManagerReviewNotes String?
 
-  supplier           Supplier               @relation(name: "SupplierToPurchaseOrder", fields: [supplierId], references: [supplierId])
-  warehouse          Warehouse              @relation(name: "WarehouseToPurchaseOrder", fields: [warehouseId], references: [warehouseId])
-  media              PurchaseOrderMedia[]   @relation(name: "PurchaseOrderToMedia")
-  payments           PurchaseOrderPayment[] @relation(name: "PurchaseOrderPaymentToPurchaseOrder")
-  PurchaseOrderItems PurchaseOrderItems[]   @relation(name: "PurchaseOrderToPurchaseOrderItem")
-  plantRestockEvents PlantRestockEventLog[] @relation(name: "PlantRestockToRequest")
-  potRestockEvents   PotRestockEventLog[]   @relation(name: "PotRestockToRequest")
+  supplier            Supplier               @relation(name: "SupplierToPurchaseOrder", fields: [supplierId], references: [supplierId])
+  warehouse           Warehouse              @relation(name: "WarehouseToPurchaseOrder", fields: [warehouseId], references: [warehouseId])
+  media               PurchaseOrderMedia[]   @relation(name: "PurchaseOrderToMedia")
+  payments            PurchaseOrderPayment[] @relation(name: "PurchaseOrderPaymentToPurchaseOrder")
+  PurchaseOrderItems  PurchaseOrderItems[]   @relation(name: "PurchaseOrderToPurchaseOrderItem")
+  plantRestockEvents  PlantRestockEventLog[] @relation(name: "PlantRestockToRequest")
+  potRestockEvents    PotRestockEventLog[]   @relation(name: "PotRestockToRequest")
+  PlantDamagedProduct PlantDamagedProduct[]  @relation(name: "PurchaseOrderToDamagedProduct")
 }
+
 /**
-PurchaseOrder -> PurchaseOrderPayment : 1 -> Many
-*/
+ * PurchaseOrder -> PurchaseOrderPayment : 1 -> Many
+ */
 model PurchaseOrderPayment {
   paymentId String  @id
   orderId   String
@@ -1864,9 +1889,9 @@ model PurchaseOrderPayment {
   remarks       String? // Initial Payment || Final Payment
   receiptUrl    String? //mediaUrl
   publicId      String?
-  resourceType String?
-  requestedAt DateTime  @default(now())
-  paidAt      DateTime?
+  resourceType  String?
+  requestedAt   DateTime  @default(now())
+  paidAt        DateTime?
 
   purchaseOrder PurchaseOrder @relation(name: "PurchaseOrderPaymentToPurchaseOrder", fields: [orderId], references: [id])
 }
