@@ -1441,13 +1441,13 @@ model PlantStockAuditLog {
 
 model PlantDamagedProduct {
   damageId       String    @id
-  handledById    String
+  handledById    String //The User, whether warehouse mNager, or customer, or admin, who reported th damaged product
   plantId        String
-  orderId        String
-  orderItemsId   String
+  orderId        String // NEW
+  orderItemsId   String // NEW
   plantVariantId String?
   warehouseId    String
-  units          Int
+  unitsDamaged   Int
   reportDate     DateTime  @default(now())
   price          Decimal // unitPrice
   reason         String
@@ -1862,7 +1862,7 @@ model PurchaseOrderPayment {
   paymentMethod String // "CASH", "ONLINE", "UPI", "NEFT", etc.
   transactionId String? // for online payments (optional)
   remarks       String? // Initial Payment || Final Payment
-  receiptUrl    String?
+  receiptUrl    String? //mediaUrl
   publicId      String
   resourceType String?
   requestedAt DateTime  @default(now())

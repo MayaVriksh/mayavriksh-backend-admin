@@ -383,8 +383,12 @@ const findHistoricalPurchaseOrdersBySupplier = async (
                         paymentMethod: true,
                         status: true,
                         receiptUrl: true,
+                        receiptUrl: true,
+                        publicId: true,
                         paidAt: true,
-                        remarks: true
+                        remarks: true,
+                        transactionId: true,
+
                     }
                     // orderBy: {
                     //     // Show the payments in chronological order

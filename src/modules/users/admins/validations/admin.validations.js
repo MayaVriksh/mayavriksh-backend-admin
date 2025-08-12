@@ -96,8 +96,11 @@ const paymentItemSchema = Joi.object({
     paymentMethod: Joi.string().required(),
     paymentRemarks: Joi.string().allow(null, ""),
     receiptUrl: Joi.string().uri().allow(null, ""),
+    resourceType: Joi.string().required(),
+    publicId: Joi.string().required(),
     requestedAt: Joi.date(),
-    paidAt: Joi.date().allow(null)
+    paidAt: Joi.date().allow(null),
+    transactionId: Joi.string().required(),
 }).label("PaymentHistoryItem");
 
 // --- 3. The main schema for the entire API response ---
