@@ -1449,7 +1449,7 @@ model PlantDamagedProduct {
   warehouseId    String
   unitsDamaged   Int
   reportDate     DateTime  @default(now())
-  price          Decimal // unitPrice
+  unitsDamagedPrice    Decimal
   reason         String
   handledBy      String
   notes          String?
@@ -1493,8 +1493,8 @@ model PotDamagedProduct {
   reason        String
   handledBy     String
   notes         String?
-  publicId      String
-  mediaUrl      String
+  publicId      String?
+  mediaUrl      String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
@@ -1863,7 +1863,7 @@ model PurchaseOrderPayment {
   transactionId String? // for online payments (optional)
   remarks       String? // Initial Payment || Final Payment
   receiptUrl    String? //mediaUrl
-  publicId      String
+  publicId      String?
   resourceType String?
   requestedAt DateTime  @default(now())
   paidAt      DateTime?
