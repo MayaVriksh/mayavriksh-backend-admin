@@ -197,9 +197,10 @@ const reviewPurchaseOrderValidation = {
                 "Set to 'PROCESSING' for partial acceptance, or 'REJECTED' for full rejection."
             ),
         rejectedOrderItemsIdArr: Joi.array()
-            .items(Joi.string().required())
+            .items(Joi.string())
+            .required() // The array key itself must be present
             .description(
-                "An array of PurchaseOrderItem IDs that are being rejected."
+                "An array of PurchaseOrderItem IDs being rejected. Send an empty array [] if all items are accepted."
             )
     })
 };

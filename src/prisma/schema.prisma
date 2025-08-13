@@ -1449,6 +1449,24 @@ model PlantStockAuditLog {
   warehouse    Warehouse      @relation(name: "WarehouseToStockAudit", fields: [warehouseId], references: [warehouseId])
 }
 
+model PotStockAuditLog {
+  auditId       String   @id
+  potCategoryId String
+  potVariantId  String?
+  warehouseId   String
+  eventType     String
+  stockDelta    Int
+  sourceTable   String
+  sourceRefId   String
+  userId        String
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  potCategory PotCategory  @relation(name: "PotCategoryToStockAudit", fields: [potCategoryId], references: [categoryId])
+  potVariant  PotVariants? @relation(name: "PotVariantToStockAudit", fields: [potVariantId], references: [potVariantId])
+  warehouse   Warehouse    @relation(name: "WarehouseToStockAuditPot", fields: [warehouseId], references: [warehouseId])
+}
+
 model PlantDamagedProduct {
   damageId String @id
 
@@ -1487,24 +1505,6 @@ model PlantDamagedProduct {
   purchaseOrderItem PurchaseOrderItems? @relation(name: "PurchaseOrderItemToPlantDamagedProduct", fields: [purchaseOrderItemId], references: [id])
   order          Order?          @relation(name: "OrderToPlantDamagedProduct", fields: [orderId], references: [orderId])
   plantOrderItem PlantOrderItem? @relation(name: "PlantOrderItemToPlantDamagedProduct", fields: [plantOrderItemId], references: [orderItemId])
-}
-
-model PotStockAuditLog {
-  auditId       String   @id
-  potCategoryId String
-  potVariantId  String?
-  warehouseId   String
-  eventType     String
-  stockDelta    Int
-  sourceTable   String
-  sourceRefId   String
-  userId        String
-  notes         String?
-  createdAt     DateTime @default(now())
-
-  potCategory PotCategory  @relation(name: "PotCategoryToStockAudit", fields: [potCategoryId], references: [categoryId])
-  potVariant  PotVariants? @relation(name: "PotVariantToStockAudit", fields: [potVariantId], references: [potVariantId])
-  warehouse   Warehouse    @relation(name: "WarehouseToStockAuditPot", fields: [warehouseId], references: [warehouseId])
 }
 
 model PotDamagedProduct {
