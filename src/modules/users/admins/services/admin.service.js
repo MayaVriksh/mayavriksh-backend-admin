@@ -406,7 +406,7 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
 };
 
 
-const restockInventory = async ({ orderId, receivedByUserId, payload }) => {
+const restockInventory = async ({ orderId, handledById, payload }) => {
     return await prisma.$transaction(async (tx) => {
         // 1. Fetch the order and all its accepted items to ensure data is trusted.
         const order = await tx.purchaseOrder.findUnique({
@@ -417,13 +417,9 @@ const restockInventory = async ({ orderId, receivedByUserId, payload }) => {
                 }
             }
         });
-        // warehouse entry -> orderItems wise any damaged/missing items, then its marked. How?
-        // only 1 modal -> calc potDamagedProduct -> add OrderId in potDamagedProduct -> individual OrderItems damaged
-        // PurchaseOrderItems has now unitRequested, unitsMissing, unitsaDamaged.
-        // what purpose does prisma.plantRestockEventLog and PurchaseOrder and OrderItems server, understand that?? 
         // 2. Business Logic Checks
         if (!order) throw { code: 404, message: "Purchase Order not found." };
-        if (order.status !== 'SHIPPING') throw { code: 400, message: "Order must be in 'SHIPPING' status to be restocked." };
+        if (order.status !== 'DELIVERED') throw { code: 400, message: "Order must be in 'SHIPPING' status to be restocked." };
         // Add more checks here, e.g., does the userId have permission for this warehouse?
 
         // 3. Loop through each accepted item and update inventory & create logs.

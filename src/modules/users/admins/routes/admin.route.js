@@ -221,7 +221,8 @@ This array contains the full payment history for the order. It will be empty unt
         path: "/warehouse/purchase-orders/{orderId}/restock",
         options: {
             tags: ["api", "Admin Purchase Order"],
-            description: "Confirm delivery of a purchase order and update warehouse stock.",
+            description: "Confirm delivery of a purchase order, update warehouse stock, and log any damages.",
+            notes: "This is the final step in the PO lifecycle. It updates inventory based on received units, creates damage logs for any discrepancies.",
             pre: [
                 verifyAccessTokenMiddleware,
                 requireRole([ROLES.WAREHOUSE_MANAGER, ROLES.ADMIN, ROLES.SUPER_ADMIN])
@@ -239,6 +240,11 @@ This array contains the full payment history for the order. It will be empty unt
                 maxBytes: 20 * 1024 * 1024, // 20MB limit
             },
             handler: AdminController.restockInventory,
+            plugins: {
+                'hapi-swagger': {
+                    payloadType: 'form' // Ensures Swagger UI shows a form for multipart data
+                }
+            }
         }
     }
 ];

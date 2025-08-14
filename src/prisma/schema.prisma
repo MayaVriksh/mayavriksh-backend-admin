@@ -802,6 +802,115 @@ model PlantVariants {
   // compatiblePots          PotVariants[]             @relation(name: "PlantVariantsToPotVariants")
 }
 
+
+// ---------------------- Plant Care & Fertilizer Data -----------------------
+
+model SunlightTypes {
+  sunlightId String @id
+
+  typeName    String
+  icon        String
+  description String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plantCareGuidelines PlantCareGuidelines[] @relation(name: "SunlightToPlantCare")
+}
+
+model HumidityLevel {
+  humidityId String @id
+
+  level         String
+  description   String?
+  suitableZones String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plantCareGuidelines PlantCareGuidelines[] @relation(name: "HumidityToPlantCare")
+}
+
+model PlantCareGuidelines {
+  careId          String @id
+  plantVariantId  String
+  sunlightTypeId  String
+  humidityLevelId String
+
+  season            String
+  wateringFrequency String
+  amountMl          Decimal
+  wateringMethod    String
+  recommendedTime   String
+  soilTypes         String
+  preferredSeasons  String
+  careNotes         String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plantVariants PlantVariants @relation(name: "ProductToCare", fields: [plantVariantId], references: [variantId])
+  sunlightType  SunlightTypes @relation(name: "SunlightToPlantCare", fields: [sunlightTypeId], references: [sunlightId])
+  humidityLevel HumidityLevel @relation(name: "HumidityToPlantCare", fields: [humidityLevelId], references: [humidityId])
+}
+
+model Fertilizers {
+  fertilizerId String @id
+
+  name          String
+  type          String
+  composition   String
+  description   String?
+  caution       String?
+  isEcoFriendly Boolean
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  productFertilizers  PlantFertilizers[]        @relation(name: "FertilizerToProduct")
+  fertilizerSchedules PlantFertilizerSchedule[] @relation(name: "FertilizerToSchedule")
+}
+
+model PlantFertilizers {
+  id             String @id
+  plantVariantId String
+  fertilizerId   String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plants     PlantVariants @relation(name: "ProductToFertilizer", fields: [plantVariantId], references: [variantId])
+  fertilizer Fertilizers   @relation(name: "FertilizerToProduct", fields: [fertilizerId], references: [fertilizerId])
+
+  @@unique([plantVariantId, fertilizerId])
+}
+
+model PlantFertilizerSchedule {
+  fertilizerEntryId String @id
+  plantVariantId    String
+  fertilizerId      String
+
+  applicationFrequency String
+  applicationMethod    String
+  applicationSeason    String
+  applicationTime      String
+  benefits             String?
+  dosageAmount         Decimal
+  safetyNotes          String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  plants     PlantVariants @relation(name: "ProductToFertilizerSchedule", fields: [plantVariantId], references: [variantId])
+  fertilizer Fertilizers   @relation(name: "FertilizerToSchedule", fields: [fertilizerId], references: [fertilizerId])
+}
+
 model PlantGenericCostComponent {
   componentId                  String  @id
   tagPrintingCost              Decimal @default(0.0)
@@ -975,114 +1084,6 @@ model Color {
 
   variants      PotVariants[]   @relation(name: "ColorToVariants")
   plantVariants PlantVariants[] @relation(name: "ColorToPlantVariants")
-}
-
-// ---------------------- Plant Care & Fertilizer Data -----------------------
-
-model SunlightTypes {
-  sunlightId String @id
-
-  typeName    String
-  icon        String
-  description String?
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  plantCareGuidelines PlantCareGuidelines[] @relation(name: "SunlightToPlantCare")
-}
-
-model HumidityLevel {
-  humidityId String @id
-
-  level         String
-  description   String?
-  suitableZones String?
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  plantCareGuidelines PlantCareGuidelines[] @relation(name: "HumidityToPlantCare")
-}
-
-model PlantCareGuidelines {
-  careId          String @id
-  plantVariantId  String
-  sunlightTypeId  String
-  humidityLevelId String
-
-  season            String
-  wateringFrequency String
-  amountMl          Decimal
-  wateringMethod    String
-  recommendedTime   String
-  soilTypes         String
-  preferredSeasons  String
-  careNotes         String?
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  plantVariants PlantVariants @relation(name: "ProductToCare", fields: [plantVariantId], references: [variantId])
-  sunlightType  SunlightTypes @relation(name: "SunlightToPlantCare", fields: [sunlightTypeId], references: [sunlightId])
-  humidityLevel HumidityLevel @relation(name: "HumidityToPlantCare", fields: [humidityLevelId], references: [humidityId])
-}
-
-model Fertilizers {
-  fertilizerId String @id
-
-  name          String
-  type          String
-  composition   String
-  description   String?
-  caution       String?
-  isEcoFriendly Boolean
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  productFertilizers  PlantFertilizers[]        @relation(name: "FertilizerToProduct")
-  fertilizerSchedules PlantFertilizerSchedule[] @relation(name: "FertilizerToSchedule")
-}
-
-model PlantFertilizers {
-  id             String @id
-  plantVariantId String
-  fertilizerId   String
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  plants     PlantVariants @relation(name: "ProductToFertilizer", fields: [plantVariantId], references: [variantId])
-  fertilizer Fertilizers   @relation(name: "FertilizerToProduct", fields: [fertilizerId], references: [fertilizerId])
-
-  @@unique([plantVariantId, fertilizerId])
-}
-
-model PlantFertilizerSchedule {
-  fertilizerEntryId String @id
-  plantVariantId    String
-  fertilizerId      String
-
-  applicationFrequency String
-  applicationMethod    String
-  applicationSeason    String
-  applicationTime      String
-  benefits             String?
-  dosageAmount         Decimal
-  safetyNotes          String?
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  plants     PlantVariants @relation(name: "ProductToFertilizerSchedule", fields: [plantVariantId], references: [variantId])
-  fertilizer Fertilizers   @relation(name: "FertilizerToSchedule", fields: [fertilizerId], references: [fertilizerId])
 }
 
 model TagGroups {

@@ -203,7 +203,7 @@ const restockInventory = async (req, h) => {
         const payload = req.payload;
         const result = await AdminService.restockInventory({
             orderId,
-            receivedByUserId: userId,
+            handledById: userId,
             payload: payload
         });
         return h.response(result).code(result.code);
