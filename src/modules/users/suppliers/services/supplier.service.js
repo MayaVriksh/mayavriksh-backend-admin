@@ -676,6 +676,7 @@ const listOrderHistory = async ({
 }) => {
     // 1. Get the supplierId for the logged-in user.
     const supplier = await supplierRepository.findSupplierByUserId(userId);
+
     if (!supplier) {
         return {
             success: true,
@@ -690,7 +691,6 @@ const listOrderHistory = async ({
             supplier.supplierId,
             { page, limit, search, sortBy, order }
         );
-
     // 3. Perform the EXACT SAME data transformation as listOrderRequests.
     //    This provides a consistent data structure to the frontend.
     const transformedOrders = rawOrders.map(order => {
@@ -749,6 +749,20 @@ const listOrderHistory = async ({
             };
         });
 
+        const invoiceUserDetails = {
+            supplier: {
+                name: order.supplier?.nurseryName ?? 'N/A',
+                gstin: order.supplier?.gstin ?? 'N/A',
+                address: order.supplier?.user?.address ?? 'Address not available',
+                phoneNumber: order.supplier?.user?.phoneNumber ?? 'phoneNumber not available'
+            },
+            warehouse: {
+                name: order.warehouse?.name ?? 'N/A',
+                address: order.warehouse?.address ?? 'Address not available',
+                officePhone: order.warehouse?.officePhone ?? 'Phone No. not available'
+            }
+        };
+
         // Return the final, structured object for this order
         return {
             // All top-level fields from the PurchaseOrder
@@ -761,7 +775,8 @@ const listOrderHistory = async ({
             requestedAt: order.requestedAt,
             acceptedAt: order.acceptedAt,
             deliveredAt: order.deliveredAt,
-            // The two transformed arrays
+            // The transformed arrays
+            invoiceUserDetails: invoiceUserDetails,
             orderItems: orderItems,
             payments: paymentHistory
         };

@@ -297,6 +297,8 @@ const findHistoricalPurchaseOrdersBySupplier = async (
         // Default sort if none is provided
         orderBy["requestedAt"] = "desc";
     }
+    
+console.log("vvsdfasd")
     // The data fetching transaction is identical to the active orders one.
     return await prisma.$transaction([
         prisma.purchaseOrder.count({ where: whereClause }),
@@ -319,6 +321,25 @@ const findHistoricalPurchaseOrdersBySupplier = async (
                 deliveredAt: true,
                 supplierReviewNotes: true,
                 warehouseManagerReviewNotes: true,
+                supplier: {
+                    select: {
+                        nurseryName: true,
+                        gstin: true,
+                        contactPerson: { // Following the relation from Supplier to User
+                            select: {
+                                address: true, // Assuming 'address' is a field on the User model
+                                phoneNumber: true,
+                            }
+                        }
+                    }
+                },
+                warehouse: {
+                    select: {
+                        name: true, // Also fetching the warehouse name
+                        officeAddress: true,// Assuming 'address' is a field on the Warehouse model
+                        officePhone: true
+                    }
+                },
                 PurchaseOrderItems: {
                     where: {
                         isAccepted: true
