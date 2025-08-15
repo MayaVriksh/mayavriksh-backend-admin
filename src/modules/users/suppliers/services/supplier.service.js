@@ -514,11 +514,11 @@ const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
                     message: "Access Denied: Supplier profile not found."
                 };
 
-            console.log(supplier, orderId)
+            console.log(supplier, orderId);
             const orderToReview = await tx.purchaseOrder.findFirst({
                 where: { id: orderId, supplierId: supplier.supplierId }
             });
-            console.log(orderToReview)
+            console.log(orderToReview);
             if (!orderToReview)
                 throw { code: 404, message: "Access Denied: Order not found." };
 
@@ -558,14 +558,14 @@ const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
                     }
                     return sum;
                 }, 0);
-                console.log(newTotalCost)
+                console.log(newTotalCost);
                 await supplierRepository.updateOrderAfterReview({
                     orderId,
                     rejectedItemIds: reviewData.rejectedOrderItemsIdArr,
                     newTotalCost,
                     tx
                 });
-            // --- Step 3 (NEW): Re-fetch and return the updated order's full state ---
+                // --- Step 3 (NEW): Re-fetch and return the updated order's full state ---
                 // After the transaction is successful, fetch the final, authoritative state of the order.
                 const updatedOrder = await prisma.purchaseOrder.findUnique({
                     where: { id: orderId },
@@ -582,7 +582,7 @@ const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
                             select: {
                                 id: true,
                                 isAccepted: true, // This will be the new true/false value
-                                productType: true,
+                                productType: true
                                 // Add any other item fields your 'View Items' modal needs
                             }
                         }
@@ -597,7 +597,7 @@ const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
                     data: updatedOrder // Return the single, fresh object
                 };
             }
-        } ,
+        },
         {
             // Sets the maximum time Prisma will wait for a connection from the pool.
             maxWait: 10000, // 10 seconds (default is 2s)
@@ -711,7 +711,7 @@ const listOrderHistory = async ({
                 publicId: payment.publicId,
                 requestedAt: payment.requestedAt,
                 paidAt: payment.paidAt,
-                transactionId: payment.transactionId,
+                transactionId: payment.transactionId
             };
         });
         const orderItems = order.PurchaseOrderItems.map(item => {
@@ -745,24 +745,29 @@ const listOrderHistory = async ({
                 unitRequested: item.unitsRequested,
                 totalVariantCost:
                     Number(item.unitsRequested) * Number(item.unitCostPrice),
-                isAccepted,
+                isAccepted
             };
         });
 
         const invoiceUserDetails = {
-            // Currently Supplier not being used,as Supplier need not see his own details in oDRER suMMARY. 
+            // Currently Supplier not being used,as Supplier need not see his own details in oDRER suMMARY.
             // bUT THIS INFO WILL BE USED, WHILE DOWNLOADING THE RECEIPT FOR wAREHOUSE, AND SIGN THERE, AND SEND TO US AFTER DELIVERY
             supplier: {
-                name: order.supplier?.nurseryName ?? 'N/A',
-                gstin: order.supplier?.gstin ?? 'N/A',
-                address: order.supplier?.user?.address ?? 'Address not available',
-                phoneNumber: order.supplier?.user?.phoneNumber ?? 'phoneNumber not available'
+                name: order.supplier?.nurseryName ?? "N/A",
+                gstin: order.supplier?.gstin ?? "N/A",
+                address:
+                    order.supplier?.user?.address ?? "Address not available",
+                phoneNumber:
+                    order.supplier?.user?.phoneNumber ??
+                    "phoneNumber not available"
             },
             warehouse: {
-                name: order.warehouse?.name ?? 'N/A',
-                address: order.warehouse?.address ?? 'Address not available',
-                officePhone: order.warehouse?.officePhone ?? 'Phone No. not available',
-                officeEmail: order.warehouse?.officeEmail ?? 'officeEmail not available'
+                name: order.warehouse?.name ?? "N/A",
+                address: order.warehouse?.address ?? "Address not available",
+                officePhone:
+                    order.warehouse?.officePhone ?? "Phone No. not available",
+                officeEmail:
+                    order.warehouse?.officeEmail ?? "officeEmail not available"
             }
         };
 

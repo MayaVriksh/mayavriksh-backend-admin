@@ -297,8 +297,8 @@ const findHistoricalPurchaseOrdersBySupplier = async (
         // Default sort if none is provided
         orderBy["requestedAt"] = "desc";
     }
-    
-console.log("vvsdfasd")
+
+    console.log("vvsdfasd");
     // The data fetching transaction is identical to the active orders one.
     return await prisma.$transaction([
         prisma.purchaseOrder.count({ where: whereClause }),
@@ -325,10 +325,11 @@ console.log("vvsdfasd")
                     select: {
                         nurseryName: true,
                         gstin: true,
-                        contactPerson: { // Following the relation from Supplier to User
+                        contactPerson: {
+                            // Following the relation from Supplier to User
                             select: {
                                 address: true, // Assuming 'address' is a field on the User model
-                                phoneNumber: true,
+                                phoneNumber: true
                             }
                         }
                     }
@@ -337,7 +338,7 @@ console.log("vvsdfasd")
                     select: {
                         name: true, // Also fetching the warehouse name
                         officeEmail: true,
-                        officeAddress: true,// Assuming 'address' is a field on the Warehouse model
+                        officeAddress: true, // Assuming 'address' is a field on the Warehouse model
                         officePhone: true
                     }
                 },
@@ -410,8 +411,7 @@ console.log("vvsdfasd")
                         publicId: true,
                         paidAt: true,
                         remarks: true,
-                        transactionId: true,
-
+                        transactionId: true
                     }
                     // orderBy: {
                     //     // Show the payments in chronological order

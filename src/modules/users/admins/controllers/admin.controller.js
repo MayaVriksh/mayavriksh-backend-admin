@@ -131,7 +131,6 @@ const recordPayment = async (req, h) => {
             receiptFile: receipt
         });
         return h.response(result).code(result.code);
-
     } catch (error) {
         // Log the full error for server-side debugging
         console.error("Error in listOrderHistory controller:", error.message);
@@ -208,7 +207,10 @@ const restockInventory = async (req, h) => {
         });
         return h.response(result).code(result.code);
     } catch (error) {
-        console.error("Error in restockPurchaseOrder controller:", error.message);
+        console.error(
+            "Error in restockPurchaseOrder controller:",
+            error.message
+        );
 
         // Return a standardized JSON error response to the client
         return h
@@ -230,5 +232,5 @@ module.exports = {
     listOrderHistory,
     recordPayment,
     uploadQcMedia,
-    restockInventory,
+    restockInventory
 };

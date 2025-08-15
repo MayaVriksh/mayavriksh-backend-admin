@@ -141,7 +141,7 @@ const findPurchaseOrdersByAdmin = async (
                         publicId: true,
                         paidAt: true,
                         remarks: true,
-                        transactionId: true,
+                        transactionId: true
                     }
                     // orderBy: {
                     //     // Show the payments in chronological order
@@ -161,7 +161,12 @@ const findPurchaseOrdersByAdmin = async (
  * @param {object} params.paymentData - Data for the new payment record.
  * @param {object} params.newTotals - Calculated totals { newTotalPaid, newRemainingAmount, newPaymentPercentage, newPaymentStatus }.
  */
-const createPaymentAndUpdateOrder = async ({ tx, orderId, paymentData, newTotals }) => {
+const createPaymentAndUpdateOrder = async ({
+    tx,
+    orderId,
+    paymentData,
+    newTotals
+}) => {
     // Step 1: Create the new payment record.
     await tx.purchaseOrderPayment.create({
         data: {
@@ -178,15 +183,14 @@ const createPaymentAndUpdateOrder = async ({ tx, orderId, paymentData, newTotals
             totalPaid: newTotals.newTotalPaid,
             remainingAmount: newTotals.newRemainingAmount,
             paymentPercentage: newTotals.newPaymentPercentage,
-            paymentStatus: newTotals.newPaymentStatus,
+            paymentStatus: newTotals.newPaymentStatus
         }
     });
 };
 
-
-const checkPurchaseOrderExist = async (orderId) => {
+const checkPurchaseOrderExist = async orderId => {
     return await prisma.purchaseOrder.findFirst({
-        where: { id: orderId}
+        where: { id: orderId }
     });
 };
 
@@ -208,7 +212,7 @@ const addMediaToPurchaseOrder = async (
     purchaseOrderId,
     mediaAssetsToCreate
 ) => {
-    console.log(purchaseOrderId)
+    console.log(purchaseOrderId);
     // Prepare the data for Prisma by adding the required IDs to each asset.
     const dataToCreate = mediaAssetsToCreate.map(asset => ({
         id: uuidv4(),
@@ -221,7 +225,7 @@ const addMediaToPurchaseOrder = async (
         uploadedBy: asset.uploadedBy
     }));
 
-    console.log(dataToCreate)
+    console.log(dataToCreate);
     // Use createMany for an efficient bulk-insert into the database.
     return await prisma.purchaseOrderMedia.createMany({
         data: dataToCreate
@@ -258,7 +262,7 @@ const updatePlantWarehouseInventory = async (inventoryData, tx) => {
             variantId,
             stockIn: units,
             currentStock: units,
-            lastRestocked: new Date(),
+            lastRestocked: new Date()
             // Set other initial values as needed
         }
     });
@@ -272,5 +276,5 @@ module.exports = {
     updateOrderStatus,
     addMediaToPurchaseOrder,
     createPlantRestockLog,
-    updatePlantWarehouseInventory,
+    updatePlantWarehouseInventory
 };

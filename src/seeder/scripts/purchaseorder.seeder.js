@@ -1,43 +1,66 @@
 const prisma = require("../../config/prisma.config");
-const generatePurchaseOrderData = require("../data/purchaseorder.data");
+const {
+    generatePlantPurchaseOrderData,
+    generatePotPurchaseOrderData
+} = require("../data/purchaseorder.data");
+const generateCustomId = require("../../utils/generateCustomId");
 
 async function seedPurchaseOrders() {
     console.log("📦 Seeding Purchase Orders...");
 
     const plants = await prisma.plants.findMany();
-    const variants = await prisma.plantVariants.findMany();
+    const plantVariants = await prisma.plantVariants.findMany();
+    const potCategories = await prisma.potCategory.findMany();
+    const potVariants = await prisma.potVariants.findMany();
     const warehouses = await prisma.warehouse.findMany();
     const suppliers = await prisma.supplier.findMany();
 
     if (
         !plants.length ||
-        !variants.length ||
+        !plantVariants.length ||
+        !potCategories.length ||
+        !potVariants.length ||
         !warehouses.length ||
         !suppliers.length
     ) {
         throw new Error("❌ Required data missing in DB.");
     }
 
-    const supplier = suppliers[0];
-    const orders = generatePurchaseOrderData(
+    const supplier = suppliers.length > 9 ? suppliers[9] : suppliers[0];
+
+    const plantOrders = generatePlantPurchaseOrderData(
         plants,
-        variants,
+        plantVariants,
         warehouses,
-        supplier
+        supplier.supplierId
     );
 
-    for (const order of orders) {
+    const potOrders = generatePotPurchaseOrderData(
+        potCategories,
+        potVariants,
+        warehouses,
+        supplier.supplierId
+    );
+
+    const allOrders = [...plantOrders, ...potOrders];
+
+    for (const order of allOrders) {
         try {
             await prisma.$transaction(
                 async tx => {
+                    const purchaseOrderId = await generateCustomId(
+                        tx,
+                        "PURCHASE_ORDER"
+                    );
+
                     await tx.purchaseOrder.create({
                         data: {
-                            id: order.id,
+                            id: purchaseOrderId,
                             warehouseId: order.warehouseId,
-                            adminId: order.adminId,
                             supplierId: order.supplierId,
                             deliveryCharges: order.deliveryCharges,
                             totalCost: order.totalCost,
+                            pendingAmount: order.pendingAmount ?? null,
                             paymentPercentage: order.paymentPercentage,
                             status: order.status,
                             isAccepted: order.isAccepted,
@@ -52,27 +75,55 @@ async function seedPurchaseOrders() {
                         }
                     });
 
-                    // 2. Create PurchaseOrderItems with same `purchaseOrderId`
-                    const itemsWithPOId = order.items.map(item => ({
-                        ...item,
-                        purchaseOrderId: order.id
-                    }));
+                    if (order.items?.length) {
+                        await tx.purchaseOrderItems.createMany({
+                            data: order.items.map(item => ({
+                                ...item,
+                                purchaseOrderId
+                            })),
+                            skipDuplicates: true
+                        });
+                    }
 
-                    await tx.purchaseOrderItems.createMany({
-                        data: itemsWithPOId,
-                        skipDuplicates: true
-                    });
+                    if (order.payments?.length) {
+                        for (const payment of order.payments) {
+                            const paymentId = await generateCustomId(
+                                tx,
+                                "PURCHASE_ORDER_PAYMENT"
+                            );
+
+                            await tx.purchaseOrderPayment.create({
+                                data: {
+                                    paymentId,
+                                    orderId: purchaseOrderId,
+                                    paidBy: payment.paidBy,
+                                    amount: payment.amount,
+                                    status: payment.status ?? "PENDING",
+                                    paymentMethod: payment.paymentMethod,
+                                    transactionId: payment.transactionId,
+                                    remarks: payment.remarks,
+                                    publicId:
+                                        "suppliers/trade_licenses/trade_license_1751201462225",
+                                    receiptUrl:
+                                        "https://res.cloudinary.com/dwdu18hzs/image/upload/suppliers/trade_licenses/trade_license_1751201462225.avif",
+                                    resourceType: "img",
+                                    requestedAt: payment.requestedAt,
+                                    paidAt: payment.paidAt
+                                }
+                            });
+                        }
+                    }
+
+                    console.log(`✅ Seeded Purchase Order ${purchaseOrderId}`);
                 },
                 {
-                    maxWait: 25000,
-                    timeout: 45000,
+                    maxWait: 99000,
+                    timeout: 100000,
                     isolationLevel: "ReadCommitted"
                 }
             );
-
-            console.log(`✅ Seeded Purchase Order ${order.id}`);
         } catch (err) {
-            console.error(`❌ Error seeding order ${order.id}:`, err.message);
+            console.error(`❌ Error seeding purchase order:`, err.message);
         }
     }
 

@@ -158,7 +158,7 @@ const listOrderRequests = async ({
                 publicId: payment.publicId,
                 requestedAt: payment.requestedAt,
                 paidAt: payment.paidAt,
-                transactionId: payment.transactionId,
+                transactionId: payment.transactionId
             };
         });
         // Determine the generic properties based on the productType
@@ -247,8 +247,7 @@ const listOrderRequests = async ({
     };
 };
 
-
-const deleteFromCloudinary = async (publicId) => {
+const deleteFromCloudinary = async publicId => {
     // You should implement this using your Cloudinary SDK or utility
     // Example:
     // const cloudinary = require('cloudinary').v2;
@@ -257,7 +256,12 @@ const deleteFromCloudinary = async (publicId) => {
     console.log(`Deleting orphaned file from Cloudinary: ${publicId}`);
 };
 
-const recordPaymentForOrder = async ({ orderId, paidByUserId, paymentDetails, receiptFile }) => {
+const recordPaymentForOrder = async ({
+    orderId,
+    paidByUserId,
+    paymentDetails,
+    receiptFile
+}) => {
     let receiptUrl = null;
     let publicId = null;
     try {
@@ -268,43 +272,76 @@ const recordPaymentForOrder = async ({ orderId, paidByUserId, paymentDetails, re
                 folder: `admins/receipts/PCOD_${orderId}`,
                 publicIdPrefix: `receipt_${Date.now()}`
             });
-            if (!uploadResult.success) throw new Error("Receipt upload failed.");
+            if (!uploadResult.success)
+                throw new Error("Receipt upload failed.");
             receiptUrl = uploadResult.data.mediaUrl;
-            console.log(receiptUrl)
+            console.log(receiptUrl);
         }
 
         // Step 2: Run the transaction for all DB operations
-        return await prisma.$transaction(async (tx) => {
+        return await prisma.$transaction(async tx => {
             const order = await tx.purchaseOrder.findUnique({
                 where: { id: orderId },
-                select: { totalCost: true, pendingAmount: true, status: true, isAccepted: true }
+                select: {
+                    totalCost: true,
+                    pendingAmount: true,
+                    status: true,
+                    isAccepted: true
+                }
             });
             const checkUserActive = await tx.User.findUnique({
                 where: { userId: paidByUserId },
                 select: { isActive: true }
             });
-            if (!checkUserActive) throw { code: 404, message: "User is not active or doesnot exist." };
-            if (!order) throw { code: 404, message: "Purchase Order not found." };
-            if ((order.pendingAmount || 0) <= 0) throw { code: 400, message: "This order is already fully paid." };
-            if (order.status === "PENDING") throw { code: 400, message: "The Order is to be accepted yet by Supplier for Payment" };
-            if (order.isAccepted === false) throw { code: 400, message: "Trying to make payment on an order that has not been accepted by admin" };
+            if (!checkUserActive)
+                throw {
+                    code: 404,
+                    message: "User is not active or doesnot exist."
+                };
+            if (!order)
+                throw { code: 404, message: "Purchase Order not found." };
+            if ((order.pendingAmount || 0) <= 0)
+                throw {
+                    code: 400,
+                    message: "This order is already fully paid."
+                };
+            if (order.status === "PENDING")
+                throw {
+                    code: 400,
+                    message:
+                        "The Order is to be accepted yet by Supplier for Payment"
+                };
+            if (order.isAccepted === false)
+                throw {
+                    code: 400,
+                    message:
+                        "Trying to make payment on an order that has not been accepted by admin"
+                };
 
             const existingPaymentCount = await tx.purchaseOrderPayment.count({
                 where: {
                     orderId: orderId,
-                    status: 'PARTIALLY_PAID'
+                    status: "PARTIALLY_PAID"
                 }
             });
 
-            const newTotalPaid = (order.totalCost - order.pendingAmount) + paymentDetails.amount;
+            const newTotalPaid =
+                order.totalCost - order.pendingAmount + paymentDetails.amount;
             const newPendingAmount = order.totalCost - newTotalPaid;
-            const newPaymentPercentage = Math.min(100, Math.round((newTotalPaid / order.totalCost) * 100));
-            const newPaymentStatus = newPendingAmount <= 0 ? 'PAID' : 'PARTIALLY_PAID';
-            const finalRemarks = (newPendingAmount <= 0 && finalRemarks === 'INSTALLMENT') ? 'COMPLETED' : `INSTALLMENT_${existingPaymentCount + 1}`;
+            const newPaymentPercentage = Math.min(
+                100,
+                Math.round((newTotalPaid / order.totalCost) * 100)
+            );
+            const newPaymentStatus =
+                newPendingAmount <= 0 ? "PAID" : "PARTIALLY_PAID";
+            const finalRemarks =
+                newPendingAmount <= 0 && finalRemarks === "INSTALLMENT"
+                    ? "COMPLETED"
+                    : `INSTALLMENT_${existingPaymentCount + 1}`;
 
             let newOrderStatus = order.status;
-            if (order.status === 'PROCESSING') {
-                newOrderStatus = 'SHIPPING';
+            if (order.status === "PROCESSING") {
+                newOrderStatus = "SHIPPING";
             }
 
             await tx.purchaseOrderPayment.create({
@@ -327,7 +364,7 @@ const recordPaymentForOrder = async ({ orderId, paidByUserId, paymentDetails, re
                 data: {
                     pendingAmount: newPendingAmount,
                     paymentPercentage: newPaymentPercentage,
-                    status: newOrderStatus,
+                    status: newOrderStatus
                 }
             });
 
@@ -348,7 +385,6 @@ const recordPaymentForOrder = async ({ orderId, paidByUserId, paymentDetails, re
     }
 };
 
-
 /**
  * Saves QC media metadata to a Purchase Order after verifying ownership.
  * @param {object} params
@@ -363,9 +399,7 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
     if (!admin) {
         throw { code: 404, message: "Admin profile not found." };
     }
-    const purchaseOrder = adminRepo.checkPurchaseOrderExist(
-        orderId
-    );
+    const purchaseOrder = adminRepo.checkPurchaseOrderExist(orderId);
 
     if (!purchaseOrder) {
         throw {
@@ -392,10 +426,7 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
     }));
 
     // 3. Save the URLs and public IDs to the database via the repository.
-    await adminRepo.addMediaToPurchaseOrder(
-        orderId,
-        mediaAssetsToCreate
-    );
+    await adminRepo.addMediaToPurchaseOrder(orderId, mediaAssetsToCreate);
 
     return {
         success: true,
@@ -405,9 +436,8 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
     };
 };
 
-
 const restockInventory = async ({ orderId, handledById, payload }) => {
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async tx => {
         // 1. Fetch the order and all its accepted items to ensure data is trusted.
         const order = await tx.purchaseOrder.findUnique({
             where: { id: orderId },
@@ -419,35 +449,47 @@ const restockInventory = async ({ orderId, handledById, payload }) => {
         });
         // 2. Business Logic Checks
         if (!order) throw { code: 404, message: "Purchase Order not found." };
-        if (order.status !== 'DELIVERED') throw { code: 400, message: "Order must be in 'SHIPPING' status to be restocked." };
+        if (order.status !== "DELIVERED")
+            throw {
+                code: 400,
+                message: "Order must be in 'SHIPPING' status to be restocked."
+            };
         // Add more checks here, e.g., does the userId have permission for this warehouse?
 
         // 3. Loop through each accepted item and update inventory & create logs.
         for (const item of order.PurchaseOrderItems) {
-            if (item.productType === 'Plant') {
+            if (item.productType === "Plant") {
                 // Update the main warehouse inventory
-                await adminRepo.updatePlantWarehouseInventory({
-                    warehouseId: order.warehouseId,//For tracking warehouse inventory of which Location to update
-                    plantId: item.plantId,
-                    variantId: item.plantVariantId,
-                    units: item.unitsRequested,
-                    unitCostPrice: item.unitCostPrice,
-                    totalCost: item.totalCost,
-                }, tx);
+                await adminRepo.updatePlantWarehouseInventory(
+                    {
+                        warehouseId: order.warehouseId, //For tracking warehouse inventory of which Location to update
+                        plantId: item.plantId,
+                        variantId: item.plantVariantId,
+                        units: item.unitsRequested,
+                        unitCostPrice: item.unitCostPrice,
+                        totalCost: item.totalCost
+                    },
+                    tx
+                );
 
                 // Create an immutable log of the event
-                await adminRepo.createPlantRestockLog({
-                    restockId: uuidv4(),
-                    purchaseOrderId: order.id,
-                    supplierId: order.supplierId,
-                    warehouseId: order.warehouseId,
-                    plantId: item.plantId,
-                    plantVariantId: item.plantVariantId,
-                    units: item.unitsRequested,
-                    unitCostPrice: item.unitCostPrice,
-                    totalCost: Number(item.unitsRequested) * Number(item.unitCostPrice)
-                }, tx);
-            } 
+                await adminRepo.createPlantRestockLog(
+                    {
+                        restockId: uuidv4(),
+                        purchaseOrderId: order.id,
+                        supplierId: order.supplierId,
+                        warehouseId: order.warehouseId,
+                        plantId: item.plantId,
+                        plantVariantId: item.plantVariantId,
+                        units: item.unitsRequested,
+                        unitCostPrice: item.unitCostPrice,
+                        totalCost:
+                            Number(item.unitsRequested) *
+                            Number(item.unitCostPrice)
+                    },
+                    tx
+                );
+            }
             // else if (item.productType === 'Pot') {
             //     // Add similar logic for pots here
             // }
@@ -457,12 +499,17 @@ const restockInventory = async ({ orderId, handledById, payload }) => {
         await tx.purchaseOrder.update({
             where: { id: orderId },
             data: {
-                status: 'DELIVERED',
+                status: "DELIVERED",
                 deliveredAt: new Date()
             }
         });
 
-        return { success: true, code: 200, message: "Stock has been successfully updated and order is marked as delivered." };
+        return {
+            success: true,
+            code: 200,
+            message:
+                "Stock has been successfully updated and order is marked as delivered."
+        };
     });
 };
 
@@ -472,5 +519,5 @@ module.exports = {
     getOrderRequestById,
     recordPaymentForOrder,
     uploadQcMediaForOrder,
-    restockInventory,
+    restockInventory
 };

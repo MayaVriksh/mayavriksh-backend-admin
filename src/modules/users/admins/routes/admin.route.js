@@ -146,34 +146,41 @@ This array contains the full payment history for the order. It will be empty unt
             }
         }
     },
-     {
+    {
         method: "POST",
         path: "/admin/purchase-orders/{orderId}/payments",
         options: {
             tags: ["api", "Admin Purchase Order"],
-            description: "Record a new payment (full or partial) for a Purchase Order.",
+            description:
+                "Record a new payment (full or partial) for a Purchase Order.",
             pre: [
                 verifyAccessTokenMiddleware,
-                requireRole([ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.WAREHOUSE_MANAGER])
+                requireRole([
+                    ROLES.ADMIN,
+                    ROLES.SUPER_ADMIN,
+                    ROLES.WAREHOUSE_MANAGER
+                ])
             ],
             validate: {
                 ...AdminValidator.recordPaymentValidation,
-                failAction: handleValidationFailure,
+                failAction: handleValidationFailure
             },
             // Payload configuration for file uploads
             payload: {
-                output: 'stream',
+                output: "stream",
                 parse: true,
                 multipart: true,
-                allow: 'multipart/form-data',
+                allow: "multipart/form-data"
             },
             handler: AdminController.recordPayment,
             plugins: {
                 "hapi-swagger": {
-                    payloadType: 'form',
+                    payloadType: "form",
                     responses: {
                         201: { description: "Payment recorded successfully." },
-                        400: { description: "Bad Request or validation error." },
+                        400: {
+                            description: "Bad Request or validation error."
+                        },
                         403: { description: "Forbidden." },
                         404: { description: "Purchase Order not found." }
                     }
@@ -182,67 +189,72 @@ This array contains the full payment history for the order. It will be empty unt
         }
     },
     {
-            method: "PUT",
-            path: "/admin/purchase-orders/{orderId}/qc-media",
-            options: {
-                tags: ["api", "Admin Purchase Order"],
-                description:
-                    "Upload Quality Check (QC) media for a purchase order.",
-                notes: "Allows a admin to upload multiple images or videos for a specific order.",
+        method: "PUT",
+        path: "/admin/purchase-orders/{orderId}/qc-media",
+        options: {
+            tags: ["api", "Admin Purchase Order"],
+            description:
+                "Upload Quality Check (QC) media for a purchase order.",
+            notes: "Allows a admin to upload multiple images or videos for a specific order.",
 
-                pre: [verifyAccessTokenMiddleware, requireRole([ROLES.ADMIN])],
+            pre: [verifyAccessTokenMiddleware, requireRole([ROLES.ADMIN])],
 
-                validate: {
-                    ...AdminValidator.qcMediaUploadValidation,
-                    failAction: handleValidationFailure
-                },
+            validate: {
+                ...AdminValidator.qcMediaUploadValidation,
+                failAction: handleValidationFailure
+            },
 
-                // --- Payload configuration for file uploads ---
-                payload: {
-                    output: "stream",
-                    parse: true,
-                    multipart: true,
-                    allow: "multipart/form-data",
-                    maxBytes: 20 * 1024 * 1024 // Example: 20MB total payload size limit
-                },
+            // --- Payload configuration for file uploads ---
+            payload: {
+                output: "stream",
+                parse: true,
+                multipart: true,
+                allow: "multipart/form-data",
+                maxBytes: 20 * 1024 * 1024 // Example: 20MB total payload size limit
+            },
 
-                handler: AdminController.uploadQcMedia,
+            handler: AdminController.uploadQcMedia,
 
-                plugins: {
-                    "hapi-swagger": {
-                        // This helps document the file upload in Swagger
-                        payloadType: "form"
-                    }
+            plugins: {
+                "hapi-swagger": {
+                    // This helps document the file upload in Swagger
+                    payloadType: "form"
                 }
             }
-        },
-        {
+        }
+    },
+    {
         method: "POST",
         path: "/warehouse/purchase-orders/{orderId}/restock",
         options: {
             tags: ["api", "Admin Purchase Order"],
-            description: "Confirm delivery of a purchase order, update warehouse stock, and log any damages.",
+            description:
+                "Confirm delivery of a purchase order, update warehouse stock, and log any damages.",
             notes: "This is the final step in the PO lifecycle. It updates inventory based on received units, creates damage logs for any discrepancies.",
             pre: [
                 verifyAccessTokenMiddleware,
-                requireRole([ROLES.WAREHOUSE_MANAGER, ROLES.ADMIN, ROLES.SUPER_ADMIN])
+                requireRole([
+                    ROLES.WAREHOUSE_MANAGER,
+                    ROLES.ADMIN,
+                    ROLES.SUPER_ADMIN
+                ])
             ],
             validate: {
                 ...AdminValidator.restockOrderValidation,
-                failAction: handleValidationFailure,
+                failAction: handleValidationFailure
             },
             // Payload configuration to handle file uploads (e.g., damage photos)
             payload: {
-                output: 'stream',
+                output: "stream",
                 parse: true,
                 multipart: true,
-                allow: 'multipart/form-data',
-                maxBytes: 20 * 1024 * 1024, // 20MB limit
+                allow: "multipart/form-data",
+                maxBytes: 20 * 1024 * 1024 // 20MB limit
             },
             handler: AdminController.restockInventory,
             plugins: {
-                'hapi-swagger': {
-                    payloadType: 'form' // Ensures Swagger UI shows a form for multipart data
+                "hapi-swagger": {
+                    payloadType: "form" // Ensures Swagger UI shows a form for multipart data
                 }
             }
         }
