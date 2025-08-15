@@ -732,9 +732,6 @@ const listOrderHistory = async ({
                 : item.potVariant?.images[0]?.mediaUrl;
             const productVariantType = item.productType;
             const isAccepted = item.isAccepted;
-            const requestedAt = item.requestedAt;
-            const acceptedAt = item.acceptedAt;
-            const deliveredAt = item.deliveredAt;
             // Return the new, simplified item object
             return {
                 id: item.id,
@@ -749,9 +746,6 @@ const listOrderHistory = async ({
                 totalVariantCost:
                     Number(item.unitsRequested) * Number(item.unitCostPrice),
                 isAccepted,
-                requestedAt,
-                acceptedAt,
-                deliveredAt
             };
         });
 
@@ -764,6 +758,9 @@ const listOrderHistory = async ({
             paymentPercentage: order.paymentPercentage,
             expectedDOA: order.expectedDateOfArrival,
             orderStatus: order.status,
+            requestedAt: order.requestedAt,
+            acceptedAt: order.acceptedAt,
+            deliveredAt: order.deliveredAt,
             // The two transformed arrays
             orderItems: orderItems,
             payments: paymentHistory

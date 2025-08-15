@@ -315,6 +315,7 @@ const findHistoricalPurchaseOrdersBySupplier = async (
                 isAccepted: true,
                 expectedDateOfArrival: true,
                 requestedAt: true,
+                acceptedAt: true,
                 deliveredAt: true,
                 supplierReviewNotes: true,
                 warehouseManagerReviewNotes: true,
