@@ -26,20 +26,20 @@ async function seedPurchaseOrders() {
         throw new Error("❌ Required data missing in DB.");
     }
 
-    const supplier = suppliers[0];
+    const supplier = suppliers.length > 9 ? suppliers[9] : suppliers[0];
 
     const plantOrders = generatePlantPurchaseOrderData(
         plants,
         plantVariants,
         warehouses,
-        supplier
+        supplier.supplierId
     );
 
     const potOrders = generatePotPurchaseOrderData(
         potCategories,
         potVariants,
         warehouses,
-        supplier
+        supplier.supplierId
     );
 
     const allOrders = [...plantOrders, ...potOrders];
@@ -52,6 +52,7 @@ async function seedPurchaseOrders() {
                         tx,
                         "PURCHASE_ORDER"
                     );
+
                     await tx.purchaseOrder.create({
                         data: {
                             id: purchaseOrderId,
@@ -59,6 +60,7 @@ async function seedPurchaseOrders() {
                             supplierId: order.supplierId,
                             deliveryCharges: order.deliveryCharges,
                             totalCost: order.totalCost,
+                            pendingAmount: order.pendingAmount ?? null,
                             paymentPercentage: order.paymentPercentage,
                             status: order.status,
                             isAccepted: order.isAccepted,
@@ -73,22 +75,46 @@ async function seedPurchaseOrders() {
                         }
                     });
 
-                    await tx.purchaseOrderItems.createMany({
-                        data: order.items.map(item => ({
-                            ...item,
-                            purchaseOrderId
-                        })),
-                        skipDuplicates: true
-                    });
-
-                    for (const payment of order.payments) {
-                        await tx.purchaseOrderPayment.create({
-                            data: {
-                                ...payment,
-                                orderId: purchaseOrderId
-                            }
+                    if (order.items?.length) {
+                        await tx.purchaseOrderItems.createMany({
+                            data: order.items.map(item => ({
+                                ...item,
+                                purchaseOrderId
+                            })),
+                            skipDuplicates: true
                         });
                     }
+
+                    if (order.payments?.length) {
+                        for (const payment of order.payments) {
+                            const paymentId = await generateCustomId(
+                                tx,
+                                "PURCHASE_ORDER_PAYMENT"
+                            );
+
+                            await tx.purchaseOrderPayment.create({
+                                data: {
+                                    paymentId,
+                                    orderId: purchaseOrderId,
+                                    paidBy: payment.paidBy,
+                                    amount: payment.amount,
+                                    status: payment.status ?? "PENDING",
+                                    paymentMethod: payment.paymentMethod,
+                                    transactionId: payment.transactionId,
+                                    remarks: payment.remarks,
+                                    publicId:
+                                        "suppliers/trade_licenses/trade_license_1751201462225",
+                                    receiptUrl:
+                                        "https://res.cloudinary.com/dwdu18hzs/image/upload/suppliers/trade_licenses/trade_license_1751201462225.avif",
+                                    resourceType: "img",
+                                    requestedAt: payment.requestedAt,
+                                    paidAt: payment.paidAt
+                                }
+                            });
+                        }
+                    }
+
+                    console.log(`✅ Seeded Purchase Order ${purchaseOrderId}`);
                 },
                 {
                     maxWait: 99000,
@@ -96,10 +122,8 @@ async function seedPurchaseOrders() {
                     isolationLevel: "ReadCommitted"
                 }
             );
-
-            console.log(`✅ Seeded Purchase Order ${order.id}`);
         } catch (err) {
-            console.error(`❌ Error seeding order ${order.id}:`, err.message);
+            console.error(`❌ Error seeding purchase order:`, err.message);
         }
     }
 
