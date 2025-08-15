@@ -336,6 +336,7 @@ console.log("vvsdfasd")
                 warehouse: {
                     select: {
                         name: true, // Also fetching the warehouse name
+                        officeEmail: true,
                         officeAddress: true,// Assuming 'address' is a field on the Warehouse model
                         officePhone: true
                     }

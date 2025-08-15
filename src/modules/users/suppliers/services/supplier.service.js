@@ -750,6 +750,8 @@ const listOrderHistory = async ({
         });
 
         const invoiceUserDetails = {
+            // Currently Supplier not being used,as Supplier need not see his own details in oDRER suMMARY. 
+            // bUT THIS INFO WILL BE USED, WHILE DOWNLOADING THE RECEIPT FOR wAREHOUSE, AND SIGN THERE, AND SEND TO US AFTER DELIVERY
             supplier: {
                 name: order.supplier?.nurseryName ?? 'N/A',
                 gstin: order.supplier?.gstin ?? 'N/A',
@@ -759,7 +761,8 @@ const listOrderHistory = async ({
             warehouse: {
                 name: order.warehouse?.name ?? 'N/A',
                 address: order.warehouse?.address ?? 'Address not available',
-                officePhone: order.warehouse?.officePhone ?? 'Phone No. not available'
+                officePhone: order.warehouse?.officePhone ?? 'Phone No. not available',
+                officeEmail: order.warehouse?.officeEmail ?? 'officeEmail not available'
             }
         };
 
