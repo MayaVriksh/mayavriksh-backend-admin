@@ -480,7 +480,7 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
         mediaType: media.mediaType,
         resourceType: media.resourceType,
         isPrimary: media.isPrimary || false,
-        uploadedBy: ROLES.SUPPLIER
+        uploadedBy: ROLES.ROLES.SUPPLIER
     }));
 
     // 3. Save the URLs and public IDs to the database via the repository.
