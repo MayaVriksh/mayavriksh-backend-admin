@@ -242,16 +242,19 @@ const listOrderRequests = async ({
                 pendingAmountAfterPayment:
                     (order.totalCost || 0) - runningTotalPaid,
                 paymentMethod: payment.paymentMethod,
-                paymentRemarks: payment.remarks,
+                paymentStatus: payment.status,
                 receiptUrl: payment.receiptUrl,
+                publicId: payment.publicId,
                 requestedAt: payment.requestedAt,
-                paidAt: payment.paidAt
+                paidAt: payment.paidAt,
+                paymentRemarks: payment.remarks,
+                transactionId: payment.transactionId
             };
         });
         // Determine the generic properties based on the productType
         // --- Object 3: For the "Order Items Modal" ---
         const orderItems = order.PurchaseOrderItems.map(item => {
-            const isPlant = item.productType === "Plant";
+            const isPlant = item.productType === "PLANT";
             const productVariantName = isPlant ? item.plant?.name : "";
             const productVariantSize = isPlant
                 ? item.plantVariant?.plantSize
@@ -261,7 +264,7 @@ const listOrderRequests = async ({
                 ? item.plantVariant?.color?.name
                 : item.potVariant?.color?.name;
             const productVariantMaterial = isPlant
-                ? null
+                ? 'NaturalPlant'
                 : item.potVariant?.material?.name;
             const productVariantImage = isPlant
                 ? item.plantVariant?.plantVariantImages[0]?.mediaUrl
@@ -703,19 +706,18 @@ const listOrderHistory = async ({
                 paidAmount: payment.amount,
                 pendingAmountAfterPayment:
                     (order.totalCost || 0) - runningTotalPaid,
-                paymentStatus: payment.status,
                 paymentMethod: payment.paymentMethod,
-                paymentRemarks: payment.remarks,
-                receiptUrl: payment.receiptUrl,
+                paymentStatus: payment.status,
                 receiptUrl: payment.receiptUrl,
                 publicId: payment.publicId,
                 requestedAt: payment.requestedAt,
                 paidAt: payment.paidAt,
+                paymentRemarks: payment.remarks,
                 transactionId: payment.transactionId
             };
         });
         const orderItems = order.PurchaseOrderItems.map(item => {
-            const isPlant = item.productType === "Plant";
+            const isPlant = item.productType === "PLANT";
             const productVariantName = isPlant ? item.plant?.name : "";
             const productVariantSize = isPlant
                 ? item.plantVariant?.plantSize
