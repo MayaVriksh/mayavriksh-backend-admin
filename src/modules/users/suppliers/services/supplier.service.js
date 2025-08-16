@@ -297,7 +297,7 @@ const listOrderRequests = async ({
             paymentPercentage: order.paymentPercentage,
             expectedDOA: order.expectedDateOfArrival,
             orderStatus: order.status,
-
+            requestedAt: order.requestedAt,
             // The two transformed arrays
             orderItems: orderItems,
             payments: paymentHistory
