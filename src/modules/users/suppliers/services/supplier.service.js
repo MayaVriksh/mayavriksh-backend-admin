@@ -279,7 +279,6 @@ const listOrderRequests = async ({
                 productVariantName: `${productVariantName}-${productVariantSize}-${productVariantColor}-${productVariantMaterial}`,
                 sku,
                 productVariantMaterial,
-                requestedDate: order.requestedAt, // Date comes from the parent order
                 unitCostPrice: item.unitCostPrice,
                 unitRequested: item.unitsRequested,
                 totalVariantCost:
@@ -742,7 +741,6 @@ const listOrderHistory = async ({
                 productVariantName: `${productVariantName}-${productVariantSize}-${productVariantColor}-${productVariantMaterial}`,
                 sku,
                 productVariantMaterial,
-                requestedDate: order.requestedAt, // Date comes from the parent order
                 unitCostPrice: item.unitCostPrice,
                 unitRequested: item.unitsRequested,
                 totalVariantCost:
@@ -765,7 +763,7 @@ const listOrderHistory = async ({
             },
             warehouse: {
                 name: order.warehouse?.name ?? "N/A",
-                address: order.warehouse?.address ?? "Address not available",
+                address: order.warehouse?.officeAddress ?? "Address not available",
                 officePhone:
                     order.warehouse?.officePhone ?? "Phone No. not available",
                 officeEmail:
