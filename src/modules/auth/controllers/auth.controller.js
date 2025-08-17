@@ -96,7 +96,7 @@ const refreshToken = async (req, h) => {
                 success: RESPONSE_FLAGS.SUCCESS,
                 message: "Token refreshed successfully.", // Added a message for consistency
                 data: {
-                    user: userProfile,       // <-- The missing piece
+                    user: userProfile, // <-- The missing piece
                     accessToken: newAccessToken
                 }
             })

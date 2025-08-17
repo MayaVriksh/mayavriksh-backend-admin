@@ -267,7 +267,7 @@ const listOrderRequests = async ({
                 ? item.plantVariant?.color?.name
                 : item.potVariant?.color?.name;
             const productVariantMaterial = isPlant
-                ? 'NaturalPlant'
+                ? "NaturalPlant"
                 : item.potVariant?.material?.name;
             const productVariantImage = isPlant
                 ? item.plantVariant?.plantVariantImages[0]?.mediaUrl
@@ -766,7 +766,8 @@ const listOrderHistory = async ({
             },
             warehouse: {
                 name: order.warehouse?.name ?? "N/A",
-                address: order.warehouse?.officeAddress ?? "Address not available",
+                address:
+                    order.warehouse?.officeAddress ?? "Address not available",
                 officePhone:
                     order.warehouse?.officePhone ?? "Phone No. not available",
                 officeEmail:

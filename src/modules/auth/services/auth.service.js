@@ -137,7 +137,6 @@ const register = async data => {
  * @param {object} user - The full user object from Prisma and password from UI, for matching passwords.
  */
 const _verifyUserCredentials = async (user, password) => {
-
     console.log("User Detail In AuthService Page for Logging In:", user);
 
     if (!user) {
@@ -170,10 +169,11 @@ const _verifyUserCredentials = async (user, password) => {
 /**
  * @private - Generates a new access token for a validated user. Determine the final 'isVerified' status based on role
  */
-const _generateAccessTokenAndPayload = (user) => {
-
+const _generateAccessTokenAndPayload = user => {
     const isSupplier = user.role.role === "SUPPLIER";
-    const finalIsVerified = isSupplier ? (user.Supplier?.isVerified || false) : true;
+    const finalIsVerified = isSupplier
+        ? user.Supplier?.isVerified || false
+        : true;
 
     const accessTokenPayload = {
         userId: user.userId,
@@ -188,14 +188,15 @@ const _generateAccessTokenAndPayload = (user) => {
 /**
  * @private - Creates a sanitized user profile object from a raw user record.
  */
-const _createUserProfile = (user) => {
-
+const _createUserProfile = user => {
     const isSupplier = user.role.role === "SUPPLIER";
-    const finalIsVerified = isSupplier ? (user.Supplier?.isVerified || false) : true;
-    
+    const finalIsVerified = isSupplier
+        ? user.Supplier?.isVerified || false
+        : true;
+
     const { password: _, deletedAt: __, ...userProfile } = user;
     userProfile.isVerified = finalIsVerified;
-    console.log(user,"user")
+    console.log(user, "user");
     console.log(userProfile, "userProfile");
     return userProfile;
     // return {
@@ -244,7 +245,6 @@ const _getAuthenticatedUser = async (whereClause, includePassword = false) => {
     });
 };
 
-
 /**
  * Authenticates a user with their email and password, then generates a full session.
  * This is the primary function for user login.
@@ -285,23 +285,25 @@ const login = async (email, password) => {
  * @returns {Promise<{userProfile: object, newAccessToken: string}>} An object containing the user's profile and a new short-lived access token.
  * @throws {Error} Throws an error if the refresh token is invalid, expired, or the user is no longer active.
  */
-const refreshUserToken = async (token) => {
+const refreshUserToken = async token => {
     try {
         const decoded = verifyRefreshToken(token);
         console.log("Refresh Token being Generated", decoded);
 
         const user = await _getAuthenticatedUser({ userId: decoded.userId });
-        console.log("User Detail In AuthService Page for Refresh User Token:", user);
-        
+        console.log(
+            "User Detail In AuthService Page for Refresh User Token:",
+            user
+        );
+
         if (!user || !user.isActive || user.deletedAt) {
             throw new Error("User account is no longer active.");
         }
 
         const userProfile = _createUserProfile(user);
         const accessToken = _generateAccessTokenAndPayload(user);
-        
-        return { userProfile, newAccessToken: accessToken };
 
+        return { userProfile, newAccessToken: accessToken };
     } catch (error) {
         console.error("Refresh token validation failed:", error.message);
         throw new Error("Invalid refresh token. Please log in again.");

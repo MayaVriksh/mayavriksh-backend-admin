@@ -8,14 +8,15 @@ const Vision = require("@hapi/vision");
 const HapiSwagger = require("hapi-swagger");
 const baseRoutes = require("./routes/base.route");
 
+const corsOrigins = process.env.CORS_ORIGINS.split(",");
+
 const createServer = async () => {
     const server = Hapi.server({
         port: process.env.PORT || 5500,
         host: process.env.HOST || "localhost",
         routes: {
             cors: {
-                origin: ["http://localhost:8080", "https://mayavriksh-ecom-admin-ui-jk2h-git-jwtauth-arka1997s-projects.vercel.app/"],
-                // origin: ["*"],
+                origin: corsOrigins,
                 headers: ["Authorization", "Content-Type", "If-None-Match"],
                 exposedHeaders: ["WWW-Authenticate", "Server-Authorization"],
                 additionalExposedHeaders: ["X-Custom-Header"],

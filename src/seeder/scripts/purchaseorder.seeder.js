@@ -15,6 +15,10 @@ async function seedPurchaseOrders() {
     const warehouses = await prisma.warehouse.findMany();
     const suppliers = await prisma.supplier.findMany();
 
+    // await prisma.purchaseOrderPayment.deleteMany();
+    // await prisma.purchaseOrderItems.deleteMany();
+    // await prisma.purchaseOrder.deleteMany();
+
     if (
         !plants.length ||
         !plantVariants.length ||
