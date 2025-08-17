@@ -9,10 +9,10 @@ const HapiSwagger = require("hapi-swagger");
 const baseRoutes = require("./routes/base.route");
 
 const createServer = async () => {
-    const corsOrigins = (process.env.CORS_ORIGINS || "")
-        .split(",")
-        .map(o => o.trim())
-        .filter(Boolean);
+    // const corsOrigins = (process.env.CORS_ORIGINS || "")
+    //     .split(",")
+    //     .map(o => o.trim())
+    //     .filter(Boolean);
 
     const server = Hapi.server({
         port: process.env.PORT || 5500,
@@ -20,10 +20,8 @@ const createServer = async () => {
         routes: {
             cors: {
                 // origin: corsOrigins,
-                origin: [
-                    "https://mayavriksh-ecom-admin-ui.onrender.com",
-                    "http://localhost:8080"
-                ],
+                origin: ["https://mayavriksh-ecom-admin-ui.onrender.com"],
+                // origin: ["http://localhost:8080"],
                 headers: ["Authorization", "Content-Type", "If-None-Match"],
                 exposedHeaders: ["WWW-Authenticate", "Server-Authorization"],
                 additionalExposedHeaders: ["X-Custom-Header"],
