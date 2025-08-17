@@ -8,9 +8,9 @@ const Vision = require("@hapi/vision");
 const HapiSwagger = require("hapi-swagger");
 const baseRoutes = require("./routes/base.route");
 
-const corsOrigins = process.env.CORS_ORIGINS.split(",");
-
 const createServer = async () => {
+    const corsOrigins = (process.env.CORS_ORIGINS || "").split(",").map(o => o.trim()).filter(Boolean);
+
     const server = Hapi.server({
         port: process.env.PORT || 5500,
         host: process.env.HOST || "localhost",
@@ -28,6 +28,14 @@ const createServer = async () => {
                 failAction: "ignore"
             }
         }
+    });
+
+    // Log all incoming requests to debug if POST reaches server
+    server.ext("onRequest", (request, h) => {
+        console.log(
+            `Incoming request: ${request.method.toUpperCase()} ${request.path}`
+        );
+        return h.continue;
     });
 
     // --- REWRITTEN & SECURED COOKIE CONFIGURATION ---
