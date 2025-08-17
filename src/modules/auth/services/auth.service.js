@@ -132,32 +132,14 @@ const register = async data => {
     });
 };
 
-const login = async (email, password) => {
-    console.log("In AuthService Page for Logging In");
-    const user = await prisma.user.findUnique({
-        where: { email },
-        select: {
-            userId: true,
-            fullName: true,
-            email: true,
-            password: true,
-            isActive: true,
-            profileImageUrl: true,
-            deletedAt: true,
-            role: {
-                select: {
-                    role: true
-                }
-            },
-            // Include the related Supplier model to get its 'isVerified' field.
-            Supplier: {
-                select: {
-                    isVerified: true
-                }
-            }
-        }
-    });
+/**
+ * @private - Internal function to validate a user's password and active status.
+ * @param {object} user - The full user object from Prisma and password from UI, for matching passwords.
+ */
+const _verifyUserCredentials = async (user, password) => {
+
     console.log("User Detail In AuthService Page for Logging In:", user);
+
     if (!user) {
         throw {
             success: RESPONSE_FLAGS.FAILURE,
@@ -175,7 +157,6 @@ const login = async (email, password) => {
             message: ERROR_MESSAGES.AUTH.ACCOUNT_INACTIVE
         };
     }
-
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
         throw {
@@ -184,145 +165,141 @@ const login = async (email, password) => {
             message: ERROR_MESSAGES.AUTH.PASSWORD_WRONG
         };
     }
-    // 3. Determine the final 'isVerified' status based on the user's role.
-    let finalIsVerified = false;
-    if (user.role.role === "SUPPLIER") {
-        // If the user is a supplier, their status comes from the database.
-        finalIsVerified = user.Supplier?.isVerified || false;
-    } else if (user.role.role === "ADMIN") {
-        // For any other role (ADMIN, SUPER_ADMIN, etc.), they are always considered verified.
-        finalIsVerified = true;
-    }
+};
 
-    // <-- MODIFIED: Create two different payloads for our two tokens.
+/**
+ * @private - Generates a new access token for a validated user. Determine the final 'isVerified' status based on role
+ */
+const _generateAccessTokenAndPayload = (user) => {
 
-    // 1. Access Token Payload: Contains data for stateless verification.
-    // This data will be available in our middleware and controllers without a DB query.
+    const isSupplier = user.role.role === "SUPPLIER";
+    const finalIsVerified = isSupplier ? (user.Supplier?.isVerified || false) : true;
+
     const accessTokenPayload = {
         userId: user.userId,
         role: user.role.role,
-        // Including a name is useful for the frontend.
-        username: user.fullName.firstName,
+        username: user.fullName.FIRST_NAME,
         isVerified: finalIsVerified
     };
-    // 2. Refresh Token Payload: Should be minimal, only what's needed to identify the user session.
-    const refreshTokenPayload = {
-        userId: user.userId
+
+    return generateAccessToken(accessTokenPayload);
+};
+
+/**
+ * @private - Creates a sanitized user profile object from a raw user record.
+ */
+const _createUserProfile = (user) => {
+
+    const { password: _, deletedAt: __, ...userProfile } = user;
+    return userProfile;
+    // return {
+    //     userId: user.userId,
+    //     firstName: user.fullName.FIRST_NAME,
+    //     lastName: user.fullName.LAST_NAME,
+    //     email: user.email,
+    //     role: user.role.role,
+    //     profileImageUrl: user.profileImageUrl,
+    //     isVerified: finalIsVerified,
+    //     isActive: user.isActive
+    // };
+};
+/**
+ * @private - Fetches the complete user profile for authentication purposes.
+ * @param {object} whereClause - The Prisma where clause (e.g., { email } or { userId }).
+ * @param {boolean} [includePassword=false] - Whether to include the password hash in the result.
+ * @returns {Promise<object|null>} The user object or null if not found.
+ */
+const _getAuthenticatedUser = async (whereClause, includePassword = false) => {
+    // --- THIS IS THE FIX ---
+    // Start with a base selection of all non-sensitive fields.
+    const selectClause = {
+        userId: true,
+        fullName: true,
+        email: true,
+        isActive: true,
+        profileImageUrl: true,
+        deletedAt: true,
+        role: {
+            select: { role: true }
+        },
+        Supplier: {
+            select: { isVerified: true }
+        }
     };
 
-    // <-- MODIFIED: Generate both tokens using the new utility functions.
-    const accessToken = generateAccessToken(accessTokenPayload);
-    const refreshToken = generateRefreshToken(refreshTokenPayload);
-    // Prepare user profile to be sent back to the client (remove sensitive info).
-    const { password: _, deletedAt: __, ...userProfile } = user;
-    // --- MERGE THE isVerified STATUS ---
-    // Make sure to add the supplier's verification status to the final object.
-    userProfile.isVerified = finalIsVerified;
+    // Conditionally add the password to the selection only if needed.
+    if (includePassword) {
+        selectClause.password = true;
+    }
 
-    // <-- MODIFIED: Return all the necessary pieces for the controller.
+    return await prisma.user.findUnique({
+        where: whereClause,
+        select: selectClause
+    });
+};
+
+
+/**
+ * Authenticates a user with their email and password, then generates a full session.
+ * This is the primary function for user login.
+ *
+ * The process involves three main steps:
+ * 1. Fetches the user's data from the database, including their password hash.
+ * 2. Verifies the provided password against the stored hash and checks if the account is active.
+ * 3. If credentials are valid, it generates a user profile object, a short-lived access token,
+ * and a long-lived refresh token.
+ *
+ * @param {string} email - The user's email address.
+ * @param {string} password - The user's raw password for verification.
+ * @returns {Promise<{userProfile: object, accessToken: string, refreshToken: string}>} An object containing the user's profile, a new access token, and a new refresh token.
+ * @throws {Error} Throws an error if authentication fails (e.g., invalid credentials, inactive account).
+ */
+const login = async (email, password) => {
+    console.log("In AuthService Page for Logging In");
+    const user = await _getAuthenticatedUser({ email }, true);
+    await _verifyUserCredentials(user, password);
+
+    const userProfile = _createUserProfile(user);
+    const accessToken = _generateAccessTokenAndPayload(user);
+    const refreshToken = generateRefreshToken({ userId: user.userId });
+
+    console.log("Refresh Token:", refreshToken);
     return { userProfile, accessToken, refreshToken };
 };
 
-// --- NEW FUNCTION: REFRESH USER TOKEN ---
-// This new service is called by the /auth/refresh-token endpoint.
-const refreshUserToken = async token => {
+/**
+ * Refreshes a user's session by validating a refresh token and issuing a new access token.
+ * This should be called by the /auth/refresh-token endpoint when the short-lived access token expires.
+ *
+ * This process ensures the user remains logged in without re-entering their password. It performs
+ * a critical security check by re-fetching the user from the database to ensure their account
+ * is still active and valid before issuing a new token.
+ *
+ * @param {string} token - The long-lived refresh token sent by the client.
+ * @returns {Promise<{userProfile: object, newAccessToken: string}>} An object containing the user's profile and a new short-lived access token.
+ * @throws {Error} Throws an error if the refresh token is invalid, expired, or the user is no longer active.
+ */
+const refreshUserToken = async (token) => {
     try {
-        // 1. Verify the incoming refresh token. Throws an error if invalid/expired.
         const decoded = verifyRefreshToken(token);
-        console.log(decoded);
-        const userId = decoded.userId;
-        // 2. IMPORTANT: Check the database to ensure the user is still valid.
-        // This is our periodic security check. If a user was banned, this is where we catch it.
-        const user = await prisma.user.findUnique({
-            where: { userId: decoded.userId },
-            select: {
-                userId: true,
-                isActive: true,
-                deletedAt: true,
-                role: { select: { role: true } },
-                fullName: true,
-                // The 'Supplier' relation MUST be nested inside the 'select' object.
-                Supplier: {
-                    select: {
-                        isVerified: true
-                    }
-                }
-            }
-        });
+        console.log("Refresh Token being Generated", decoded);
 
-        console.log(
-            "User Detail In AuthService Page for Refresh User Token:",
-            user
-        );
-        if (!user) {
-            throw new Error(
-                "User associated with this token no longer exists."
-            );
-        }
-        if (!user.isActive || user.deletedAt) {
+        const user = await _getAuthenticatedUser({ userId: decoded.userId });
+        console.log("User Detail In AuthService Page for Refresh User Token:", user);
+        
+        if (!user || !user.isActive || user.deletedAt) {
             throw new Error("User account is no longer active.");
         }
-        // 3. If user is valid, issue a NEW access token with fresh data.
-        const newAccessTokenPayload = {
-            userId: user.userId,
-            role: user.role.role,
-            username: user.fullName.firstName,
-            // This optional chaining (?.) safely handles non-supplier roles.
-            // If user.Supplier is null (for an Admin), isVerified becomes false.
-            isVerified: user.Supplier?.isVerified || false
-        };
-        const newAccessToken = generateAccessToken(newAccessTokenPayload);
 
-        return { newAccessToken };
+        const userProfile = _createUserProfile(user);
+        const accessToken = _generateAccessTokenAndPayload(user);
+        
+        return { userProfile, newAccessToken: accessToken };
+
     } catch (error) {
-        // The error could be from JWT verification or the DB check.
-        // The controller will catch this and force a logout.
         console.error("Refresh token validation failed:", error.message);
         throw new Error("Invalid refresh token. Please log in again.");
     }
-};
-
-const verifyUser = async userId => {
-    const user = await prisma.user.findUnique({
-        where: { userId },
-        select: {
-            userId: true,
-            fullName: true,
-            isActive: true,
-            profileImageUrl: true,
-            deletedAt: true,
-            role: {
-                select: {
-                    role: true
-                }
-            }
-        }
-    });
-
-    if (!user) {
-        throw {
-            success: RESPONSE_FLAGS.FAILURE,
-            code: RESPONSE_CODES.NOT_FOUND,
-            message: ERROR_MESSAGES.USERS.PROFILE_NOT_FOUND
-        };
-    }
-
-    if (!user.isActive || user.deletedAt) {
-        throw {
-            success: RESPONSE_FLAGS.FAILURE,
-            code: RESPONSE_CODES.BAD_REQUEST,
-            message: ERROR_MESSAGES.AUTH.ACCOUNT_INACTIVE
-        };
-    }
-
-    const { deletedAt: _, ...userProfile } = user;
-
-    return {
-        success: RESPONSE_FLAGS.SUCCESS,
-        code: RESPONSE_CODES.SUCCESS,
-        message: SUCCESS_MESSAGES.AUTH.PROFILE_FETCHED,
-        data: userProfile
-    };
 };
 
 const deactivateUser = async userId => {
@@ -447,7 +424,6 @@ module.exports = {
     login,
     register,
     refreshUserToken,
-    verifyUser,
     deactivateUser,
     reactivateUserProfile,
     changePassword

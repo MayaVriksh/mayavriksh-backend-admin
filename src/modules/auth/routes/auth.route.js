@@ -170,7 +170,20 @@ module.exports = [
             }
         }
     },
-
+    /**
+     * @api {get} /auth/verify-profile Verify User Profile
+     * @apiName VerifyProfile
+     * @apiGroup Auth
+     *
+     * @apiDescription Verifies the current user's Access Token and returns their profile.
+     * This endpoint is protected by middleware, which handles the token validation.
+     * It provides a fast, database-free way for the frontend to confirm a user's session.
+     *
+     * @apiSuccess {Boolean} success Indicates if the operation was successful.
+     * @apiSuccess {String} message A confirmation message.
+     * @apiSuccess {Object} data The container for the user's profile.
+     * @apiSuccess {Object} data.user The user's profile information, decoded from the token.
+     */
     {
         method: "GET",
         path: "/auth/verify-profile",
@@ -179,7 +192,7 @@ module.exports = [
             description: "Verify User Profile",
             notes: "Verify the current user's Access Token and return their profile.",
             pre: [verifyAccessTokenMiddleware],
-            // handler: AuthController.verifyUser,
+            handler: AuthController.verifyUser,
             handler: (req, h) => {
                 // The user data is now available from the middleware without a DB call
                 const userCredentials = req.pre.credentials;
@@ -187,7 +200,7 @@ module.exports = [
                     .response({
                         success: RESPONSE_FLAGS.SUCCESS,
                         message: "User profile verified successfully 🌿",
-                        data: { user: userCredentials }
+                        data: { user: userCredentials } // Return the data directly from the token
                     })
                     .code(RESPONSE_CODES.SUCCESS);
             },

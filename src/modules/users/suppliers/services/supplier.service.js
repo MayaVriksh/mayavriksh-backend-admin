@@ -30,7 +30,10 @@ const showSupplierProfile = async userId => {
             warehouse: {
                 select: {
                     warehouseId: true,
-                    name: true
+                    name: true,
+                    officeEmail: true,
+                    officePhone: true,
+                    officeAddress: true
                 }
             }
         }

@@ -56,7 +56,6 @@ const signin = async (req, h) => {
         const { email, password } = req.payload;
         const { userProfile, accessToken, refreshToken } =
             await AuthService.login(email, password);
-        console.log("signin: ", userProfile, accessToken, refreshToken);
         // The secure Refresh Token is set in the HttpOnly cookie
         // The short-lived Access Token is sent in the response body for the client to use
         return h
@@ -72,26 +71,12 @@ const signin = async (req, h) => {
             .code(RESPONSE_CODES.SUCCESS);
     } catch (error) {
         console.error("Signin Error:", error);
-
-        const isInvalidCreds = error.message.includes("Invalid credentials");
-        const isLocked = error.message.includes("locked");
-        const isInactive = error.message.includes("inactive");
-
-        let message = ERROR_MESSAGES.AUTH.LOGIN_FAILED;
-        let statusCode = RESPONSE_CODES.UNAUTHORIZED;
-
-        if (isInvalidCreds) {
-            message = ERROR_MESSAGES.AUTH.INVALID_CREDENTIALS;
-        } else if (isLocked) {
-            message = ERROR_MESSAGES.AUTH.ACCOUNT_LOCKED;
-            statusCode = RESPONSE_CODES.LOCKED;
-        } else if (isInactive) {
-            message = ERROR_MESSAGES.AUTH.ACCOUNT_INACTIVE;
-            statusCode = RESPONSE_CODES.FORBIDDEN;
-        }
         return h
-            .response({ success: RESPONSE_FLAGS.FAILURE, message })
-            .code(statusCode);
+            .response({
+                success: RESPONSE_FLAGS.FAILURE,
+                message: error.message || ERROR_MESSAGES.AUTH.LOGIN_FAILED
+            })
+            .code(error.code || RESPONSE_CODES.UNAUTHORIZED);
     }
 };
 const refreshToken = async (req, h) => {
@@ -103,21 +88,28 @@ const refreshToken = async (req, h) => {
 
         console.log(incomingRefreshToken);
         // This service function will verify the refresh token and issue a new access token
-        const { newAccessToken } =
+        const { userProfile, newAccessToken } =
             await AuthService.refreshUserToken(incomingRefreshToken);
 
         return h
             .response({
                 success: RESPONSE_FLAGS.SUCCESS,
-                accessToken: newAccessToken
+                message: "Token refreshed successfully.", // Added a message for consistency
+                data: {
+                    user: userProfile,       // <-- The missing piece
+                    accessToken: newAccessToken
+                }
             })
             .code(RESPONSE_CODES.SUCCESS);
     } catch (error) {
         console.error("Refresh Token Error:", error);
         // Important: clear the invalid cookie on failure
         return h
-            .response({ error: "Invalid refresh token." })
-            .code(403)
+            .response({
+                success: RESPONSE_FLAGS.FAILURE,
+                message: error.message || "Invalid refresh token."
+            })
+            .code(error.code || 403)
             .unstate("mv_refresh_token");
     }
 };
@@ -146,31 +138,6 @@ const logout = async (_, h) => {
                 message: ERROR_MESSAGES.AUTH.LOGOUT_FAILED
             })
             .code(RESPONSE_CODES.INTERNAL_SERVER_ERROR);
-    }
-};
-
-const verifyUser = async (req, h) => {
-    try {
-        const { userId } = req.auth;
-
-        const result = await AuthService.verifyUser(userId);
-        // console.log("verifyUser: ", result);
-
-        return h
-            .response({
-                success: result.success,
-                message: result.message,
-                data: result.data
-            })
-            .code(result.code);
-    } catch (error) {
-        console.error("Logout error:", error);
-        return h
-            .response({
-                success: error.success || RESPONSE_FLAGS.FAILURE,
-                message: error.message || ERROR_MESSAGES.AUTH.LOGOUT_FAILED
-            })
-            .code(error.code || RESPONSE_CODES.INTERNAL_SERVER_ERROR);
     }
 };
 
@@ -268,6 +235,5 @@ module.exports = {
     deactivateUser,
     reactivateUser,
     logout,
-    verifyUser,
     changePassword
 };
