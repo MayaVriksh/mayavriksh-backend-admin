@@ -14,7 +14,7 @@ const createServer = async () => {
         host: process.env.HOST || "localhost",
         routes: {
             cors: {
-                origin: ["http://localhost:8080", "https://mayavriksh-ecom-admin-ui.vercel.app"],
+                origin: ["http://localhost:8080", "https://mayavriksh-ecom-admin-ui-mhb8.vercel.app"],
                 // origin: ["*"],
                 headers: ["Authorization", "Content-Type", "If-None-Match"],
                 exposedHeaders: ["WWW-Authenticate", "Server-Authorization"],
