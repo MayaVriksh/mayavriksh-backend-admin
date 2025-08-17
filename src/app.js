@@ -20,8 +20,10 @@ const createServer = async () => {
         routes: {
             cors: {
                 // origin: corsOrigins,
-                // origin: ["https://mayavriksh-ecom-admin-ui.onrender.com"],
-                origin:["*"],
+                origin: [
+                    "https://mayavriksh-ecom-admin-ui.onrender.com",
+                    "http://localhost:8080/"
+                ],
                 headers: ["Authorization", "Content-Type", "If-None-Match"],
                 exposedHeaders: ["WWW-Authenticate", "Server-Authorization"],
                 additionalExposedHeaders: ["X-Custom-Header"],
