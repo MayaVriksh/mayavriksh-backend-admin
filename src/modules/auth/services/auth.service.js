@@ -190,7 +190,13 @@ const _generateAccessTokenAndPayload = (user) => {
  */
 const _createUserProfile = (user) => {
 
+    const isSupplier = user.role.role === "SUPPLIER";
+    const finalIsVerified = isSupplier ? (user.Supplier?.isVerified || false) : true;
+    
     const { password: _, deletedAt: __, ...userProfile } = user;
+    userProfile.isVerified = finalIsVerified;
+    console.log(user,"user")
+    console.log(userProfile, "userProfile");
     return userProfile;
     // return {
     //     userId: user.userId,

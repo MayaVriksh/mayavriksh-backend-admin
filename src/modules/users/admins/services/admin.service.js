@@ -154,7 +154,6 @@ const listOrderRequests = async ({
                 paymentMethod: payment.paymentMethod,
                 paymentRemarks: payment.remarks,
                 receiptUrl: payment.receiptUrl,
-                receiptUrl: payment.receiptUrl,
                 publicId: payment.publicId,
                 requestedAt: payment.requestedAt,
                 paidAt: payment.paidAt,
