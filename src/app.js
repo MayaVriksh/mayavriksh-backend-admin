@@ -49,7 +49,7 @@ const createServer = async () => {
         ttl: 7 * 24 * 60 * 60 * 1000, // 7 days, matches refresh token expiry
         isSecure: process.env.NODE_ENV === "production", // MUST be true in production (requires HTTPS)
         isHttpOnly: true, // CRITICAL: Prevents client-side JS from accessing the cookie (XSS protection)
-        isSameSite: "Lax", // CRITICAL: Best protection against CSRF attacks for auth tokens in cross-sites, like communication between a.com & b.com
+        isSameSite: "None", // CRITICAL: Best protection against CSRF attacks for auth tokens in cross-sites, like communication between a.com & b.com
         path: "/", // Ensure the cookie is accessible across the site
         encoding: "iron", // Hapi's session encryption is great
         password: process.env.COOKIE_SECRET // Ensure this is a long, complex secret
