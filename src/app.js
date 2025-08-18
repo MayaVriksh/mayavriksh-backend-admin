@@ -28,7 +28,6 @@ const createServer = async () => {
     else origin.push("http://localhost:8080");
 
     console.log(origin);
-    
 
     const server = Hapi.server({
         port: process.env.PORT || 5500,
@@ -42,7 +41,7 @@ const createServer = async () => {
                 //         ? ["https://mayavriksh-ecom-admin-ui.onrender.com"]
                 //         : ["http://localhost:8080"],
 
-                origin,
+                origin: origin,
 
                 headers: ["Authorization", "Content-Type", "If-None-Match"],
                 exposedHeaders: ["WWW-Authenticate", "Server-Authorization"],
