@@ -14,6 +14,22 @@ const createServer = async () => {
     //     .map(o => o.trim())
     //     .filter(Boolean);
 
+    console.log(
+        "CORS origin: ",
+        process.env.NODE_ENV === "production"
+            ? ["https://mayavriksh-ecom-admin-ui.onrender.com"]
+            : ["http://localhost:8080"]
+    );
+
+    let origin = [];
+
+    if (process.env.NODE_ENV === "production")
+        origin.push("https://mayavriksh-ecom-admin-ui.onrender.com");
+    else origin.push("http://localhost:8080");
+
+    console.log(origin);
+    
+
     const server = Hapi.server({
         port: process.env.PORT || 5500,
         host: process.env.HOST || "localhost",
@@ -21,10 +37,13 @@ const createServer = async () => {
             cors: {
                 // origin: corsOrigins,
                 // origin: ["https://mayavriksh-ecom-admin-ui.onrender.com"],
-                origin:
-                    process.env.NODE_ENV === "production"
-                        ? ["https://mayavriksh-ecom-admin-ui.onrender.com"]
-                        : ["http://localhost:8080"],
+                // origin:
+                //     process.env.NODE_ENV === "production"
+                //         ? ["https://mayavriksh-ecom-admin-ui.onrender.com"]
+                //         : ["http://localhost:8080"],
+
+                origin,
+
                 headers: ["Authorization", "Content-Type", "If-None-Match"],
                 exposedHeaders: ["WWW-Authenticate", "Server-Authorization"],
                 additionalExposedHeaders: ["X-Custom-Header"],
