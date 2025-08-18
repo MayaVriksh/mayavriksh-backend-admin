@@ -178,7 +178,7 @@ const _generateAccessTokenAndPayload = user => {
     const accessTokenPayload = {
         userId: user.userId,
         role: user.role.role,
-        username: user.fullName.FIRST_NAME,
+        username: user.fullName.firstName || user.fullName.lastName,
         isVerified: finalIsVerified
     };
 
