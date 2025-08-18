@@ -28,6 +28,18 @@ module.exports = [
         }
     },
 
+    // Supplier: Fetch Dashboard Summary
+    {
+        method: "GET",
+        path: "/supplier/dashboard-summary",
+        options: {
+            tags: ["api", "Supplier Profile"],
+            pre: [verifyAccessTokenMiddleware, requireRole(ROLES.SUPPLIER)],
+            handler: SupplierController.showSupplierProfile,
+            description: "Get supplier profile details"
+        }
+    },
+
     // Supplier: Complete Profile
     {
         method: "PUT",
