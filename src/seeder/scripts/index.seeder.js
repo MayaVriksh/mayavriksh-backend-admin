@@ -6,6 +6,9 @@ const seedUsers = require("./users/users.seeder");
 const seedTags = require("./tags.seeder");
 const seedColors = require("./colors.seeder");
 const seedPlants = require("./plants.seeder");
+const seedPotMaterials = require("./potMaterials.seeder");
+const seedPots = require("./pots.seeder");
+const seedPurchaseOrders = require("./purchaseorder.seeder");
 
 async function runSeeder() {
     console.log("🌱 Starting full seeding...");
@@ -18,6 +21,9 @@ async function runSeeder() {
         await seedTags();
         await seedColors();
         await seedPlants();
+        await seedPotMaterials();
+        await seedPots();
+        await seedPurchaseOrders();
 
         console.log("✅ All seeders executed successfully!");
     } catch (error) {

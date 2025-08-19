@@ -68,7 +68,7 @@ const verifyAccessTokenMiddleware = {
  */
 // --- Bouncer #2: The VIP Section Guard ---
 // This is a "factory" that creates a middleware. You call it like `requireRole('admin')`.
-const requireRole = allowedRoles => ({
+const requireRole = (allowedRoles) => ({
     // We don't strictly need to assign its result, but it's good practice.
     assign: "roleCheck",
 

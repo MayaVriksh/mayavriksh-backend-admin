@@ -7,7 +7,7 @@ async function seedTags() {
 
     try {
         await prisma.$transaction(
-            async tx => {
+            async (tx) => {
                 for (const group of tagGroupsWithTags) {
                     if (!group?.groupName || !Array.isArray(group.tags)) {
                         console.warn(`⚠️  Skipping invalid group data:`, group);
@@ -71,7 +71,7 @@ async function seedTags() {
 
 if (require.main === module) {
     seedTags()
-        .catch(e => {
+        .catch((e) => {
             console.error("❌ Seeding failed:", e.stack || e);
         })
         .finally(async () => {

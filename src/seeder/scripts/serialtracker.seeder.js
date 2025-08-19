@@ -45,7 +45,7 @@ async function seedSerialTrackers() {
 
 if (require.main === module) {
     seedSerialTrackers()
-        .catch(error => {
+        .catch((error) => {
             console.error("❌ Seeding failed:", error);
         })
         .finally(async () => {

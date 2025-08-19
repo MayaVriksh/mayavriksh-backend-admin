@@ -27,7 +27,7 @@ const uploadMedia = async ({ files, folder, publicIdPrefix }) => {
                 folder,
                 publicId,
                 mimeType
-            ).then(res => ({
+            ).then((res) => ({
                 ...res,
                 mimeType,
                 isPrimary: index === 0
@@ -35,7 +35,7 @@ const uploadMedia = async ({ files, folder, publicIdPrefix }) => {
         })
     );
 
-    const failed = uploadResults.find(r => !r.success);
+    const failed = uploadResults.find((r) => !r.success);
     if (failed) {
         return {
             success: false,
@@ -44,7 +44,7 @@ const uploadMedia = async ({ files, folder, publicIdPrefix }) => {
         };
     }
 
-    const data = uploadResults.map(res => ({
+    const data = uploadResults.map((res) => ({
         mediaUrl: res.data.url,
         mediaType: getMediaType(res.mimeType),
         publicId: res.data.public_id,

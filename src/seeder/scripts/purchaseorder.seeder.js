@@ -51,7 +51,7 @@ async function seedPurchaseOrders() {
     for (const order of allOrders) {
         try {
             await prisma.$transaction(
-                async tx => {
+                async (tx) => {
                     const purchaseOrderId = await generateCustomId(
                         tx,
                         "PURCHASE_ORDER"
@@ -81,7 +81,7 @@ async function seedPurchaseOrders() {
 
                     if (order.items?.length) {
                         await tx.purchaseOrderItems.createMany({
-                            data: order.items.map(item => ({
+                            data: order.items.map((item) => ({
                                 ...item,
                                 purchaseOrderId
                             })),
@@ -136,7 +136,7 @@ async function seedPurchaseOrders() {
 
 if (require.main === module) {
     seedPurchaseOrders()
-        .catch(err => {
+        .catch((err) => {
             console.error("❌ Seeder failed:", err);
         })
         .finally(() => {

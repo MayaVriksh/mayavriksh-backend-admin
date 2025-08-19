@@ -12,7 +12,7 @@ const orderEvents = require("../../../../events/order.events.js");
 const ORDER_STATUSES = require("../../../../constants/orderStatus.constant.js");
 const ROLES = require("../../../../constants/roles.constant.js");
 
-const showSupplierProfile = async userId => {
+const showSupplierProfile = async (userId) => {
     const profile = await prisma.supplier.findUnique({
         where: { userId },
         include: {
@@ -89,7 +89,7 @@ const completeSupplierProfile = async (
         warehouseId
     } = profileFields;
     return await prisma.$transaction(
-        async tx => {
+        async (tx) => {
             // --- REMOVED: Phone number validation ---
             // This check is no longer needed here because the phone number was
             // validated during the initial signup.
@@ -154,7 +154,7 @@ const completeSupplierProfile = async (
                 Array.isArray(nurseryMediaAssets) &&
                 nurseryMediaAssets.length > 0
             ) {
-                const mediaData = nurseryMediaAssets.map(asset => ({
+                const mediaData = nurseryMediaAssets.map((asset) => ({
                     id: uuidv4(),
                     supplierId: supplierProfile.supplierId,
                     mediaUrl: asset.mediaUrl,
@@ -234,10 +234,10 @@ const listOrderRequests = async ({
             { page, limit, search, sortBy, order }
         );
     // --- Transform the raw database results into a clean, generic structure ---
-    const transformedOrders = rawOrders.map(order => {
+    const transformedOrders = rawOrders.map((order) => {
         // --- Object 2: For the "View Payments Modal" ---
         let runningTotalPaid = 0;
-        const paymentHistory = order.payments.map(payment => {
+        const paymentHistory = order.payments.map((payment) => {
             runningTotalPaid += payment.amount;
             return {
                 paidAmount: payment.amount,
@@ -255,7 +255,7 @@ const listOrderRequests = async ({
         });
         // Determine the generic properties based on the productType
         // --- Object 3: For the "Order Items Modal" ---
-        const orderItems = order.PurchaseOrderItems.map(item => {
+        const orderItems = order.PurchaseOrderItems.map((item) => {
             const isPlant = item.productType === "PLANT";
             const productVariantName = isPlant ? item.plant?.name : "";
             const productVariantSize = isPlant
@@ -304,7 +304,7 @@ const listOrderRequests = async ({
             payments: paymentHistory
         };
     });
-    transformedOrders.forEach(order => {
+    transformedOrders.forEach((order) => {
         console.log(`\n--- Details for Order ID: ${order.id} ---`);
 
         // --- THIS IS THE FIX ---
@@ -339,7 +339,7 @@ const listOrderRequests = async ({
 };
 
 const updateSupplierProfile = async (userId, updateData, profileImageUrl) => {
-    return await prisma.$transaction(async tx => {
+    return await prisma.$transaction(async (tx) => {
         const {
             email,
             phoneNumber,
@@ -478,7 +478,7 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
     const mediaArray = Array.isArray(uploadedMedia)
         ? uploadedMedia
         : [uploadedMedia];
-    const mediaAssetsToCreate = mediaArray.map(media => ({
+    const mediaAssetsToCreate = mediaArray.map((media) => ({
         mediaUrl: media.mediaUrl,
         publicId: media.publicId,
         mediaType: media.mediaType,
@@ -507,7 +507,7 @@ const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
     // 1. Security Check: The repository will verify ownership ??
     // --- 1. Security Check: Verify ownership of the Purchase Order ---
     return await prisma.$transaction(
-        async tx => {
+        async (tx) => {
             // 1. Security Check: Verify the supplier owns this order.
             const supplier = await tx.supplier.findUnique({
                 where: { userId }
@@ -697,11 +697,11 @@ const listOrderHistory = async ({
         );
     // 3. Perform the EXACT SAME data transformation as listOrderRequests.
     //    This provides a consistent data structure to the frontend.
-    const transformedOrders = rawOrders.map(order => {
+    const transformedOrders = rawOrders.map((order) => {
         // --- Object 2: For the "View Payments Modal" ---
         let runningTotalPaid = 0;
         // ... transform payment history ...
-        const paymentHistory = order.payments.map(payment => {
+        const paymentHistory = order.payments.map((payment) => {
             runningTotalPaid += payment.amount;
             return {
                 paidAmount: payment.amount,
@@ -717,7 +717,7 @@ const listOrderHistory = async ({
                 transactionId: payment.transactionId
             };
         });
-        const orderItems = order.PurchaseOrderItems.map(item => {
+        const orderItems = order.PurchaseOrderItems.map((item) => {
             const isPlant = item.productType === "PLANT";
             const productVariantName = isPlant ? item.plant?.name : "";
             const productVariantSize = isPlant
@@ -792,7 +792,7 @@ const listOrderHistory = async ({
             payments: paymentHistory
         };
     });
-    transformedOrders.forEach(order => {
+    transformedOrders.forEach((order) => {
         console.log(`\n--- Details for Order ID: ${order.id} ---`);
 
         // --- THIS IS THE FIX ---
@@ -825,7 +825,7 @@ const listOrderHistory = async ({
     };
 };
 
-const searchWarehousesByName = async search => {
+const searchWarehousesByName = async (search) => {
     const trimmedSearch = search?.trim();
 
     if (!trimmedSearch || trimmedSearch.length < 1) {

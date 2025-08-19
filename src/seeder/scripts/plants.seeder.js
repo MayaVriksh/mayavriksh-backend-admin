@@ -15,7 +15,7 @@ async function seedPlants() {
         console.log("🌱 Seeding Plants and Variants...");
 
         await prisma.$transaction(
-            async tx => {
+            async (tx) => {
                 for (const plant of plants) {
                     if (!plant?.name || !Array.isArray(plant.variants)) {
                         console.warn(`⚠️  Skipping invalid plant data:`, plant);
@@ -91,7 +91,7 @@ async function seedPlants() {
 
 if (require.main === module) {
     seedPlants()
-        .catch(e => {
+        .catch((e) => {
             console.error("❌ Seeding failed:", e.stack || e);
         })
         .finally(async () => {

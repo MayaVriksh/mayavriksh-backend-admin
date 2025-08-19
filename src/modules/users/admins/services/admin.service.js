@@ -12,7 +12,7 @@ const ORDER_STATUSES = require("../../../../constants/orderStatus.constant.js");
 const ROLES = require("../../../../constants/roles.constant.js");
 const uploadMedia = require("../../../../utils/uploadMedia.js");
 
-const showAdminProfile = async userId => {
+const showAdminProfile = async (userId) => {
     const profile = await prisma.admin.findUnique({
         where: { userId },
         include: {
@@ -136,12 +136,18 @@ const listOrderRequests = async ({
     }
 
     // 3. Call the repository to get the purchase order data.
-    const [totalItems, rawOrders] = await adminRepo.findPurchaseOrdersByAdmin({ page, limit, search, sortBy, order });
+    const [totalItems, rawOrders] = await adminRepo.findPurchaseOrdersByAdmin({
+        page,
+        limit,
+        search,
+        sortBy,
+        order
+    });
     // --- Transform the raw database results into a clean, generic structure ---
-    const transformedOrders = rawOrders.map(order => {
+    const transformedOrders = rawOrders.map((order) => {
         // --- Object 2: For the "View Payments Modal" ---
         let runningTotalPaid = 0;
-        const paymentHistory = order.payments.map(payment => {
+        const paymentHistory = order.payments.map((payment) => {
             runningTotalPaid += payment.amount;
             return {
                 paidAmount: payment.amount,
@@ -160,7 +166,7 @@ const listOrderRequests = async ({
         });
         // Determine the generic properties based on the productType
         // --- Object 3: For the "Order Items Modal" ---
-        const orderItems = order.PurchaseOrderItems.map(item => {
+        const orderItems = order.PurchaseOrderItems.map((item) => {
             const isPlant = item.productType === "Plant";
             const productVariantName = isPlant ? item.plant?.name : "";
             const productVariantSize = isPlant
@@ -210,7 +216,7 @@ const listOrderRequests = async ({
             payments: paymentHistory
         };
     });
-    transformedOrders.forEach(order => {
+    transformedOrders.forEach((order) => {
         console.log(`\n--- Details for Order ID: ${order.id} ---`);
 
         // --- THIS IS THE FIX ---
@@ -244,7 +250,7 @@ const listOrderRequests = async ({
     };
 };
 
-const deleteFromCloudinary = async publicId => {
+const deleteFromCloudinary = async (publicId) => {
     // You should implement this using your Cloudinary SDK or utility
     // Example:
     // const cloudinary = require('cloudinary').v2;
@@ -276,7 +282,7 @@ const recordPaymentForOrder = async ({
         }
 
         // Step 2: Run the transaction for all DB operations
-        return await prisma.$transaction(async tx => {
+        return await prisma.$transaction(async (tx) => {
             const order = await tx.purchaseOrder.findUnique({
                 where: { id: orderId },
                 select: {
@@ -413,7 +419,7 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
     const mediaArray = Array.isArray(uploadedMedia)
         ? uploadedMedia
         : [uploadedMedia];
-    const mediaAssetsToCreate = mediaArray.map(media => ({
+    const mediaAssetsToCreate = mediaArray.map((media) => ({
         mediaUrl: media.mediaUrl,
         publicId: media.publicId,
         mediaType: media.mediaType,
@@ -433,7 +439,6 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
     };
 };
 
-
 /**
  * Retrieves a paginated list of historical purchase orders for a supplier.
  */
@@ -447,7 +452,7 @@ const listOrderHistory = async ({
 }) => {
     // 1. Get the adminId for the logged-in user.
     const admin = await adminRepo.findAdminByUserId(userId);
-    console.log("admin",admin)
+    console.log("admin", admin);
     if (!admin) {
         return {
             success: true,
@@ -458,14 +463,20 @@ const listOrderHistory = async ({
     }
     // 2. Call the NEW repository function for historical orders.
     const [totalItems, rawOrders] =
-        await adminRepo.findHistoricalPurchaseOrders({ page, limit, search, sortBy, order });
+        await adminRepo.findHistoricalPurchaseOrders({
+            page,
+            limit,
+            search,
+            sortBy,
+            order
+        });
     // 3. Perform the EXACT SAME data transformation as listOrderRequests.
     //    This provides a consistent data structure to the frontend.
-    const transformedOrders = rawOrders.map(order => {
+    const transformedOrders = rawOrders.map((order) => {
         // --- Object 2: For the "View Payments Modal" ---
         let runningTotalPaid = 0;
         // ... transform payment history ...
-        const paymentHistory = order.payments.map(payment => {
+        const paymentHistory = order.payments.map((payment) => {
             runningTotalPaid += payment.amount;
             return {
                 paidAmount: payment.amount,
@@ -481,7 +492,7 @@ const listOrderHistory = async ({
                 transactionId: payment.transactionId
             };
         });
-        const orderItems = order.PurchaseOrderItems.map(item => {
+        const orderItems = order.PurchaseOrderItems.map((item) => {
             const isPlant = item.productType === "PLANT";
             const productVariantName = isPlant ? item.plant?.name : "";
             const productVariantSize = isPlant
@@ -547,7 +558,7 @@ const listOrderHistory = async ({
             payments: paymentHistory
         };
     });
-    transformedOrders.forEach(order => {
+    transformedOrders.forEach((order) => {
         console.log(`\n--- Details for Order ID: ${order.id} ---`);
 
         // --- THIS IS THE FIX ---
@@ -581,7 +592,7 @@ const listOrderHistory = async ({
 };
 
 const restockInventory = async ({ orderId, handledById, payload }) => {
-    return await prisma.$transaction(async tx => {
+    return await prisma.$transaction(async (tx) => {
         // 1. Fetch the order and all its accepted items to ensure data is trusted.
         const order = await tx.purchaseOrder.findUnique({
             where: { id: orderId },

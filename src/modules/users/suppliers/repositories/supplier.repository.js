@@ -6,7 +6,7 @@ const ORDER_STATUSES = require("../../../../constants/orderStatus.constant.js");
  * @param {string} userId - The user's unique ID.
  * @returns {Promise<object|null>} The supplier object with their ID, or null if not found.
  */
-const findSupplierByUserId = async userId => {
+const findSupplierByUserId = async (userId) => {
     return await prisma.supplier.findUnique({
         where: { userId: userId },
         select: { supplierId: true }
@@ -159,7 +159,7 @@ const checkPurchaseOrderExist = async (orderId, supplierId) => {
     });
 };
 
-const updateOrderStatus = async orderId => {
+const updateOrderStatus = async (orderId) => {
     return await prisma.purchaseOrder.update({
         where: { id: orderId },
         data: {
@@ -177,7 +177,7 @@ const addMediaToPurchaseOrder = async (
     mediaAssetsToCreate
 ) => {
     // Prepare the data for Prisma by adding the required IDs to each asset.
-    const dataToCreate = mediaAssetsToCreate.map(asset => ({
+    const dataToCreate = mediaAssetsToCreate.map((asset) => ({
         id: uuidv4(),
         purchaseOrderId: purchaseOrderId,
         mediaUrl: asset.mediaUrl,
@@ -199,7 +199,7 @@ const addMediaToPurchaseOrder = async (
  * @param {string[]} itemIds - An array of PurchaseOrderItem IDs.
  * @returns {Promise<Array<object>>} A list of purchase order items with their cost and quantity.
  */
-const findOrderItemsByIds = async itemIds => {
+const findOrderItemsByIds = async (itemIds) => {
     return await prisma.purchaseOrderItems.findMany({
         where: {
             id: { in: itemIds }
@@ -436,5 +436,5 @@ module.exports = {
     orderToReview,
     updateOrderAfterReview,
     rejectEntireOrder,
-    findHistoricalPurchaseOrders,
+    findHistoricalPurchaseOrders
 };
