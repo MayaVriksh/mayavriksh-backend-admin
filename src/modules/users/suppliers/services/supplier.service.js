@@ -241,11 +241,10 @@ const listOrderRequests = async ({
             runningTotalPaid += payment.amount;
             return {
                 paidAmount: payment.amount,
-                paymentStatus: order.payments.status,
                 pendingAmountAfterPayment:
                     (order.totalCost || 0) - runningTotalPaid,
                 paymentMethod: payment.paymentMethod,
-                // paymentStatus: payment.status,
+                paymentStatus: payment.status,
                 receiptUrl: payment.receiptUrl,
                 publicId: payment.publicId,
                 requestedAt: payment.requestedAt,

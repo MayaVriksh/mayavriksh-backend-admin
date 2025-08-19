@@ -273,7 +273,7 @@ const rejectEntireOrder = async (orderId, tx) => {
  * @param {object} options - Pagination and search options.
  * @returns {Promise<[number, object[]]>} A tuple with the total count and the list of orders.
  */
-const findHistoricalPurchaseOrdersBySupplier = async (
+const findHistoricalPurchaseOrders = async (
     supplierId,
     { page, limit, search, sortBy, order }
 ) => {
@@ -436,5 +436,5 @@ module.exports = {
     orderToReview,
     updateOrderAfterReview,
     rejectEntireOrder,
-    findHistoricalPurchaseOrdersBySupplier
+    findHistoricalPurchaseOrders,
 };

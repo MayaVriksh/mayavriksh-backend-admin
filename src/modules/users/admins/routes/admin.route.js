@@ -225,7 +225,7 @@ This array contains the full payment history for the order. It will be empty unt
     },
     {
         method: "POST",
-        path: "/warehouse/purchase-orders/{orderId}/restock",
+        path: "/admin/purchase-orders/{orderId}/restock",
         options: {
             tags: ["api", "Admin Purchase Order"],
             description:
@@ -255,6 +255,64 @@ This array contains the full payment history for the order. It will be empty unt
             plugins: {
                 "hapi-swagger": {
                     payloadType: "form" // Ensures Swagger UI shows a form for multipart data
+                }
+            }
+        }
+    },
+    {
+        method: "GET",
+        path: "/admin/order-history",
+        options: {
+            tags: ["api", "Admin Purchase Order"],
+            description:
+                "Get a list of historical (completed or rejected) order requests for the authenticated admin.",
+            notes: `
+This endpoint fetches a paginated list of orders that are in a final state. The structure of the returned order objects can vary based on whether the order was completed or rejected.
+
+### Case 1: Completed Orders
+A successfully completed order will have the following characteristics:
+-   \`orderStatus\`: \`"DELIVERED"\`
+-   \`paymentPercentage\`: \`100\`
+-   \`isAccepted\`: \`"true"\`
+-   The \`orderItems\` will show only those items whose \`isAccepted\` : will be \`"true"\` and \`payments\` arrays will be fully populated with the final details of the transaction.
+
+### Case 2: Rejected/Cancelled Orders
+A rejected or cancelled order will have these characteristics:
+-   \`orderStatus\`: \`"REJECTED"\` or \`"CANCELLED"\`
+-   The \`payments\` array will typically be empty as no payment was processed.
+-   The \`orderItems\` array will still be present, showing all the originally requested items. The frontend can inspect the \`isAccepted: false\` status on these items if needed.
+            `,
+
+            pre: [verifyAccessTokenMiddleware, requireRole([ROLES.ADMIN])],
+            validate: {
+                // This correctly validates query params like '?page=2'
+                ...AdminValidator.listHistoryValidation,
+                failAction: handleValidationFailure
+            },
+            handler: AdminController.listOrderHistory,
+
+            // --- ADDED: Full Swagger Documentation ---
+            plugins: {
+                "hapi-swagger": {
+                    responses: {
+                        200: {
+                            description:
+                                "Order history retrieved successfully.",
+                            // This links our response schema to the 200 status code
+                            schema: AdminValidator.listOrdersResponseSchema
+                        },
+                        400: {
+                            description:
+                                "Bad Request: Invalid query parameters."
+                        },
+                        401: {
+                            description:
+                                "Unauthorized: Invalid or expired token."
+                        },
+                        403: {
+                            description: "Forbidden: User is not a admin."
+                        }
+                    }
                 }
             }
         }

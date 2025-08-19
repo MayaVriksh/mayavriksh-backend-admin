@@ -127,6 +127,31 @@ const listHistoryValidation = {
         order: Joi.string().lowercase().valid("asc", "desc").default("desc")
     })
 };
+// A schema for a single order SUMMARY in the list
+const orderSummarySchema = Joi.object({
+    id: Joi.string().required(),
+    totalCost: Joi.number().allow(null),
+    pendingAmount: Joi.number().allow(null),
+    paymentPercentage: Joi.number().integer().required(),
+    status: Joi.string().required(),
+    expectedDateOfArrival: Joi.date().required(),
+    _count: Joi.object({
+        media: Joi.number().integer().required()
+    })
+}).label("OrderSummary");
+
+// The schema for the entire successful response payload
+const listOrdersResponseSchema = Joi.object({
+    success: Joi.boolean().example(true),
+    code: Joi.number().example(200),
+    message: Joi.string(),
+    data: Joi.object({
+        orders: Joi.array().items(orderSummarySchema),
+        totalPages: Joi.number().integer().example(10),
+        currentPage: Joi.number().integer().example(1)
+    })
+}).label("ListOrdersResponse");
+
 const orderItemSchema = Joi.object({
     id: Joi.string().required(),
     productType: Joi.string().valid("Plant", "Pot").required(),
@@ -221,6 +246,7 @@ const recordPaymentValidation = {
 module.exports = {
     orderRequestValidation,
     listHistoryValidation,
+    listOrdersResponseSchema,
     qcMediaUploadValidation,
     orderIdParamValidation,
     restockOrderValidation,

@@ -130,16 +130,13 @@ const listOrderRequests = async ({
         return {
             success: true,
             code: 200,
-            message: "Supplier profile not found for this user.",
+            message: "Admin profile not found for this user.",
             data: { orders: [], totalPages: 0, currentPage: page }
         };
     }
 
     // 3. Call the repository to get the purchase order data.
-    const [totalItems, rawOrders] = await adminRepo.findPurchaseOrdersByAdmin(
-        admin.adminId,
-        { page, limit, search, sortBy, order }
-    );
+    const [totalItems, rawOrders] = await adminRepo.findPurchaseOrdersByAdmin({ page, limit, search, sortBy, order });
     // --- Transform the raw database results into a clean, generic structure ---
     const transformedOrders = rawOrders.map(order => {
         // --- Object 2: For the "View Payments Modal" ---
@@ -148,15 +145,16 @@ const listOrderRequests = async ({
             runningTotalPaid += payment.amount;
             return {
                 paidAmount: payment.amount,
-                paymentStatus: order.payments.status,
+                // paymentStatus: order.payments.status,
                 pendingAmountAfterPayment:
                     (order.totalCost || 0) - runningTotalPaid,
                 paymentMethod: payment.paymentMethod,
-                paymentRemarks: payment.remarks,
+                paymentStatus: payment.status,
                 receiptUrl: payment.receiptUrl,
                 publicId: payment.publicId,
                 requestedAt: payment.requestedAt,
                 paidAt: payment.paidAt,
+                paymentRemarks: payment.remarks,
                 transactionId: payment.transactionId
             };
         });
@@ -206,7 +204,7 @@ const listOrderRequests = async ({
             paymentPercentage: order.paymentPercentage,
             expectedDOA: order.expectedDateOfArrival,
             orderStatus: order.status,
-
+            requestedAt: order.requestedAt,
             // The two transformed arrays
             orderItems: orderItems,
             payments: paymentHistory
@@ -435,6 +433,153 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
     };
 };
 
+
+/**
+ * Retrieves a paginated list of historical purchase orders for a supplier.
+ */
+const listOrderHistory = async ({
+    userId,
+    page,
+    limit,
+    search,
+    sortBy,
+    order
+}) => {
+    // 1. Get the adminId for the logged-in user.
+    const admin = await adminRepo.findAdminByUserId(userId);
+    console.log("admin",admin)
+    if (!admin) {
+        return {
+            success: true,
+            code: 200,
+            message: "Admin profile not found for this user.",
+            data: { orders: [], totalPages: 0, currentPage: page }
+        };
+    }
+    // 2. Call the NEW repository function for historical orders.
+    const [totalItems, rawOrders] =
+        await adminRepo.findHistoricalPurchaseOrders({ page, limit, search, sortBy, order });
+    // 3. Perform the EXACT SAME data transformation as listOrderRequests.
+    //    This provides a consistent data structure to the frontend.
+    const transformedOrders = rawOrders.map(order => {
+        // --- Object 2: For the "View Payments Modal" ---
+        let runningTotalPaid = 0;
+        // ... transform payment history ...
+        const paymentHistory = order.payments.map(payment => {
+            runningTotalPaid += payment.amount;
+            return {
+                paidAmount: payment.amount,
+                pendingAmountAfterPayment:
+                    (order.totalCost || 0) - runningTotalPaid,
+                paymentMethod: payment.paymentMethod,
+                paymentStatus: payment.status,
+                receiptUrl: payment.receiptUrl,
+                publicId: payment.publicId,
+                requestedAt: payment.requestedAt,
+                paidAt: payment.paidAt,
+                paymentRemarks: payment.remarks,
+                transactionId: payment.transactionId
+            };
+        });
+        const orderItems = order.PurchaseOrderItems.map(item => {
+            const isPlant = item.productType === "PLANT";
+            const productVariantName = isPlant ? item.plant?.name : "";
+            const productVariantSize = isPlant
+                ? item.plantVariant?.plantSize
+                : item.potVariant?.size;
+            const sku = isPlant ? item.plantVariant?.sku : item.potVariant?.sku;
+            const productVariantColor = isPlant
+                ? item.plantVariant?.color?.name
+                : item.potVariant?.color?.name;
+            const productVariantMaterial = isPlant
+                ? null
+                : item.potVariant?.material?.name;
+            const productVariantImage = isPlant
+                ? item.plantVariant?.plantVariantImages[0]?.mediaUrl
+                : item.potVariant?.images[0]?.mediaUrl;
+            const productVariantType = item.productType;
+            const isAccepted = item.isAccepted;
+            // Return the new, simplified item object
+            return {
+                id: item.id,
+                productVariantImage,
+                productVariantType,
+                productVariantName: `${productVariantName}-${productVariantSize}-${productVariantColor}-${productVariantMaterial}`,
+                sku,
+                productVariantMaterial,
+                unitCostPrice: item.unitCostPrice,
+                unitRequested: item.unitsRequested,
+                totalVariantCost:
+                    Number(item.unitsRequested) * Number(item.unitCostPrice),
+                isAccepted
+            };
+        });
+
+        const invoiceUserDetails = {
+            // Currently Supplier not being used,as Supplier need not see his own details in oDRER suMMARY.
+            // bUT THIS INFO WILL BE USED, WHILE DOWNLOADING THE RECEIPT FOR wAREHOUSE, AND SIGN THERE, AND SEND TO US AFTER DELIVERY
+            supplier: {
+                name: order.supplier?.nurseryName ?? "N/A",
+                gstin: order.supplier?.gstin ?? "N/A",
+                address:
+                    order.supplier?.user?.address ?? "Address not available",
+                phoneNumber:
+                    order.supplier?.user?.phoneNumber ??
+                    "phoneNumber not available"
+            }
+        };
+
+        // Return the final, structured object for this order
+        return {
+            // All top-level fields from the PurchaseOrder
+            id: order.id,
+            totalOrderCost: order.totalCost,
+            pendingAmount: order.pendingAmount,
+            paymentPercentage: order.paymentPercentage,
+            expectedDOA: order.expectedDateOfArrival,
+            orderStatus: order.status,
+            requestedAt: order.requestedAt,
+            acceptedAt: order.acceptedAt,
+            deliveredAt: order.deliveredAt,
+            // The transformed arrays
+            invoiceUserDetails: invoiceUserDetails,
+            orderItems: orderItems,
+            payments: paymentHistory
+        };
+    });
+    transformedOrders.forEach(order => {
+        console.log(`\n--- Details for Order ID: ${order.id} ---`);
+
+        // --- THIS IS THE FIX ---
+        // Use util.inspect to print the entire object without truncation.
+        // 'depth: null' tells it to show all nested levels.
+        // 'colors: true' makes it much easier to read in the terminal.
+        console.log(
+            util.inspect(order, {
+                showHidden: false,
+                depth: null,
+                colors: true
+            })
+        );
+
+        console.log(`------------------------------------`);
+    });
+    const totalPages = Math.ceil(totalItems / limit);
+    return {
+        success: true,
+        code: 200,
+        message: "Order requests retrieved successfully.",
+        data: {
+            orders: transformedOrders,
+            totalPages,
+            totalItems,
+            limit,
+            skip: (page - 1) * limit,
+            currentPage: parseInt(page, 10)
+        }
+    };
+};
+
 const restockInventory = async ({ orderId, handledById, payload }) => {
     return await prisma.$transaction(async tx => {
         // 1. Fetch the order and all its accepted items to ensure data is trusted.
@@ -515,6 +660,7 @@ const restockInventory = async ({ orderId, handledById, payload }) => {
 module.exports = {
     showAdminProfile,
     listOrderRequests,
+    listOrderHistory,
     getOrderRequestById,
     recordPaymentForOrder,
     uploadQcMediaForOrder,

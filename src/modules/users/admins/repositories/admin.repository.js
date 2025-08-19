@@ -21,7 +21,6 @@ const findAdminByUserId = async userId => {
  * @returns {Promise<[number, object[]]>} A tuple containing the total count and the list of orders.
  */
 const findPurchaseOrdersByAdmin = async (
-    adminId,
     { page, limit, search, sortBy, order }
 ) => {
     console.log(page, limit);
@@ -137,8 +136,8 @@ const findPurchaseOrdersByAdmin = async (
                         paymentMethod: true,
                         status: true,
                         receiptUrl: true,
-                        receiptUrl: true,
                         publicId: true,
+                        requestedAt: true,
                         paidAt: true,
                         remarks: true,
                         transactionId: true
@@ -241,6 +240,156 @@ const createPlantRestockLog = async (logData, tx) => {
     return await tx.plantRestockEventLog.create({ data: logData });
 };
 
+
+/**
+ * Fetches historical (completed or rejected) purchase orders for a given admin.
+ * @param {string} adminId - The ID of the admin.
+ * @param {object} options - Pagination and search options.
+ * @returns {Promise<[number, object[]]>} A tuple with the total count and the list of orders.
+ */
+const findHistoricalPurchaseOrders = async (
+    { page, limit, search, sortBy, order }
+) => {
+    const whereClause = {
+        OR: [
+            { status: { in: ["REJECTED"] } },
+            {
+                AND: [
+                    { status: "DELIVERED" },
+                    { paymentPercentage: 100 },
+                    { pendingAmount: 0 }
+                ]
+            }
+        ],
+        ...(search && {
+            id: { contains: search, mode: "insensitive" }
+        })
+    };
+    const orderBy = {};
+    if (sortBy && order) {
+        orderBy[sortBy] = order;
+    } else {
+        // Default sort if none is provided
+        orderBy["requestedAt"] = "desc";
+    }
+
+    console.log("vvsdfasd");
+    // The data fetching transaction is identical to the active orders one.
+    return await prisma.$transaction([
+        prisma.purchaseOrder.count({ where: whereClause }),
+        prisma.purchaseOrder.findMany({
+            where: whereClause,
+            skip: (page - 1) * limit,
+            take: limit,
+            orderBy: orderBy,
+            // We select all the same detailed information as before.
+            select: {
+                id: true,
+                totalCost: true,
+                pendingAmount: true,
+                paymentPercentage: true,
+                status: true,
+                isAccepted: true,
+                expectedDateOfArrival: true,
+                requestedAt: true,
+                acceptedAt: true,
+                deliveredAt: true,
+                supplierReviewNotes: true,
+                warehouseManagerReviewNotes: true,
+                supplier: {
+                    select: {
+                        nurseryName: true,
+                        gstin: true,
+                        contactPerson: {
+                            // Following the relation from Supplier to User
+                            select: {
+                                address: true, // Assuming 'address' is a field on the User model
+                                phoneNumber: true
+                            }
+                        }
+                    }
+                },
+                PurchaseOrderItems: {
+                    where: {
+                        isAccepted: true
+                    },
+                    select: {
+                        id: true,
+                        productType: true,
+                        unitsRequested: true,
+                        unitCostPrice: true,
+                        isAccepted: true,
+                        plant: { select: { name: true } },
+                        plantVariant: {
+                            select: {
+                                plantSize: true,
+                                sku: true,
+                                /** mediaUrl:true */
+                                color: {
+                                    select: {
+                                        name: true,
+                                        hexCode: true
+                                    }
+                                },
+                                plantVariantImages: {
+                                    // This is the relation name
+                                    where: { isPrimary: true }, // Filter for the primary image
+                                    take: 1, // We only need one
+                                    select: { mediaUrl: true } // Select just the URL
+                                }
+                            }
+                        },
+                        potCategory: { select: { name: true } },
+                        potVariant: {
+                            select: {
+                                potName: true,
+                                size: true,
+                                sku: true,
+                                // --- ADDED: Include the nested material name for pots ---
+                                material: {
+                                    select: {
+                                        name: true
+                                    }
+                                },
+                                color: {
+                                    select: {
+                                        name: true,
+                                        hexCode: true
+                                    }
+                                },
+                                images: {
+                                    // This is the relation name for pot variant images
+                                    where: { isPrimary: true },
+                                    take: 1,
+                                    select: { mediaUrl: true }
+                                }
+                            }
+                        }
+                    }
+                },
+                payments: {
+                    select: {
+                        paymentId: true,
+                        amount: true,
+                        paymentMethod: true,
+                        status: true,
+                        receiptUrl: true,
+                        publicId: true,
+                        requestedAt: true,
+                        paidAt: true,
+                        remarks: true,
+                        transactionId: true
+                    }
+                    // orderBy: {
+                    //     // Show the payments in chronological order
+                    //     requestedAt: 'asc'
+                    // }
+                }
+            }
+        })
+    ]);
+};
+
 /**
  * Updates the inventory for a specific plant variant in a specific warehouse.
  * Uses upsert to create a record if it doesn't exist.
@@ -276,5 +425,6 @@ module.exports = {
     updateOrderStatus,
     addMediaToPurchaseOrder,
     createPlantRestockLog,
-    updatePlantWarehouseInventory
+    updatePlantWarehouseInventory,
+    findHistoricalPurchaseOrders
 };
