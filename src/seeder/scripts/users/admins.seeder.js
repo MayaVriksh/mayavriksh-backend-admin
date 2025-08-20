@@ -12,7 +12,7 @@ async function seedAdminUsers() {
     const roleId = await findRoleId(ROLES.ADMIN);
 
     for (const entry of adminUsers) {
-        await prisma.$transaction(async tx => {
+        await prisma.$transaction(async (tx) => {
             const userId = await generateCustomId(tx, ROLES.USER);
             const hashedPassword = await hashPassword(entry.user.password);
 
@@ -40,7 +40,7 @@ async function seedAdminUsers() {
 
 if (require.main === module) {
     seedAdminUsers()
-        .catch(err => {
+        .catch((err) => {
             console.error("❌ Admin seeding failed:", err);
         })
         .finally(async () => {

@@ -12,7 +12,7 @@ async function seedKeyAreaManagerUsers() {
     const roleId = await findRoleId(ROLES.KEY_AREA_MANAGER);
 
     for (const entry of keyAreaManagerUsers) {
-        await prisma.$transaction(async tx => {
+        await prisma.$transaction(async (tx) => {
             const userId = await generateCustomId(tx, ROLES.USER);
             const hashedPassword = await hashPassword(entry.user.password);
 
@@ -42,7 +42,7 @@ async function seedKeyAreaManagerUsers() {
 
 if (require.main === module) {
     seedKeyAreaManagerUsers()
-        .catch(err => {
+        .catch((err) => {
             console.error("❌ Key Area Manager seeding failed:", err);
         })
         .finally(async () => {

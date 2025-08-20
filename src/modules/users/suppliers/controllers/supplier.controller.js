@@ -79,7 +79,7 @@ const completeSupplierProfile = async (req, h) => {
         ];
 
         const missingFields = requiredKeys.filter(
-            key =>
+            (key) =>
                 profileFields[key] === undefined ||
                 profileFields[key] === null ||
                 profileFields[key] === ""

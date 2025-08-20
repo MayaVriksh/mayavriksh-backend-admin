@@ -8,7 +8,7 @@ async function seedRoles() {
 
     try {
         await prisma.$transaction(
-            async tx => {
+            async (tx) => {
                 for (const roleData of roles) {
                     if (!roleData.role) {
                         console.warn(
@@ -40,7 +40,7 @@ async function seedRoles() {
                     }
                 }
             },
-            { maxWait: 200000 }
+            { maxWait: 20000, timeout: 20000 }
         );
 
         console.log("✅ Role seeding completed.");
@@ -51,7 +51,7 @@ async function seedRoles() {
 
 if (require.main === module) {
     seedRoles()
-        .catch(error => {
+        .catch((error) => {
             console.error("❌ Seeding failed:", error);
         })
         .finally(async () => {

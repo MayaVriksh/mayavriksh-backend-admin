@@ -14,7 +14,7 @@ const {
  */
 const handleValidationFailure = (request, h, err) => {
     // Extract the user-friendly messages from the Joi error details
-    const customErrorMessages = err.details.map(detail => detail.message);
+    const customErrorMessages = err.details.map((detail) => detail.message);
 
     // Log the error for debugging purposes on the server
     console.error("Joi Validation Error:", customErrorMessages);

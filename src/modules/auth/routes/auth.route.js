@@ -23,7 +23,7 @@ module.exports = [
                 ...AuthValidator.registerUserValidation,
                 failAction: (_, h, err) => {
                     const customErrorMessages = err.details.map(
-                        detail => detail.message
+                        (detail) => detail.message
                     );
                     console.log("Validation Error: ", customErrorMessages);
                     return h
@@ -71,7 +71,7 @@ module.exports = [
                 ...AuthValidator.loginUserValidation,
                 failAction: (_, h, err) => {
                     const customErrorMessages = err.details.map(
-                        detail => detail.message
+                        (detail) => detail.message
                     );
                     console.log("Validation Error: ", customErrorMessages);
                     return h
@@ -120,7 +120,7 @@ module.exports = [
                 ...AuthValidator.refreshTokenValidation,
                 failAction: (_, h, err) => {
                     const customErrorMessages = err.details.map(
-                        detail => detail.message
+                        (detail) => detail.message
                     );
                     console.log("Validation Error: ", customErrorMessages);
                     return h
@@ -243,7 +243,7 @@ module.exports = [
                 // ...AuthValidator.deactivateProfileValidation,
                 failAction: (_, h, err) => {
                     const customErrorMessages = err.details.map(
-                        detail => detail.message
+                        (detail) => detail.message
                     );
                     console.log("Validation Error: ", customErrorMessages);
                     return h
@@ -297,7 +297,7 @@ module.exports = [
                 ...AuthValidator.reactivateUserValidation,
                 failAction: (_, h, err) => {
                     const customErrorMessages = err.details.map(
-                        detail => detail.message
+                        (detail) => detail.message
                     );
                     console.log("Validation Error: ", customErrorMessages);
                     return h
@@ -351,7 +351,7 @@ module.exports = [
                 ...AuthValidator.changePasswordValidation,
                 failAction: (_, h, err) => {
                     const customErrorMessages = err.details.map(
-                        detail => detail.message
+                        (detail) => detail.message
                     );
                     console.log("Validation Error: ", customErrorMessages);
                     return h

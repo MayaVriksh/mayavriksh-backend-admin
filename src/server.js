@@ -18,13 +18,13 @@ const startServer = async () => {
 };
 
 // Handle unhandled rejections
-process.on("unhandledRejection", error => {
+process.on("unhandledRejection", (error) => {
     console.error("Unhandled rejection:", error);
     //   process.exit(1);
 });
 
 // Handle uncaught exceptions
-process.on("uncaughtException", error => {
+process.on("uncaughtException", (error) => {
     console.error("Uncaught exception:", error);
     //   process.exit(1);
 });

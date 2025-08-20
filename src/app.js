@@ -50,6 +50,7 @@ const createServer = async () => {
         encoding: "iron", // Hapi's session encryption is great
         password: process.env.COOKIE_SECRET // Ensure this is a long, complex secret
     });
+
     await server.register([
         Inert,
         Vision,

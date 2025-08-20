@@ -7,7 +7,7 @@ const ORDER_STATUSES = require("../../../../constants/orderStatus.constant.js");
  * @param {string} userId - The user's unique ID.
  * @returns {Promise<object|null>} The admin object with their ID, or null if not found.
  */
-const findAdminByUserId = async userId => {
+const findAdminByUserId = async (userId) => {
     return await prisma.admin.findUnique({
         where: { userId: userId },
         select: { adminId: true }
@@ -20,9 +20,13 @@ const findAdminByUserId = async userId => {
  * @param {object} options - An object containing pagination and filtering options.
  * @returns {Promise<[number, object[]]>} A tuple containing the total count and the list of orders.
  */
-const findPurchaseOrdersByAdmin = async (
-    { page, limit, search, sortBy, order }
-) => {
+const findPurchaseOrdersByAdmin = async ({
+    page,
+    limit,
+    search,
+    sortBy,
+    order
+}) => {
     console.log(page, limit);
     const whereClause = {
         // Add a NOT clause to exclude all historical orders.
@@ -187,13 +191,13 @@ const createPaymentAndUpdateOrder = async ({
     });
 };
 
-const checkPurchaseOrderExist = async orderId => {
+const checkPurchaseOrderExist = async (orderId) => {
     return await prisma.purchaseOrder.findFirst({
         where: { id: orderId }
     });
 };
 
-const updateOrderStatus = async orderId => {
+const updateOrderStatus = async (orderId) => {
     return await prisma.purchaseOrder.update({
         where: { id: orderId },
         data: {
@@ -213,7 +217,7 @@ const addMediaToPurchaseOrder = async (
 ) => {
     console.log(purchaseOrderId);
     // Prepare the data for Prisma by adding the required IDs to each asset.
-    const dataToCreate = mediaAssetsToCreate.map(asset => ({
+    const dataToCreate = mediaAssetsToCreate.map((asset) => ({
         id: uuidv4(),
         purchaseOrderId: purchaseOrderId,
         mediaUrl: asset.mediaUrl,
@@ -240,16 +244,19 @@ const createPlantRestockLog = async (logData, tx) => {
     return await tx.plantRestockEventLog.create({ data: logData });
 };
 
-
 /**
  * Fetches historical (completed or rejected) purchase orders for a given admin.
  * @param {string} adminId - The ID of the admin.
  * @param {object} options - Pagination and search options.
  * @returns {Promise<[number, object[]]>} A tuple with the total count and the list of orders.
  */
-const findHistoricalPurchaseOrders = async (
-    { page, limit, search, sortBy, order }
-) => {
+const findHistoricalPurchaseOrders = async ({
+    page,
+    limit,
+    search,
+    sortBy,
+    order
+}) => {
     const whereClause = {
         OR: [
             { status: { in: ["REJECTED"] } },

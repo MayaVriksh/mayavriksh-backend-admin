@@ -86,8 +86,10 @@ async function main() {
     const shippingData = JSON.parse(fileContent);
 
     // Extract all pincodes from the nested JSON structure
-    const destinationPincodes = shippingData.shippingZones.flatMap(district =>
-        district.representativePincodes.map(pincodeInfo => pincodeInfo.pincode)
+    const destinationPincodes = shippingData.shippingZones.flatMap((district) =>
+        district.representativePincodes.map(
+            (pincodeInfo) => pincodeInfo.pincode
+        )
     );
 
     console.log(
@@ -101,7 +103,7 @@ async function main() {
         const results = await checkShippingRates(pincode);
 
         if (results && results.length > 0) {
-            results.forEach(courier => {
+            results.forEach((courier) => {
                 const rate = parseFloat(courier.rate || 0).toFixed(2);
                 const courierName = courier.courier_name || "N/A";
                 const etd = courier.etd || "N/A";

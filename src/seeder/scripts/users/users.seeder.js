@@ -34,7 +34,7 @@ async function seedAdminUsers() {
     console.log(`🌱 Seeding Admins`);
 
     await prisma.$transaction(
-        async tx => {
+        async (tx) => {
             for (const entry of adminUsers) {
                 if (
                     !entry?.user?.email ||
@@ -81,7 +81,7 @@ async function seedSuperAdminUsers() {
     console.log(`🌱 Seeding Super Admins`);
 
     await prisma.$transaction(
-        async tx => {
+        async (tx) => {
             for (const entry of superAdminUsers) {
                 if (
                     !entry?.user?.email ||
@@ -131,7 +131,7 @@ async function seedCustomerUsers() {
     console.log(`🌱 Seeding Customers`);
 
     await prisma.$transaction(
-        async tx => {
+        async (tx) => {
             for (const entry of customerUsers) {
                 if (
                     !entry?.user?.email ||
@@ -186,7 +186,7 @@ async function seedSupplierUsers() {
     console.log(`🌱 Seeding Suppliers`);
 
     await prisma.$transaction(
-        async tx => {
+        async (tx) => {
             for (let i = 0; i < supplierUsers.length; i++) {
                 const entry = supplierUsers[i];
 
@@ -240,7 +240,7 @@ async function seedKeyAreaManagerUsers() {
     console.log(`🌱 Seeding Key Area Managers`);
 
     await prisma.$transaction(
-        async tx => {
+        async (tx) => {
             for (const entry of keyAreaManagerUsers) {
                 if (
                     !entry?.user?.email ||
@@ -302,7 +302,7 @@ async function seedAllUsers() {
 
 if (require.main === module) {
     seedAllUsers()
-        .catch(error => {
+        .catch((error) => {
             console.error("❌ Seeding failed:", error);
             process.exit(1);
         })

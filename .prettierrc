@@ -4,5 +4,12 @@
     "tabWidth": 4,
     "printWidth": 80,
     "trailingComma": "none",
-    "arrowParens": "avoid"
+    "arrowParens": "always",
+    "bracketSpacing": true,
+    "endOfLine": "lf",
+    "quoteProps": "as-needed",
+    "bracketSameLine": false,
+    "htmlWhitespaceSensitivity": "css",
+    "embeddedLanguageFormatting": "auto",
+    "proseWrap": "preserve"
 }

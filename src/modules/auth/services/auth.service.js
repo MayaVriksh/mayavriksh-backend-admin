@@ -14,10 +14,10 @@ const {
 } = require("../../../constants/responseCodes.constant");
 const SUCCESS_MESSAGES = require("../../../constants/successMessages.constant.js");
 
-const register = async data => {
+const register = async (data) => {
     const { firstName, lastName, email, phoneNumber, password, role } = data;
 
-    return await prisma.$transaction(async tx => {
+    return await prisma.$transaction(async (tx) => {
         const existingUserByEmail = await tx.user.findUnique({
             where: { email }
         });
@@ -103,7 +103,10 @@ const register = async data => {
             },
             [ROLES.SUPER_ADMIN]: {
                 model: tx.superAdmin,
-                data: { superAdminId: roleEntityId, userId: createdUser.userId }
+                data: {
+                    superAdminId: roleEntityId,
+                    userId: createdUser.userId
+                }
             },
             [ROLES.SUPPLIER]: {
                 model: tx.supplier,
@@ -169,7 +172,7 @@ const _verifyUserCredentials = async (user, password) => {
 /**
  * @private - Generates a new access token for a validated user. Determine the final 'isVerified' status based on role
  */
-const _generateAccessTokenAndPayload = user => {
+const _generateAccessTokenAndPayload = (user) => {
     const isSupplier = user.role.role === "SUPPLIER";
     const finalIsVerified = isSupplier
         ? user.Supplier?.isVerified || false
@@ -188,7 +191,7 @@ const _generateAccessTokenAndPayload = user => {
 /**
  * @private - Creates a sanitized user profile object from a raw user record.
  */
-const _createUserProfile = user => {
+const _createUserProfile = (user) => {
     const isSupplier = user.role.role === "SUPPLIER";
     const finalIsVerified = isSupplier
         ? user.Supplier?.isVerified || false
@@ -285,7 +288,7 @@ const login = async (email, password) => {
  * @returns {Promise<{userProfile: object, newAccessToken: string}>} An object containing the user's profile and a new short-lived access token.
  * @throws {Error} Throws an error if the refresh token is invalid, expired, or the user is no longer active.
  */
-const refreshUserToken = async token => {
+const refreshUserToken = async (token) => {
     try {
         const decoded = verifyRefreshToken(token);
         console.log("Refresh Token being Generated", decoded);
@@ -310,7 +313,7 @@ const refreshUserToken = async token => {
     }
 };
 
-const deactivateUser = async userId => {
+const deactivateUser = async (userId) => {
     const user = await prisma.user.findUnique({
         where: { userId }
     });
@@ -346,7 +349,7 @@ const deactivateUser = async userId => {
  * @param {string} userId - The ID of the user to reactivate.
  * @returns {object} A success message.
  */
-const reactivateUserProfile = async userId => {
+const reactivateUserProfile = async (userId) => {
     // First, find the user to ensure they exist.
     const user = await prisma.user.findUnique({
         where: { userId }

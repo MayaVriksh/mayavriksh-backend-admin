@@ -18,7 +18,7 @@ async function seedPots() {
         console.log("🪻 Seeding Pot Categories and Variants...");
 
         await prisma.$transaction(
-            async tx => {
+            async (tx) => {
                 for (const pot of potData) {
                     if (!pot?.name || !Array.isArray(pot.variants)) {
                         console.warn(`⚠️  Skipping invalid pot data:`, pot);
@@ -98,7 +98,7 @@ async function seedPots() {
 }
 
 if (require.main === module) {
-    seedPots().catch(e => {
+    seedPots().catch((e) => {
         console.error("❌ Seeding failed:", e.stack || e);
     });
 }

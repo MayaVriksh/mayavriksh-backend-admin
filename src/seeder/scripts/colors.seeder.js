@@ -35,7 +35,7 @@ async function seedColors() {
 
 if (require.main === module) {
     seedColors()
-        .catch(error => {
+        .catch((error) => {
             console.error("❌ Seeding failed:", error);
         })
         .finally(() => {

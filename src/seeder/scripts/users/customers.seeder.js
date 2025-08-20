@@ -12,7 +12,7 @@ async function seedCustomerUsers() {
     const roleId = await findRoleId(ROLES.CUSTOMER);
 
     for (const entry of customerUsers) {
-        await prisma.$transaction(async tx => {
+        await prisma.$transaction(async (tx) => {
             const userId = await generateCustomId(tx, ROLES.USER);
             const hashedPassword = await hashPassword(entry.user.password);
 
@@ -40,7 +40,7 @@ async function seedCustomerUsers() {
 
 if (require.main === module) {
     seedCustomerUsers()
-        .catch(err => {
+        .catch((err) => {
             console.error("❌ Customer seeding failed:", err);
         })
         .finally(async () => {
