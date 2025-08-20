@@ -245,16 +245,16 @@ This array contains the full payment history for the order. It will be empty unt
             },
             // Payload configuration to handle file uploads (e.g., damage photos)
             payload: {
-                output: "stream",
+                // output: "stream",
                 parse: true,
-                multipart: true,
-                allow: "multipart/form-data",
-                maxBytes: 20 * 1024 * 1024 // 20MB limit
+                // multipart: true,
+                allow: ["application/json"]
+                // maxBytes: 20 * 1024 * 1024 // 20MB limit
             },
             handler: AdminController.restockInventory,
             plugins: {
                 "hapi-swagger": {
-                    payloadType: "form" // Ensures Swagger UI shows a form for multipart data
+                    // payloadType: "form" // Ensures Swagger UI shows a form for multipart data
                 }
             }
         }

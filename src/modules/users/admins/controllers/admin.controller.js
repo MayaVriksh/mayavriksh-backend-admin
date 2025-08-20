@@ -198,11 +198,13 @@ const uploadQcMedia = async (req, h) => {
 const restockInventory = async (req, h) => {
     try {
         const { userId } = req.pre.credentials;
+        const { role } = req.pre.credentials;
         const { orderId } = req.params;
         const payload = req.payload;
         const result = await AdminService.restockInventory({
             orderId,
             handledById: userId,
+            handledBy: role,
             payload: payload
         });
         return h.response(result).code(result.code);

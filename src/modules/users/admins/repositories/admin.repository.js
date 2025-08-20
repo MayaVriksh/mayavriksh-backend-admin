@@ -399,27 +399,35 @@ const findHistoricalPurchaseOrders = async ({
 
 // Universal function to create a damage log
 const createDamageLog = async (productType, data, tx) => {
-    const model = productType === 'PLANT' ? tx.plantDamagedProduct : tx.potDamagedProduct;
+    const model =
+        productType === "PLANT" ? tx.plantDamagedProduct : tx.potDamagedProduct;
     return await model.create({ data });
 };
 
 // Universal function to create a restock log
 const createRestockLog = async (productType, data, tx) => {
-    const model = productType === 'PLANT' ? tx.plantRestockEventLog : tx.potRestockEventLog;
+    const model =
+        productType === "PLANT"
+            ? tx.plantRestockEventLog
+            : tx.potRestockEventLog;
     return await model.create({ data });
 };
 
 // Universal function to update warehouse inventory
 const updateWarehouseInventory = async (productType, data, tx) => {
     const { warehouseId, variantId, units, unitCostPrice } = data;
-    const model = productType === 'PLANT' ? tx.plantWarehouseInventory : tx.potWarehouseInventory;
-    
+    const model =
+        productType === "PLANT"
+            ? tx.plantWarehouseInventory
+            : tx.potWarehouseInventory;
+
     const existingInventory = await model.findUnique({ where: { variantId } });
 
     if (existingInventory) {
         // Update existing inventory
         const newStockIn = existingInventory.stockIn + units;
-        const newTotalCost = existingInventory.totalCost + (units * unitCostPrice);
+        const newTotalCost =
+            existingInventory.totalCost + units * unitCostPrice;
         const newTrueCostPrice = newTotalCost / newStockIn; // Recalculate average cost
 
         return await model.update({
@@ -430,7 +438,7 @@ const updateWarehouseInventory = async (productType, data, tx) => {
                 latestQuantityAdded: units,
                 totalCost: newTotalCost,
                 trueCostPrice: newTrueCostPrice,
-                lastRestocked: new Date(),
+                lastRestocked: new Date()
             }
         });
     } else {

@@ -591,54 +591,81 @@ const listOrderHistory = async ({
     };
 };
 
-const restockInventory = async ({ orderId, handledById, payload }) => {
+const restockInventory = async ({ orderId, handledById, handledBy, payload }) => {
     return await prisma.$transaction(async (tx) => {
         // Step 1: Fetch trusted Purchase Order and accepted items from the DB.
         const order = await tx.purchaseOrder.findUnique({
             where: { id: orderId },
             include: { PurchaseOrderItems: { where: { isAccepted: true } } }
         });
-
+        console.log("order",order);
         if (!order) throw { code: 404, message: "Purchase Order not found." };
-        if (order.status !== 'SHIPPING') throw { code: 400, message: "Order must be in 'SHIPPING' status." };
+        if (order.status !== "DELIVERED")
+            throw { code: 400, message: "Order must be in 'DELIVERED' status." };
 
         // Step 2: Loop through each item submitted by the manager.
         for (const receivedItem of payload.items) {
-            const originalItem = order.PurchaseOrderItems.find(p => p.id === receivedItem.purchaseOrderItemId);
+            const originalItem = order.PurchaseOrderItems.find(
+                (p) => p.id === receivedItem.purchaseOrderItemId
+            );
             if (!originalItem) continue; // Safety check
-
+            
+            console.log("originalItem",originalItem);
             // Step 3: Log Damaged Units, if any.
             if (receivedItem.unitsDamaged > 0) {
-                let mediaUrl = null, publicId = null;
-                if (receivedItem.damagePhoto && receivedItem.damagePhoto.hapi.filename) {
-                    const uploadResult = await uploadMedia({ files: receivedItem.damagePhoto, folder: `damaged-products/${order.id}` });
-                    mediaUrl = uploadResult.data.url;
-                    publicId = uploadResult.data.publicId;
-                }
+                let mediaUrl = null,
+                    publicId = null;
+
+                    /** Need to implement the Damage Photo Upload below*/
+                // if (
+                //     receivedItem.damagePhoto &&
+                //     receivedItem.damagePhoto.hapi.filename
+                // ) {
+                //     const uploadResult = await uploadMedia({
+                //         files: receivedItem.damagePhoto,
+                //         folder: `damaged-products/${order.id}`
+                //     });
+                //     mediaUrl = uploadResult.data.url;
+                //     publicId = uploadResult.data.publicId;
+                // }
 
                 const damageData = {
                     damageId: uuidv4(),
+                    plantId: originalItem.plantId,
+                    plantVariantId: originalItem.plantVariantId,
                     warehouseId: order.warehouseId,
                     purchaseOrderId: order.id,
                     purchaseOrderItemId: originalItem.id,
                     handledById: handledById,
-                    damageType: 'FROM_SUPPLIER',
+                    handledBy: handledBy,
+                    damageType: "SUPPLIER_DELIVERY",
                     unitsDamaged: receivedItem.unitsDamaged,
                     unitsDamagedPrice: originalItem.unitCostPrice,
-                    totalAmount: receivedItem.unitsDamaged * Number(originalItem.unitCostPrice),
+                    totalAmount:
+                        receivedItem.unitsDamaged *
+                        Number(originalItem.unitCostPrice),
                     reason: receivedItem.damageReason,
                     notes: payload.warehouseManagerReviewNotes,
                     mediaUrl,
                     publicId
                 };
-                if (originalItem.productType === 'PLANT') {
+
+                // console.log(damageData);
+                
+                if (originalItem.productType === "PLANT") {
                     damageData.plantId = originalItem.plantId;
                     damageData.plantVariantId = originalItem.plantVariantId;
                 } else {
                     damageData.potCategoryId = originalItem.potCategoryId;
                     damageData.potVariantId = originalItem.potVariantId;
                 }
-                await adminRepo.createDamageLog(originalItem.productType, damageData, tx);
+
+                console.log(damageData);
+                await adminRepo.createDamageLog(
+                    originalItem.productType,
+                    damageData,
+                    tx
+                );
             }
 
             // Step 4: Update Warehouse Inventory with only the good units.
@@ -648,14 +675,18 @@ const restockInventory = async ({ orderId, handledById, payload }) => {
                     units: receivedItem.unitsReceived,
                     unitCostPrice: originalItem.unitCostPrice
                 };
-                if (originalItem.productType === 'PLANT') {
+                if (originalItem.productType === "PLANT") {
                     inventoryData.plantId = originalItem.plantId;
                     inventoryData.variantId = originalItem.plantVariantId;
                 } else {
                     inventoryData.potCategoryId = originalItem.potCategoryId;
                     inventoryData.variantId = originalItem.potVariantId;
                 }
-                await adminRepo.updateWarehouseInventory(originalItem.productType, inventoryData, tx);
+                await adminRepo.updateWarehouseInventory(
+                    originalItem.productType,
+                    inventoryData,
+                    tx
+                );
             }
 
             // Step 5: Create an immutable Restock Event Log for received units.
@@ -667,26 +698,36 @@ const restockInventory = async ({ orderId, handledById, payload }) => {
                     purchaseOrderId: order.id,
                     units: receivedItem.unitsReceived,
                     unitCostPrice: originalItem.unitCostPrice,
-                    totalCost: receivedItem.unitsReceived * Number(originalItem.unitCostPrice)
+                    totalCost:
+                        receivedItem.unitsReceived *
+                        Number(originalItem.unitCostPrice)
                 };
-                if (originalItem.productType === 'PLANT') {
+                if (originalItem.productType === "PLANT") {
                     restockData.plantId = originalItem.plantId;
                     restockData.plantVariantId = originalItem.plantVariantId;
                 } else {
                     restockData.potCategoryId = originalItem.potCategoryId;
                     restockData.potVariantId = originalItem.potVariantId;
                 }
-                await adminRepo.createRestockLog(originalItem.productType, restockData, tx);
+                await adminRepo.createRestockLog(
+                    originalItem.productType,
+                    restockData,
+                    tx
+                );
             }
         }
 
         // Step 6: Update the final status of the parent Purchase Order.
         await tx.purchaseOrder.update({
             where: { id: orderId },
-            data: { status: 'DELIVERED', deliveredAt: new Date() }
+            data: { status: "DELIVERED", deliveredAt: new Date() }
         });
 
-        return { success: true, code: 200, message: "Stock updated and order marked as delivered." };
+        return {
+            success: true,
+            code: 200,
+            message: "Stock updated and order marked as delivered."
+        };
     });
 };
 
