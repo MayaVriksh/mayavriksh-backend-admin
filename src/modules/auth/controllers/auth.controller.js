@@ -85,8 +85,8 @@ const refreshToken = async (req, h) => {
         if (!incomingRefreshToken) {
             return h.response({ error: "Refresh token not found." }).code(401);
         }
+        console.log("Incoming Refresh Token: ", incomingRefreshToken);
 
-        console.log(incomingRefreshToken);
         // This service function will verify the refresh token and issue a new access token
         const { userProfile, newAccessToken } =
             await AuthService.refreshUserToken(incomingRefreshToken);

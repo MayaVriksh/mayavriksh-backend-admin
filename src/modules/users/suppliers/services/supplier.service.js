@@ -680,6 +680,7 @@ const listOrderHistory = async ({
 }) => {
     // 1. Get the supplierId for the logged-in user.
     const supplier = await supplierRepository.findSupplierByUserId(userId);
+    // console.log("Supplier service: ", supplier);
 
     if (!supplier) {
         return {
@@ -689,12 +690,14 @@ const listOrderHistory = async ({
             data: { orders: [], totalPages: 0, currentPage: page }
         };
     }
+
     // 2. Call the NEW repository function for historical orders.
     const [totalItems, rawOrders] =
-        await supplierRepository.findHistoricalPurchaseOrdersBySupplier(
+        await supplierRepository.findHistoricalPurchaseOrders(
             supplier.supplierId,
             { page, limit, search, sortBy, order }
         );
+
     // 3. Perform the EXACT SAME data transformation as listOrderRequests.
     //    This provides a consistent data structure to the frontend.
     const transformedOrders = rawOrders.map((order) => {

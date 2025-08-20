@@ -13,7 +13,15 @@ async function seedPurchaseOrders() {
     const potCategories = await prisma.potCategory.findMany();
     const potVariants = await prisma.potVariants.findMany();
     const warehouses = await prisma.warehouse.findMany();
-    const suppliers = await prisma.supplier.findMany();
+    // const suppliers = await prisma.supplier.findMany();
+
+    const { supplierId } = await prisma.supplier.findFirst({
+        where: {
+            contactPerson: {
+                email: "restaurant@gmail.com"
+            }
+        }
+    });
 
     // await prisma.purchaseOrderPayment.deleteMany();
     // await prisma.purchaseOrderItems.deleteMany();
@@ -24,26 +32,26 @@ async function seedPurchaseOrders() {
         !plantVariants.length ||
         !potCategories.length ||
         !potVariants.length ||
-        !warehouses.length ||
-        !suppliers.length
+        !warehouses.length
+        // || !suppliers.length
     ) {
         throw new Error("❌ Required data missing in DB.");
     }
 
-    const supplier = suppliers.length > 9 ? suppliers[9] : suppliers[0];
+    // const supplier = suppliers.length > 4 ? suppliers[5] : suppliers[0];
 
     const plantOrders = generatePlantPurchaseOrderData(
         plants,
         plantVariants,
         warehouses,
-        supplier.supplierId
+        supplierId
     );
 
     const potOrders = generatePotPurchaseOrderData(
         potCategories,
         potVariants,
         warehouses,
-        supplier.supplierId
+        supplierId
     );
 
     const allOrders = [...plantOrders, ...potOrders];
