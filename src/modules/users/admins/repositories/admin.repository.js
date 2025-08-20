@@ -397,31 +397,55 @@ const findHistoricalPurchaseOrders = async ({
     ]);
 };
 
-/**
- * Updates the inventory for a specific plant variant in a specific warehouse.
- * Uses upsert to create a record if it doesn't exist.
- * @param {object} inventoryData - Data for the inventory update.
- * @param {object} tx - The Prisma transaction client.
- */
-const updatePlantWarehouseInventory = async (inventoryData, tx) => {
-    const { warehouseId, plantId, variantId, units } = inventoryData;
-    return await tx.plantWarehouseInventory.upsert({
-        where: { variantId }, // Assumes variantId is unique in this table
-        update: {
-            stockIn: { increment: units },
-            currentStock: { increment: units },
-            lastRestocked: new Date()
-        },
-        create: {
-            warehouseId,
-            plantId,
-            variantId,
+// Universal function to create a damage log
+const createDamageLog = async (productType, data, tx) => {
+    const model = productType === 'PLANT' ? tx.plantDamagedProduct : tx.potDamagedProduct;
+    return await model.create({ data });
+};
+
+// Universal function to create a restock log
+const createRestockLog = async (productType, data, tx) => {
+    const model = productType === 'PLANT' ? tx.plantRestockEventLog : tx.potRestockEventLog;
+    return await model.create({ data });
+};
+
+// Universal function to update warehouse inventory
+const updateWarehouseInventory = async (productType, data, tx) => {
+    const { warehouseId, variantId, units, unitCostPrice } = data;
+    const model = productType === 'PLANT' ? tx.plantWarehouseInventory : tx.potWarehouseInventory;
+    
+    const existingInventory = await model.findUnique({ where: { variantId } });
+
+    if (existingInventory) {
+        // Update existing inventory
+        const newStockIn = existingInventory.stockIn + units;
+        const newTotalCost = existingInventory.totalCost + (units * unitCostPrice);
+        const newTrueCostPrice = newTotalCost / newStockIn; // Recalculate average cost
+
+        return await model.update({
+            where: { variantId },
+            data: {
+                stockIn: { increment: units },
+                currentStock: { increment: units },
+                latestQuantityAdded: units,
+                totalCost: newTotalCost,
+                trueCostPrice: newTrueCostPrice,
+                lastRestocked: new Date(),
+            }
+        });
+    } else {
+        // Create new inventory record
+        const createData = {
+            ...data, // Contains warehouseId, plantId/potCategoryId, variantId
             stockIn: units,
             currentStock: units,
+            latestQuantityAdded: units,
+            totalCost: units * unitCostPrice,
+            trueCostPrice: unitCostPrice,
             lastRestocked: new Date()
-            // Set other initial values as needed
-        }
-    });
+        };
+        return await model.create({ data: createData });
+    }
 };
 
 module.exports = {
@@ -432,6 +456,8 @@ module.exports = {
     updateOrderStatus,
     addMediaToPurchaseOrder,
     createPlantRestockLog,
-    updatePlantWarehouseInventory,
-    findHistoricalPurchaseOrders
+    findHistoricalPurchaseOrders,
+    createDamageLog,
+    createRestockLog,
+    updateWarehouseInventory
 };

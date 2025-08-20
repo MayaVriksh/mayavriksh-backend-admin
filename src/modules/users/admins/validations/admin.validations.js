@@ -41,58 +41,26 @@ const orderIdParamValidation = {
             .description("The ID of the purchase order")
     })
 };
+
 const restockOrderValidation = {
-    // Validate the orderId from the URL
     params: Joi.object({
-        orderId: Joi.string()
-            .required()
-            .description("The ID of the purchase order to restock")
+        orderId: Joi.string().required().description('The ID of the purchase order to restock')
     }),
-    // Validate the multipart/form-data payload
     payload: Joi.object({
-        warehouseManagerReviewNotes: Joi.string()
-            .optional()
-            .allow("")
-            .description("Overall notes for the delivery"),
-        items: Joi.array()
-            .items(
-                Joi.object({
-                    purchaseOrderItemId: Joi.string()
-                        .required()
-                        .description(
-                            "The ID of the specific PurchaseOrderItem"
-                        ),
-                    unitsReceived: Joi.number()
-                        .integer()
-                        .min(0)
-                        .required()
-                        .description("Quantity received in good condition"),
-                    unitsDamaged: Joi.number()
-                        .integer()
-                        .min(0)
-                        .default(0)
-                        .description("Quantity received damaged"),
-                    damageReason: Joi.string()
-                        .when("unitsDamaged", {
-                            is: Joi.number().greater(0),
-                            then: Joi.string().required(),
-                            otherwise: Joi.optional().allow("")
-                        })
-                        .description(
-                            "Reason for damage (required if unitsDamaged > 0)"
-                        ),
-                    // The damage photo is handled by the payload parser, not Joi
-                    damagePhoto: Joi.any()
-                        .meta({ swaggerType: "file" })
-                        .optional()
-                        .description("Photo of the damaged item (if any)")
-                })
-            )
-            .min(1)
-            .required()
-            .description(
-                "An array of all items from the PO with their received/damaged quantities"
-            )
+        warehouseManagerReviewNotes: Joi.string().optional().allow('').description('Overall notes for the delivery'),
+        items: Joi.array().items(
+            Joi.object({
+                purchaseOrderItemId: Joi.string().required().description('The ID of the PurchaseOrderItem'),
+                unitsReceived: Joi.number().integer().min(0).required().description('Quantity received in good condition'),
+                unitsDamaged: Joi.number().integer().min(0).default(0).description('Quantity received damaged'),
+                damageReason: Joi.string().when('unitsDamaged', {
+                    is: Joi.number().greater(0),
+                    then: Joi.string().required(),
+                    otherwise: Joi.optional().allow('')
+                }).description('Reason for damage (required if unitsDamaged > 0)'),
+                damagePhoto: Joi.any().meta({ swaggerType: 'file' }).optional().description('Photo of the damaged item (if any)'),
+            })
+        ).min(1).required().description('An array of items with their received/damaged quantities')
     })
 };
 
