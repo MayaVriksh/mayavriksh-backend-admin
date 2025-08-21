@@ -224,7 +224,7 @@ This array contains the full payment history for the order. It will be empty unt
         }
     },
     {
-        method: "POST",
+        method: "PUT",
         path: "/admin/purchase-orders/{orderId}/restock",
         options: {
             tags: ["api", "Admin Purchase Order"],

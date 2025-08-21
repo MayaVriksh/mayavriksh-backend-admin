@@ -598,23 +598,28 @@ const restockInventory = async ({ orderId, handledById, handledBy, payload }) =>
             where: { id: orderId },
             include: { PurchaseOrderItems: { where: { isAccepted: true } } }
         });
-        console.log("order",order);
+        
         if (!order) throw { code: 404, message: "Purchase Order not found." };
         if (order.status !== "DELIVERED")
             throw { code: 400, message: "Order must be in 'DELIVERED' status." };
-
+        console.log("Check Passed");
         // Step 2: Loop through each item submitted by the manager.
         for (const receivedItem of payload.items) {
             const originalItem = order.PurchaseOrderItems.find(
                 (p) => p.id === receivedItem.purchaseOrderItemId
             );
-            if (!originalItem) continue; // Safety check
+            console.log("Fetched originalItem", originalItem );
+            if (!originalItem){
+                throw { code: 404, message: "Purchase Order Item not found." };
+            };
             
-            console.log("originalItem",originalItem);
+            
+            let mediaUrl = "https://res.cloudinary.com/dwdu18hzs/image/upload/suppliers/trade_licenses/trade_license_1751201462225.avif";
+            let publicId = "xyz";
             // Step 3: Log Damaged Units, if any.
             if (receivedItem.unitsDamaged > 0) {
-                let mediaUrl = null,
-                    publicId = null;
+                mediaUrl = "https://res.cloudinary.com/dwdu18hzs/image/upload/suppliers/trade_licenses/trade_license_1751201462225.avif";
+                publicId = "xyz";
 
                     /** Need to implement the Damage Photo Upload below*/
                 // if (
@@ -628,7 +633,7 @@ const restockInventory = async ({ orderId, handledById, handledBy, payload }) =>
                 //     mediaUrl = uploadResult.data.url;
                 //     publicId = uploadResult.data.publicId;
                 // }
-
+            }
                 const damageData = {
                     damageId: uuidv4(),
                     plantId: originalItem.plantId,
@@ -649,8 +654,6 @@ const restockInventory = async ({ orderId, handledById, handledBy, payload }) =>
                     mediaUrl,
                     publicId
                 };
-
-                // console.log(damageData);
                 
                 if (originalItem.productType === "PLANT") {
                     damageData.plantId = originalItem.plantId;
@@ -660,14 +663,12 @@ const restockInventory = async ({ orderId, handledById, handledBy, payload }) =>
                     damageData.potVariantId = originalItem.potVariantId;
                 }
 
-                console.log(damageData);
                 await adminRepo.createDamageLog(
                     originalItem.productType,
                     damageData,
                     tx
                 );
-            }
-
+                console.log("Damaged Data is stored successfully")
             // Step 4: Update Warehouse Inventory with only the good units.
             if (receivedItem.unitsReceived > 0) {
                 const inventoryData = {
@@ -728,6 +729,10 @@ const restockInventory = async ({ orderId, handledById, handledBy, payload }) =>
             code: 200,
             message: "Stock updated and order marked as delivered."
         };
+    },
+    {
+        maxWait: 20000,
+        timeout: 30000
     });
 };
 

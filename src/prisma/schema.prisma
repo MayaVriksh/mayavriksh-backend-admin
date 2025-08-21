@@ -785,7 +785,7 @@ model PlantVariants {
   plantFertilizers        PlantFertilizers[]        @relation(name: "ProductToFertilizer")
   tags                    Tags[]                    @relation(name: "PlantVariantToTags")
   plantFertilizerSchedule PlantFertilizerSchedule[] @relation(name: "ProductToFertilizerSchedule")
-  plantWarehouseInventory PlantWarehouseInventory?  @relation(name: "PlantVariantToWarehouse")
+  plantWarehouseInventory PlantWarehouseInventory[]  @relation(name: "PlantVariantToWarehouse")
   Review                  Review[]                  @relation(name: "PlantVariantToReview")
   PlantSupplierInventory  PlantSupplierInventory[]  @relation(name: "PlantVariantToSupplierInventory")
   PlantStockAuditLog      PlantStockAuditLog[]      @relation(name: "PlantVariantToStockAudit")
@@ -1692,7 +1692,7 @@ model Warehouse {
 model PlantWarehouseInventory {
   id          String @id
   plantId     String
-  variantId   String @unique
+  variantId   String
   warehouseId String
 
   stockIn             Int
@@ -1709,10 +1709,13 @@ model PlantWarehouseInventory {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   deletedAt           DateTime?
-
+  
   plants       Plants        @relation(name: "PlantToWarehouseInventory", fields: [plantId], references: [plantId])
   warehouse    Warehouse     @relation(name: "WarehouseToPlantInventory", fields: [warehouseId], references: [warehouseId])
   plantVariant PlantVariants @relation(name: "PlantVariantToWarehouse", fields: [variantId], references: [variantId])
+
+
+  @@unique([variantId, warehouseId])
 }
 
 model PotWarehouseInventory {
@@ -1739,6 +1742,9 @@ model PotWarehouseInventory {
   potVariant  PotVariants @relation(name: "PotVariantToWarehouse", fields: [potVariantId], references: [potVariantId])
   potCategory PotCategory @relation(name: "PotCategoryToPotInventory", fields: [potCategoryId], references: [categoryId])
   warehouse   Warehouse   @relation(name: "WarehouseToPotInventory", fields: [warehouseId], references: [warehouseId])
+
+
+  @@unique([potVariantId, warehouseId])
 }
 
 model PlantRestockEventLog {
@@ -1865,7 +1871,7 @@ model PurchaseOrderItems {
   PotDamagedProduct PotDamagedProduct? @relation(name: "PurchaseOrderItemToPotDamagedProduct")
 }
 
-model PurchaseOrder {
+model  PurchaseOrder {
   id          String @id
   warehouseId String
   supplierId  String

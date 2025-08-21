@@ -399,9 +399,44 @@ const findHistoricalPurchaseOrders = async ({
 
 // Universal function to create a damage log
 const createDamageLog = async (productType, data, tx) => {
-    const model =
-        productType === "PLANT" ? tx.plantDamagedProduct : tx.potDamagedProduct;
-    return await model.create({ data });
+    const model = productType === "PLANT" ? tx.plantDamagedProduct : tx.potDamagedProduct;
+
+    // --- THIS IS THE FIX ---
+    // We must wrap the foreign keys in 'connect' objects to establish the relationships.
+    const createData = {
+        damageId: data.damageId,
+        unitsDamaged: data.unitsDamaged,
+        unitsDamagedPrice: data.unitsDamagedPrice,
+        totalAmount: data.totalAmount,
+        reason: data.reason,
+        notes: data.notes,
+        handledById: data.handledById,
+        handledBy: data.handledBy,
+        damageType: data.damageType,
+        mediaUrl: data.mediaUrl,
+        publicId: data.publicId,
+
+        // Prisma needs these 'connect' blocks to link the records
+        plants: {
+            connect: { plantId: data.plantId }
+        },
+        plantVariant: {
+            connect: { variantId: data.plantVariantId }
+        },
+        warehouse: {
+            connect: { warehouseId: data.warehouseId }
+        },
+        purchaseOrder: {
+            connect: { id: data.purchaseOrderId }
+        },
+        purchaseOrderItem: {
+            connect: { id: data.purchaseOrderItemId }
+        }
+    };
+
+    return await model.create({
+        data: createData
+    });
 };
 
 // Universal function to create a restock log
@@ -415,42 +450,76 @@ const createRestockLog = async (productType, data, tx) => {
 
 // Universal function to update warehouse inventory
 const updateWarehouseInventory = async (productType, data, tx) => {
-    const { warehouseId, variantId, units, unitCostPrice } = data;
+    const { warehouseId, variantId, unitsReceived, unitsDamaged, unitCostPrice } = data;
     const model =
         productType === "PLANT"
             ? tx.plantWarehouseInventory
             : tx.potWarehouseInventory;
 
-    const existingInventory = await model.findUnique({ where: { variantId } });
+     const existingInventory = await model.findUnique({
+        where: {
+            // Prisma's syntax for a composite unique key @@unique([warehouseId, variantId])
+            warehouseId_variantId: {
+                warehouseId: warehouseId,
+                variantId: variantId
+            }
+        }
+    });
 
     if (existingInventory) {
         // Update existing inventory
-        const newStockIn = existingInventory.stockIn + units;
-        const newTotalCost =
-            existingInventory.totalCost + units * unitCostPrice;
+
+        const newStockIn = existingInventory.stockIn + unitsReceived;
+        // 1. First, calculate the number of good, sellable units.
+        const goodUnits = unitsReceived - unitsDamaged;
+        // 2. Calculate the new total for stock loss, including the newly damaged units.
+        const newStockLossCount = existingInventory.stockLossCount + unitsDamaged;        // 3. Calculate the new total cost based on ONLY the good units received.
+        // The cost of damaged goods is logged but does not add to the inventory's value.
+        const newTotalCost = existingInventory.totalCost + (unitsReceived * unitCostPrice);
+        // 4. Recalculate the True Cost Price (Average Cost) using your formula.
         const newTrueCostPrice = newTotalCost / newStockIn; // Recalculate average cost
+        // 5. Recalculate the Current Stock. It only increases by the number of good units received.
+        const newCurrentStock = existingInventory.currentStock + goodUnits;
 
         return await model.update({
-            where: { variantId },
+            where: {
+                warehouseId_variantId: { // Use composite key for update
+                    warehouseId: warehouseId,
+                    variantId: variantId
+                }
+            },
             data: {
-                stockIn: { increment: units },
-                currentStock: { increment: units },
-                latestQuantityAdded: units,
+                stockIn: newStockIn,
+                stockLossCount: newStockLossCount,
+                currentStock: newCurrentStock,
+                latestQuantityAdded: unitsReceived, // Track the most recent addition
                 totalCost: newTotalCost,
                 trueCostPrice: newTrueCostPrice,
                 lastRestocked: new Date()
             }
         });
     } else {
+        console.log(data);
+        console.log("existingInventory", existingInventory)
         // Create new inventory record
         const createData = {
-            ...data, // Contains warehouseId, plantId/potCategoryId, variantId
+            id: uuidv4(),
+            plantId, // Will be null for pots, which is correct
+            variantId,
+            potCategoryId, // Will be null for plants
             stockIn: units,
             currentStock: units,
             latestQuantityAdded: units,
             totalCost: units * unitCostPrice,
             trueCostPrice: unitCostPrice,
-            lastRestocked: new Date()
+            lastRestocked: new Date(),
+
+            // ---: Initialize other fields to their default state (0) ---
+            stockOut: 0,
+            stockLossCount: 0,
+            reservedUnit: 0,
+            sellingPrice: 0, // Should be set later by an admin
+            profitMargin: 0,   // Will be calculated when sellingPrice is set
         };
         return await model.create({ data: createData });
     }
@@ -469,3 +538,5 @@ module.exports = {
     createRestockLog,
     updateWarehouseInventory
 };
+
+// PCOD-25-5C5DB89-0064
