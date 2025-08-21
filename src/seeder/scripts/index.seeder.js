@@ -1,4 +1,4 @@
-const prisma = require("../../config/prisma.config");
+const { prisma } = require("../../config/prisma.config");
 const seedSerialTrackers = require("./serialtracker.seeder");
 const seedRoles = require("./roles.seeder");
 const seedWarehouses = require("./warehouses.seeder");

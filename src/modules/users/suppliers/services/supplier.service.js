@@ -1,6 +1,6 @@
 const util = require("util");
 const { v4: uuidv4 } = require("uuid");
-const prisma = require("../../../../config/prisma.config.js");
+const { prisma } = require("../../../../config/prisma.config.js");
 const {
     RESPONSE_CODES,
     RESPONSE_FLAGS

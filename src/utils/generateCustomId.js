@@ -1,5 +1,5 @@
 const { v4: uuidv4 } = require("uuid");
-const prisma = require("../config/prisma.config");
+const { prisma } = require("../config/prisma.config");
 const ENTITY_PREFIX = require("../constants/prefix.constant");
 
 async function generateCustomId(tx, entityKey) {

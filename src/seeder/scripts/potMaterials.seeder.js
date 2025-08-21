@@ -1,4 +1,4 @@
-const prisma = require("../../config/prisma.config");
+const { prisma } = require("../../config/prisma.config");
 const materials = require("../data/potMaterials.data");
 const { v4: uuidv4 } = require("uuid");
 

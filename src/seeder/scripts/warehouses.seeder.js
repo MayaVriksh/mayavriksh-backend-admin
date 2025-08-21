@@ -1,4 +1,4 @@
-const prisma = require("../../config/prisma.config");
+const { prisma } = require("../../config/prisma.config");
 const { ROLES } = require("../../constants/roles.constant");
 const generateCustomId = require("../../utils/generateCustomId");
 const warehouses = require("../data/warehouse.data");

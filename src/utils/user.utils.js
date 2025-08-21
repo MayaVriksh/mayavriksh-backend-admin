@@ -1,5 +1,5 @@
 const bcrypt = require("bcrypt");
-const prisma = require("../../config/prisma.config");
+const { prisma } = require("../../config/prisma.config");
 const generateCustomId = require("../../utils/generateCustomId");
 const { ROLES } = require("../../constants/roles.constant");
 

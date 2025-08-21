@@ -1,4 +1,4 @@
-const prisma = require("../../config/prisma.config");
+const { prisma } = require("../../config/prisma.config");
 const colors = require("../data/colors.data");
 
 async function seedColors() {

@@ -1,6 +1,7 @@
-const prisma = require("../../../../config/prisma.config.js");
+const { prisma } = require("../../../../config/prisma.config.js");
 const { v4: uuidv4 } = require("uuid");
 const ORDER_STATUSES = require("../../../../constants/orderStatus.constant.js");
+const { PRODUCT_TYPES } = require("../../../../constants/general.constant.js");
 
 /**
  * Finds a admin's ID based on their user ID.
@@ -399,7 +400,8 @@ const findHistoricalPurchaseOrders = async ({
 
 // Universal function to create a damage log
 const createDamageLog = async (productType, data, tx) => {
-    const model = productType === "PLANT" ? tx.plantDamagedProduct : tx.potDamagedProduct;
+    const model =
+        productType === PRODUCT_TYPES.PLANT ? tx.plantDamagedProduct : tx.potDamagedProduct;
 
     // --- THIS IS THE FIX ---
     // We must wrap the foreign keys in 'connect' objects to establish the relationships.
@@ -442,88 +444,30 @@ const createDamageLog = async (productType, data, tx) => {
 // Universal function to create a restock log
 const createRestockLog = async (productType, data, tx) => {
     const model =
-        productType === "PLANT"
+        productType === PRODUCT_TYPES.PLANT
             ? tx.plantRestockEventLog
             : tx.potRestockEventLog;
     return await model.create({ data });
 };
 
 // Universal function to update warehouse inventory
-const updateWarehouseInventory = async (productType, data, tx) => {
-    const { warehouseId, variantId, unitsReceived, unitsDamaged, unitCostPrice } = data;
+const updateWarehouseInventory = async (productType, where, data, tx) => {
+    console.log("Admin repository payload:", { where, data });
+  
     const model =
-        productType === "PLANT"
-            ? tx.plantWarehouseInventory
-            : tx.potWarehouseInventory;
-
-     const existingInventory = await model.findUnique({
-        where: {
-            // Prisma's syntax for a composite unique key @@unique([warehouseId, variantId])
-            warehouseId_variantId: {
-                warehouseId: warehouseId,
-                variantId: variantId
-            }
-        }
-    });
-
+      productType === PRODUCT_TYPES.PLANT
+        ? tx.plantWarehouseInventory
+        : tx.potWarehouseInventory;
+  
+    const existingInventory = await model.findUnique({ where });
+  
     if (existingInventory) {
-        // Update existing inventory
-
-        const newStockIn = existingInventory.stockIn + unitsReceived;
-        // 1. First, calculate the number of good, sellable units.
-        const goodUnits = unitsReceived - unitsDamaged;
-        // 2. Calculate the new total for stock loss, including the newly damaged units.
-        const newStockLossCount = existingInventory.stockLossCount + unitsDamaged;        // 3. Calculate the new total cost based on ONLY the good units received.
-        // The cost of damaged goods is logged but does not add to the inventory's value.
-        const newTotalCost = existingInventory.totalCost + (unitsReceived * unitCostPrice);
-        // 4. Recalculate the True Cost Price (Average Cost) using your formula.
-        const newTrueCostPrice = newTotalCost / newStockIn; // Recalculate average cost
-        // 5. Recalculate the Current Stock. It only increases by the number of good units received.
-        const newCurrentStock = existingInventory.currentStock + goodUnits;
-
-        return await model.update({
-            where: {
-                warehouseId_variantId: { // Use composite key for update
-                    warehouseId: warehouseId,
-                    variantId: variantId
-                }
-            },
-            data: {
-                stockIn: newStockIn,
-                stockLossCount: newStockLossCount,
-                currentStock: newCurrentStock,
-                latestQuantityAdded: unitsReceived, // Track the most recent addition
-                totalCost: newTotalCost,
-                trueCostPrice: newTrueCostPrice,
-                lastRestocked: new Date()
-            }
-        });
+      return await model.update({ where, data });
     } else {
-        console.log(data);
-        console.log("existingInventory", existingInventory)
-        // Create new inventory record
-        const createData = {
-            id: uuidv4(),
-            plantId, // Will be null for pots, which is correct
-            variantId,
-            potCategoryId, // Will be null for plants
-            stockIn: units,
-            currentStock: units,
-            latestQuantityAdded: units,
-            totalCost: units * unitCostPrice,
-            trueCostPrice: unitCostPrice,
-            lastRestocked: new Date(),
-
-            // ---: Initialize other fields to their default state (0) ---
-            stockOut: 0,
-            stockLossCount: 0,
-            reservedUnit: 0,
-            sellingPrice: 0, // Should be set later by an admin
-            profitMargin: 0,   // Will be calculated when sellingPrice is set
-        };
-        return await model.create({ data: createData });
+      return await model.create({ data });
     }
-};
+  };
+  
 
 module.exports = {
     findAdminByUserId,

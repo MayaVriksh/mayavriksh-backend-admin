@@ -1,5 +1,5 @@
 const EventEmitter = require("events");
-const prisma = require("../config/prisma.config"); // Adjust path as needed
+const { prisma } = require("../config/prisma.config"); // Adjust path as needed
 const { sendEmail } = require("../utils/email.util");
 
 class OrderEventEmitter extends EventEmitter {}

@@ -1,4 +1,4 @@
-const prisma = require("../../../config/prisma.config");
+const { prisma } = require("../../../config/prisma.config");
 const { supplierUsers } = require("../../data/users.data");
 const { ROLES } = require("../../../constants/roles.constant");
 const {

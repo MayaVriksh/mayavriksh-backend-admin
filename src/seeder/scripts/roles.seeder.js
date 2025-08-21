@@ -1,5 +1,5 @@
 const { roles } = require("../data/roles.data");
-const prisma = require("../../config/prisma.config");
+const { prisma } = require("../../config/prisma.config");
 const { ROLE } = require("../../constants/prefix.constant");
 const generateCustomId = require("../../utils/generateCustomId");
 

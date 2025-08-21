@@ -1,4 +1,4 @@
-const prisma = require("../../../../config/prisma.config.js");
+const { prisma } = require("../../../../config/prisma.config.js");
 const { v4: uuidv4 } = require("uuid");
 const ORDER_STATUSES = require("../../../../constants/orderStatus.constant.js");
 /**

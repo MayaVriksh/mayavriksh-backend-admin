@@ -1,4 +1,4 @@
-const prisma = require("../../../config/prisma.config");
+const { prisma } = require("../../../config/prisma.config");
 const { keyAreaManagerUsers } = require("../../data/users.data");
 const { ROLES, DEPARTMENTS } = require("../../../constants/roles.constant");
 const {

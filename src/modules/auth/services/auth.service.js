@@ -1,4 +1,4 @@
-const prisma = require("../../../config/prisma.config");
+const { prisma } = require("../../../config/prisma.config");
 const bcrypt = require("bcrypt");
 const {
     generateAccessToken,

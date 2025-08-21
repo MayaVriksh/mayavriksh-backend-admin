@@ -785,7 +785,7 @@ model PlantVariants {
   plantFertilizers        PlantFertilizers[]        @relation(name: "ProductToFertilizer")
   tags                    Tags[]                    @relation(name: "PlantVariantToTags")
   plantFertilizerSchedule PlantFertilizerSchedule[] @relation(name: "ProductToFertilizerSchedule")
-  plantWarehouseInventory PlantWarehouseInventory[]  @relation(name: "PlantVariantToWarehouse")
+  plantWarehouseInventory PlantWarehouseInventory[] @relation(name: "PlantVariantToWarehouse")
   Review                  Review[]                  @relation(name: "PlantVariantToReview")
   PlantSupplierInventory  PlantSupplierInventory[]  @relation(name: "PlantVariantToSupplierInventory")
   PlantStockAuditLog      PlantStockAuditLog[]      @relation(name: "PlantVariantToStockAudit")
@@ -801,7 +801,6 @@ model PlantVariants {
   WarehouseCartItem       WarehouseCartItem[]       @relation(name: "PlantVariantToWarehouseCartItem")
   // compatiblePots          PotVariants[]             @relation(name: "PlantVariantsToPotVariants")
 }
-
 
 // ---------------------- Plant Care & Fertilizer Data -----------------------
 
@@ -912,7 +911,8 @@ model PlantFertilizerSchedule {
 }
 
 model PlantGenericCostComponent {
-  componentId                  String  @id
+  componentId String @id
+
   tagPrintingCost              Decimal @default(0.0)
   marketingOverheadCost        Decimal @default(0.0)
   paymentGatewayCostPercentage Decimal @default(0.0)
@@ -931,11 +931,12 @@ model PlantGenericCostComponent {
 }
 
 model PlantSizeCostComponent {
-  sizeCostComponentId         String  @id
+  sizeCostComponentId String @id
+
   plantSize                   String
   plantCocopeatCost           Decimal @default(0.0)
   plantPackagingCost          Decimal @default(0.0)
-  plantGitPackagingCost       Decimal @default(0.0)
+  plantGiftPackagingCost      Decimal @default(0.0)
   plantProfitMarginPercentage Decimal @default(0.0)
   plantFertilizersCost        Decimal @default(0.0)
   totalPlantSizeCost          Decimal @default(0.0)
@@ -969,7 +970,7 @@ model PotSizeCostComponent {
   sizeCostComponentId       String  @id
   potSize                   String
   potPackagingCost          Decimal @default(0.0)
-  potGitPackagingCost       Decimal @default(0.0)
+  potGiftPackagingCost      Decimal @default(0.0)
   potProfitMarginPercentage Decimal @default(0.0)
   totalPotSizeCost          Decimal @default(0.0)
 
@@ -1145,16 +1146,16 @@ model Order {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  customer         Customer             @relation(name: "CustomerToOrder", fields: [customerId], references: [customerId])
-  promoCode        PromoCode?           @relation(name: "PromoCodeToOrder", fields: [promoCodeId], references: [promoCodeId])
-  Payment          Payment[]            @relation(name: "PaymentToOrder")
-  shipping         Shipping?            @relation(name: "OrderToShipping")
-  returnsRefunds   ReturnsRefunds[]     @relation(name: "OrderToReturns")
-  OrderCostDetails OrderCostDetails[]   @relation(name: "OrderToOrderCost")
-  PlantOrderItem   PlantOrderItem[]     @relation(name: "PlantOrderItemToOrder")
-  PotOrderItem     PotOrderItem[]       @relation(name: "PotOrderItemToOrder")
-  PlantDamagedProduct   PlantDamagedProduct[] @relation(name: "OrderToPlantDamagedProduct")
-  PotDamagedProduct PotDamagedProduct[] @relation(name: "OrderToPotDamagedProduct")
+  customer            Customer              @relation(name: "CustomerToOrder", fields: [customerId], references: [customerId])
+  promoCode           PromoCode?            @relation(name: "PromoCodeToOrder", fields: [promoCodeId], references: [promoCodeId])
+  Payment             Payment[]             @relation(name: "PaymentToOrder")
+  shipping            Shipping?             @relation(name: "OrderToShipping")
+  returnsRefunds      ReturnsRefunds[]      @relation(name: "OrderToReturns")
+  OrderCostDetails    OrderCostDetails[]    @relation(name: "OrderToOrderCost")
+  PlantOrderItem      PlantOrderItem[]      @relation(name: "PlantOrderItemToOrder")
+  PotOrderItem        PotOrderItem[]        @relation(name: "PotOrderItemToOrder")
+  PlantDamagedProduct PlantDamagedProduct[] @relation(name: "OrderToPlantDamagedProduct")
+  PotDamagedProduct   PotDamagedProduct[]   @relation(name: "OrderToPotDamagedProduct")
 }
 
 model PlantOrderItem {
@@ -1202,10 +1203,10 @@ model PotOrderItem {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  potCategory PotCategory @relation(name: "PotOrderItemToPotCategory", fields: [potCategoryId], references: [categoryId])
-  potVariant  PotVariants @relation(name: "PotOrderItemToPotVariant", fields: [potVariantId], references: [potVariantId])
-  order       Order       @relation(name: "PotOrderItemToOrder", fields: [orderId], references: [orderId])
-  promoCode   PromoCode?  @relation(name: "PotOrderItemToPromoCode", fields: [promoCodeId], references: [promoCodeId])
+  potCategory       PotCategory        @relation(name: "PotOrderItemToPotCategory", fields: [potCategoryId], references: [categoryId])
+  potVariant        PotVariants        @relation(name: "PotOrderItemToPotVariant", fields: [potVariantId], references: [potVariantId])
+  order             Order              @relation(name: "PotOrderItemToOrder", fields: [orderId], references: [orderId])
+  promoCode         PromoCode?         @relation(name: "PotOrderItemToPromoCode", fields: [promoCodeId], references: [promoCodeId])
   PotDamagedProduct PotDamagedProduct? @relation(name: "PotOrderItemToPotDamagedProduct")
 
   @@index([orderId])
@@ -1475,10 +1476,10 @@ model PlantDamagedProduct {
   plantVariantId String?
   warehouseId    String
 
-  purchaseOrderId     String? 
+  purchaseOrderId     String?
   purchaseOrderItemId String? @unique
 
-  orderId          String? 
+  orderId          String?
   plantOrderItemId String? @unique
 
   handledById String // The user (warehouse manager, customer, or admin) who reported the damaged product
@@ -1499,13 +1500,13 @@ model PlantDamagedProduct {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  plants       Plants         @relation(name: "PlantToPlantDamagedProduct", fields: [plantId], references: [plantId])
-  plantVariant PlantVariants? @relation(name: "PlantVariantToPlantDamagedProduct", fields: [plantVariantId], references: [variantId])
-  warehouse    Warehouse      @relation(name: "WarehouseToPlantDamagedProduct", fields: [warehouseId], references: [warehouseId])
+  plants            Plants              @relation(name: "PlantToPlantDamagedProduct", fields: [plantId], references: [plantId])
+  plantVariant      PlantVariants?      @relation(name: "PlantVariantToPlantDamagedProduct", fields: [plantVariantId], references: [variantId])
+  warehouse         Warehouse           @relation(name: "WarehouseToPlantDamagedProduct", fields: [warehouseId], references: [warehouseId])
   purchaseOrder     PurchaseOrder?      @relation(name: "PurchaseOrderToPlantDamagedProduct", fields: [purchaseOrderId], references: [id])
   purchaseOrderItem PurchaseOrderItems? @relation(name: "PurchaseOrderItemToPlantDamagedProduct", fields: [purchaseOrderItemId], references: [id])
-  order          Order?          @relation(name: "OrderToPlantDamagedProduct", fields: [orderId], references: [orderId])
-  plantOrderItem PlantOrderItem? @relation(name: "PlantOrderItemToPlantDamagedProduct", fields: [plantOrderItemId], references: [orderItemId])
+  order             Order?              @relation(name: "OrderToPlantDamagedProduct", fields: [orderId], references: [orderId])
+  plantOrderItem    PlantOrderItem?     @relation(name: "PlantOrderItemToPlantDamagedProduct", fields: [plantOrderItemId], references: [orderItemId])
 }
 
 model PotDamagedProduct {
@@ -1515,10 +1516,10 @@ model PotDamagedProduct {
   potVariantId  String?
   warehouseId   String
 
-  purchaseOrderId     String? 
+  purchaseOrderId     String?
   purchaseOrderItemId String? @unique
 
-  orderId        String? 
+  orderId        String?
   potOrderItemId String? @unique
 
   handledById String // User (warehouse manager, customer, or admin) who reported the damage
@@ -1530,7 +1531,7 @@ model PotDamagedProduct {
   reason            String
   notes             String?
   handledBy         String
-  reportDate        DateTime @default(now())
+  reportDate        DateTime   @default(now())
 
   publicId String
   mediaUrl String
@@ -1539,15 +1540,14 @@ model PotDamagedProduct {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  potCategory        PotCategory       @relation(name: "PotCategoryToPotDamagedProduct", fields: [potCategoryId], references: [categoryId])
-  potVariant         PotVariants?      @relation(name: "PotVariantToPotDamagedProduct", fields: [potVariantId], references: [potVariantId])
-  warehouse          Warehouse         @relation(name: "WarehouseToPotDamagedProduct", fields: [warehouseId], references: [warehouseId])
-  purchaseOrder      PurchaseOrder?    @relation(name: "PurchaseOrderToPotDamagedProduct", fields: [purchaseOrderId], references: [id])
-  purchaseOrderItem  PurchaseOrderItems? @relation(name: "PurchaseOrderItemToPotDamagedProduct", fields: [purchaseOrderItemId], references: [id])
-  order              Order?            @relation(name: "OrderToPotDamagedProduct", fields: [orderId], references: [orderId])
-  potOrderItem       PotOrderItem?     @relation(name: "PotOrderItemToPotDamagedProduct", fields: [potOrderItemId], references: [orderItemId])
+  potCategory       PotCategory         @relation(name: "PotCategoryToPotDamagedProduct", fields: [potCategoryId], references: [categoryId])
+  potVariant        PotVariants?        @relation(name: "PotVariantToPotDamagedProduct", fields: [potVariantId], references: [potVariantId])
+  warehouse         Warehouse           @relation(name: "WarehouseToPotDamagedProduct", fields: [warehouseId], references: [warehouseId])
+  purchaseOrder     PurchaseOrder?      @relation(name: "PurchaseOrderToPotDamagedProduct", fields: [purchaseOrderId], references: [id])
+  purchaseOrderItem PurchaseOrderItems? @relation(name: "PurchaseOrderItemToPotDamagedProduct", fields: [purchaseOrderItemId], references: [id])
+  order             Order?              @relation(name: "OrderToPotDamagedProduct", fields: [orderId], references: [orderId])
+  potOrderItem      PotOrderItem?       @relation(name: "PotOrderItemToPotDamagedProduct", fields: [potOrderItemId], references: [orderItemId])
 }
-
 
 // ------------------------ Reviews & Feedback -------------------------
 
@@ -1695,56 +1695,56 @@ model PlantWarehouseInventory {
   variantId   String
   warehouseId String
 
-  stockIn             Int
-  stockOut            Int
-  stockLossCount      Int //for tracking all stocks, and to calculate currentStock
-  latestQuantityAdded Int
-  currentStock        Int
-  reservedUnit        Int
-  sellingPrice        Decimal
-  profitMargin        Decimal
-  totalCost           Decimal
-  trueCostPrice       Decimal
-  lastRestocked       DateTime
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  deletedAt           DateTime?
-  
+  stockIn             Int? @default(0)
+  stockOut            Int? @default(0)
+  // for tracking all stocks, and to calculate currentStock
+  stockLossCount      Int? @default(0)
+  latestQuantityAdded Int? @default(0)
+  currentStock        Int? @default(0)
+  reservedUnit        Int? @default(0)
+
+  totalCost     Decimal? @default(0.0)
+  trueCostPrice Decimal? @default(0.0)
+
+  lastRestocked DateTime  @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
   plants       Plants        @relation(name: "PlantToWarehouseInventory", fields: [plantId], references: [plantId])
   warehouse    Warehouse     @relation(name: "WarehouseToPlantInventory", fields: [warehouseId], references: [warehouseId])
   plantVariant PlantVariants @relation(name: "PlantVariantToWarehouse", fields: [variantId], references: [variantId])
 
-
-  @@unique([variantId, warehouseId])
+  @@unique([plantId, variantId, warehouseId])
 }
 
 model PotWarehouseInventory {
   id            String @id
-  potVariantId  String
   potCategoryId String
+  potVariantId  String
   warehouseId   String
-  stockIn       Int
 
-  stockOut            Int
-  stockLossCount      Int
-  latestQuantityAdded Int
-  currentStock        Int
-  reservedUnit        Int
-  sellingPrice        Decimal
-  profitMargin        Decimal
-  totalCost           Decimal
-  trueCostPrice       Decimal
-  lastRestocked       DateTime
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  deletedAt           DateTime?
+  stockIn             Int? @default(0)
+  stockOut            Int? @default(0)
+  // for tracking all stocks, and to calculate currentStock
+  stockLossCount      Int? @default(0)
+  latestQuantityAdded Int? @default(0)
+  currentStock        Int? @default(0)
+  reservedUnit        Int? @default(0)
+
+  totalCost     Decimal? @default(0.0)
+  trueCostPrice Decimal? @default(0.0)
+
+  lastRestocked DateTime  @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
 
   potVariant  PotVariants @relation(name: "PotVariantToWarehouse", fields: [potVariantId], references: [potVariantId])
   potCategory PotCategory @relation(name: "PotCategoryToPotInventory", fields: [potCategoryId], references: [categoryId])
   warehouse   Warehouse   @relation(name: "WarehouseToPotInventory", fields: [warehouseId], references: [warehouseId])
 
-
-  @@unique([potVariantId, warehouseId])
+  @@unique([potCategoryId, potVariantId, warehouseId])
 }
 
 model PlantRestockEventLog {
@@ -1862,16 +1862,16 @@ model PurchaseOrderItems {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  purchaseOrder  PurchaseOrder        @relation(name: "PurchaseOrderToPurchaseOrderItem", fields: [purchaseOrderId], references: [id])
-  plant          Plants?              @relation(name: "PlantToPurchaseOrder", fields: [plantId], references: [plantId])
-  plantVariant   PlantVariants?       @relation(name: "PlantVariantToPurchaseOrder", fields: [plantVariantId], references: [variantId])
-  potCategory    PotCategory?         @relation(name: "PotCategoryToPurchaseOrder", fields: [potCategoryId], references: [categoryId])
-  potVariant     PotVariants?         @relation(name: "PotVariantToPurchaseOrder", fields: [potVariantId], references: [potVariantId])
+  purchaseOrder       PurchaseOrder        @relation(name: "PurchaseOrderToPurchaseOrderItem", fields: [purchaseOrderId], references: [id])
+  plant               Plants?              @relation(name: "PlantToPurchaseOrder", fields: [plantId], references: [plantId])
+  plantVariant        PlantVariants?       @relation(name: "PlantVariantToPurchaseOrder", fields: [plantVariantId], references: [variantId])
+  potCategory         PotCategory?         @relation(name: "PotCategoryToPurchaseOrder", fields: [potCategoryId], references: [categoryId])
+  potVariant          PotVariants?         @relation(name: "PotVariantToPurchaseOrder", fields: [potVariantId], references: [potVariantId])
   PlantDamagedProduct PlantDamagedProduct? @relation(name: "PurchaseOrderItemToPlantDamagedProduct")
-  PotDamagedProduct PotDamagedProduct? @relation(name: "PurchaseOrderItemToPotDamagedProduct")
+  PotDamagedProduct   PotDamagedProduct?   @relation(name: "PurchaseOrderItemToPotDamagedProduct")
 }
 
-model  PurchaseOrder {
+model PurchaseOrder {
   id          String @id
   warehouseId String
   supplierId  String
@@ -1901,7 +1901,7 @@ model  PurchaseOrder {
   plantRestockEvents  PlantRestockEventLog[] @relation(name: "PlantRestockToRequest")
   potRestockEvents    PotRestockEventLog[]   @relation(name: "PotRestockToRequest")
   PlantDamagedProduct PlantDamagedProduct[]  @relation(name: "PurchaseOrderToPlantDamagedProduct")
-  PotDamagedProduct PotDamagedProduct[] @relation(name: "PurchaseOrderToPotDamagedProduct")
+  PotDamagedProduct   PotDamagedProduct[]    @relation(name: "PurchaseOrderToPotDamagedProduct")
 }
 
 /**
