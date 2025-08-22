@@ -54,7 +54,9 @@ async function seedAdminUsers() {
                         userId,
                         roleId,
                         ...entry.user,
-                        password: hashedPassword
+                        password: hashedPassword,
+                        profileImageUrl:
+                            "https://res.cloudinary.com/dwdu18hzs/image/upload/suppliers/trade_licenses/trade_license_1751201462225.avif"
                     }
                 });
 
@@ -70,8 +72,8 @@ async function seedAdminUsers() {
             }
         },
         {
-            maxWait: 10000,
-            timeout: 20000
+            // maxWait: 10000,
+            timeout: 15000
         }
     );
 }
@@ -101,7 +103,9 @@ async function seedSuperAdminUsers() {
                         userId,
                         roleId,
                         ...entry.user,
-                        password: hashedPassword
+                        password: hashedPassword,
+                        profileImageUrl:
+                            "https://res.cloudinary.com/dwdu18hzs/image/upload/suppliers/trade_licenses/trade_license_1751201462225.avif"
                     }
                 });
 
@@ -120,8 +124,8 @@ async function seedSuperAdminUsers() {
             }
         },
         {
-            maxWait: 10000,
-            timeout: 20000
+            // maxWait: 10000,
+            timeout: 15000
         }
     );
 }
@@ -151,7 +155,9 @@ async function seedCustomerUsers() {
                         userId,
                         roleId,
                         ...entry.user,
-                        password: hashedPassword
+                        password: hashedPassword,
+                        profileImageUrl:
+                            "https://res.cloudinary.com/dwdu18hzs/image/upload/suppliers/trade_licenses/trade_license_1751201462225.avif"
                     }
                 });
 
@@ -167,8 +173,8 @@ async function seedCustomerUsers() {
             }
         },
         {
-            maxWait: 10000,
-            timeout: 20000
+            // maxWait: 10000,
+            timeout: 15000
         }
     );
 }
@@ -210,6 +216,8 @@ async function seedSupplierUsers() {
                         userId,
                         roleId,
                         ...entry.user,
+                        profileImageUrl:
+                            "https://res.cloudinary.com/dwdu18hzs/image/upload/suppliers/trade_licenses/trade_license_1751201462225.avif",
                         password: hashedPassword
                     }
                 });
@@ -219,7 +227,12 @@ async function seedSupplierUsers() {
                     data: {
                         supplierId,
                         userId: user.userId,
-                        nurseryName: entry.supplier.nurseryName
+                        warehouseId: warehouse.warehouseId,
+                        nurseryName: entry.supplier.nurseryName,
+                        businessCategory: entry.supplier.businessCategory,
+                        gstin: entry.supplier.gstin,
+                        tradeLicenseUrl:
+                            "https://res.cloudinary.com/dwdu18hzs/image/upload/suppliers/trade_licenses/trade_license_1751201462225.avif"
                     }
                 });
 
@@ -229,8 +242,8 @@ async function seedSupplierUsers() {
             }
         },
         {
-            maxWait: 10000,
-            timeout: 20000
+            // maxWait: 10000,
+            timeout: 15000
         }
     );
 }
@@ -260,7 +273,9 @@ async function seedKeyAreaManagerUsers() {
                         userId,
                         roleId,
                         ...entry.user,
-                        password: hashedPassword
+                        password: hashedPassword,
+                        profileImageUrl:
+                            "https://res.cloudinary.com/dwdu18hzs/image/upload/suppliers/trade_licenses/trade_license_1751201462225.avif"
                     }
                 });
 
@@ -280,8 +295,8 @@ async function seedKeyAreaManagerUsers() {
             }
         },
         {
-            maxWait: 10000,
-            timeout: 20000
+            // maxWait: 10000,
+            timeout: 15000
         }
     );
 }

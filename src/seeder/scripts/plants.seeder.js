@@ -78,8 +78,8 @@ async function seedPlants() {
                 }
             },
             {
-                maxWait: 10000,
-                timeout: 20000
+                // maxWait: 10000,
+                timeout: 15000
             }
         );
 

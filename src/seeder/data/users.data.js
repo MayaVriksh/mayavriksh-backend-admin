@@ -417,10 +417,42 @@ const supplierUsers = [
         role: ROLES.SUPPLIER,
         user: {
             fullName: {
+                [FIRST_NAME]: "Arjun",
+                [LAST_NAME]: "Verma"
+            },
+            email: "restaurant@gmail.com",
+            phoneNumber: "+919090902345",
+            password: "res@12345",
+            profileImageUrl: null,
+            phoneVerified: true,
+            emailVerified: true,
+            isActive: true,
+            address: {
+                [STREET_ADDRESS]: "78 Lotus Garden Road",
+                [CITY]: "Delhi",
+                [STATE]: "Delhi",
+                [COUNTRY]: "India",
+                [PIN_CODE]: "110001",
+                [LANDMARK]: "Near Lodhi Garden",
+                [LATITUDE]: "28.6139",
+                [LONGITUDE]: "77.2090"
+            }
+        },
+        supplier: {
+            nurseryName: "Nature’s Bloom Nursery",
+            contactPerson: "Arjun Verma",
+            businessCategory: "Plant Nursery",
+            gstin: "07AAACV9023B1Z1"
+        }
+    },
+    {
+        role: ROLES.SUPPLIER,
+        user: {
+            fullName: {
                 [FIRST_NAME]: "Rajeev",
                 [LAST_NAME]: "Singhania"
             },
-            email: "rajeev.singhania.supplier@example.com",
+            email: "rajeev.singhania@mayavriksh.com",
             phoneNumber: "+919876543230",
             password: "password@123",
             profileImageUrl: null,
@@ -440,7 +472,9 @@ const supplierUsers = [
         },
         supplier: {
             nurseryName: "GreenLeaf Nursery",
-            contactPerson: "Rajeev Singhania"
+            contactPerson: "Rajeev Singhania",
+            businessCategory: "Plant Nursery",
+            gstin: "27AAACG9123K1Z2"
         }
     },
     {
@@ -450,7 +484,7 @@ const supplierUsers = [
                 [FIRST_NAME]: "Ashok",
                 [LAST_NAME]: "Patel"
             },
-            email: "ashok.patel.supplier@example.com",
+            email: "ashok.patel@mayavriksh.com",
             phoneNumber: "+919876543231",
             password: "password@123",
             profileImageUrl: null,
@@ -470,7 +504,9 @@ const supplierUsers = [
         },
         supplier: {
             nurseryName: "Flora World",
-            contactPerson: "Ashok Patel"
+            contactPerson: "Ashok Patel",
+            businessCategory: "Garden Supplies",
+            gstin: "24AAACP4567N1Z3"
         }
     },
     {
@@ -480,7 +516,7 @@ const supplierUsers = [
                 [FIRST_NAME]: "Satyam",
                 [LAST_NAME]: "Mehta"
             },
-            email: "satyam.mehta.supplier@example.com",
+            email: "satyam.mehta@mayavriksh.com",
             phoneNumber: "+919876543232",
             password: "password@123",
             profileImageUrl: null,
@@ -500,7 +536,9 @@ const supplierUsers = [
         },
         supplier: {
             nurseryName: "Urban Botanica",
-            contactPerson: "Satyam Mehta"
+            contactPerson: "Satyam Mehta",
+            businessCategory: "Landscape Plants",
+            gstin: "07AAACU6789L1Z4"
         }
     },
     {
@@ -510,7 +548,7 @@ const supplierUsers = [
                 [FIRST_NAME]: "Karan",
                 [LAST_NAME]: "Bhagat"
             },
-            email: "karan.bhagat.supplier@example.com",
+            email: "karan.bhagat@mayavriksh.com",
             phoneNumber: "+919876543233",
             password: "password@123",
             profileImageUrl: null,
@@ -530,7 +568,9 @@ const supplierUsers = [
         },
         supplier: {
             nurseryName: "Pink City Nursery",
-            contactPerson: "Karan Bhagat"
+            contactPerson: "Karan Bhagat",
+            businessCategory: "Plant Nursery",
+            gstin: "08AAACK1234R1Z5"
         }
     },
     {
@@ -540,7 +580,7 @@ const supplierUsers = [
                 [FIRST_NAME]: "Deepak",
                 [LAST_NAME]: "Rao"
             },
-            email: "deepak.rao.supplier@example.com",
+            email: "deepak.rao@mayavriksh.com",
             phoneNumber: "+919876543234",
             password: "password@123",
             profileImageUrl: null,
@@ -560,7 +600,9 @@ const supplierUsers = [
         },
         supplier: {
             nurseryName: "Coco Gardens",
-            contactPerson: "Deepak Rao"
+            contactPerson: "Deepak Rao",
+            businessCategory: "Exotic Plants",
+            gstin: "32AAACD5678P1Z6"
         }
     }
 ];
