@@ -67,7 +67,7 @@ const signin = async (req, h) => {
                     accessToken: accessToken // Client will store this in memory
                 }
             })
-            .state("mv_refresh_token", refreshToken)
+            .state("mv_refresh_token", refreshToken)// Only meant for login. And once logout, then the state is removed
             .code(RESPONSE_CODES.SUCCESS);
     } catch (error) {
         console.error("Signin Error:", error);
