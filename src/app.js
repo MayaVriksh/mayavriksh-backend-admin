@@ -40,17 +40,14 @@ const createServer = async () => {
     });
 
     // --- REWRITTEN & SECURED COOKIE CONFIGURATION ---
-    
-    
+
     server.state("mv_access_token", {
-        ttl: 5000, // 7 days
-        isSecure: process.env.NODE_ENV === "production", 
+        ttl: 15 * 60 * 1000, // 15 minutes
+        isSecure: process.env.NODE_ENV === "production",
         isHttpOnly: false, // allow frontend JS to access
         isSameSite: process.env.NODE_ENV !== "production" ? "Strict" : "None",
         path: "/"
-      });
-      
-
+    });
 
     // This cookie is ONLY for the long-lived Refresh Token.
     server.state("mv_refresh_token", {
