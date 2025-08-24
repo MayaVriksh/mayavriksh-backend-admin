@@ -22,6 +22,7 @@ module.exports = {
     // 🪴 Product Models
     PLANT: "PLNT",
     PLANT_VARIANT: "PLVR",
+    PLANT_SIZE: "PLSZ",
     PLANT_CATEGORY: "PLCT",
     POT: "POT",
     POT_VARIANT: "POVR",

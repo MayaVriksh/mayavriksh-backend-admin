@@ -1,3 +1,6 @@
+const {
+    issueNewAccessToken
+} = require("../modules/auth/controllers/auth.controller");
 const { verifyAccessToken } = require("../utils/jwt.util");
 
 /**
@@ -14,10 +17,16 @@ const verifyAccessTokenMiddleware = {
     method: async (req, h) => {
         try {
             // 1. Get the "Authorization" header from the incoming request.
-            const authHeader = req.headers.authorization;
+
+            // const authHeader = req.headers.authorization;
+            const authHeader = req.state.mv_access_token;
+
             console.log(authHeader);
+
             // 2. Check if the header exists and is correctly formatted. It must start with "Bearer ".
-            if (!authHeader) {
+            if (!authHeader && req.state.mv_refresh_token) {
+                issueNewAccessToken(req, h);
+            } else {
                 throw new Error("Token is missing or malformed.");
             }
 
@@ -42,7 +51,7 @@ const verifyAccessTokenMiddleware = {
             console.log("yoooooo");
             // Now, we are guaranteed to be verifying only the token string.
             const decoded = verifyAccessToken(token);
-            console.log("xx", decoded);
+            console.log("Decoded token (in auth middleware): ", decoded);
             // 5. SUCCESS! The token is valid. We return the decoded payload.
             // Because of `assign: 'credentials'`, this object (`{ userId, role, username }`)
             // is now available at `req.pre.credentials`.

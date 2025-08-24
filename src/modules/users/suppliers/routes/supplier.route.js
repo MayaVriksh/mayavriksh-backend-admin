@@ -58,7 +58,8 @@ module.exports = [
                 parse: true,
                 output: "stream",
                 multipart: true,
-                allow: ["multipart/form-data", "application/json"]
+                maxBytes: 25971520,
+                allow: ["multipart/form-data", "application/json"],
             },
             plugins: {
                 "hapi-swagger": {

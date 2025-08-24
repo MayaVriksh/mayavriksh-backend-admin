@@ -54,20 +54,17 @@ const signup = async (req, h) => {
 const signin = async (req, h) => {
     try {
         const { email, password } = req.payload;
-        const { userProfile, accessToken, refreshToken } =
+        const {accessToken, refreshToken } =
             await AuthService.login(email, password);
         // The secure Refresh Token is set in the HttpOnly cookie
         // The short-lived Access Token is sent in the response body for the client to use
         return h
             .response({
                 success: RESPONSE_FLAGS.SUCCESS,
-                message: SUCCESS_MESSAGES.AUTH.LOGIN_SUCCESS,
-                data: {
-                    user: userProfile,
-                    accessToken: accessToken // Client will store this in memory
-                }
+                message: SUCCESS_MESSAGES.AUTH.LOGIN_SUCCESS
             })
             .state("mv_refresh_token", refreshToken)
+            .state("mv_access_token", accessToken)
             .code(RESPONSE_CODES.SUCCESS);
     } catch (error) {
         console.error("Signin Error:", error);
@@ -79,7 +76,8 @@ const signin = async (req, h) => {
             .code(error.code || RESPONSE_CODES.UNAUTHORIZED);
     }
 };
-const refreshToken = async (req, h) => {
+
+const issueNewAccessToken = async (req, h) => {
     try {
         const incomingRefreshToken = req.state.mv_refresh_token;
         if (!incomingRefreshToken) {
@@ -88,18 +86,15 @@ const refreshToken = async (req, h) => {
         console.log("Incoming Refresh Token: ", incomingRefreshToken);
 
         // This service function will verify the refresh token and issue a new access token
-        const { userProfile, newAccessToken } =
+        const {  newAccessToken } =
             await AuthService.refreshUserToken(incomingRefreshToken);
 
         return h
             .response({
                 success: RESPONSE_FLAGS.SUCCESS,
                 message: "Token refreshed successfully.", // Added a message for consistency
-                data: {
-                    user: userProfile, // <-- The missing piece
-                    accessToken: newAccessToken
-                }
-            })
+                        })
+            .state("mv_access_token", newAccessToken)
             .code(RESPONSE_CODES.SUCCESS);
     } catch (error) {
         console.error("Refresh Token Error:", error);
@@ -109,8 +104,9 @@ const refreshToken = async (req, h) => {
                 success: RESPONSE_FLAGS.FAILURE,
                 message: error.message || "Invalid refresh token."
             })
-            .code(error.code || 403)
-            .unstate("mv_refresh_token");
+            .unstate("mv_access_token")
+            .unstate("mv_refresh_token")
+            .code(error.code || 403);
     }
 };
 
@@ -125,9 +121,9 @@ const logout = async (_, h) => {
                 .unstate("mv_refresh_token", {
                     path: "/"
                 })
-                // .unstate("mv_user_token", {
-                //     path: "/"
-                // })
+                .unstate("mv_access_token", {
+                    path: "/"
+                })
                 .code(RESPONSE_CODES.SUCCESS)
         );
     } catch (error) {
@@ -231,7 +227,7 @@ const changePassword = async (req, h) => {
 module.exports = {
     signup,
     signin,
-    refreshToken,
+    issueNewAccessToken,
     deactivateUser,
     reactivateUser,
     logout,

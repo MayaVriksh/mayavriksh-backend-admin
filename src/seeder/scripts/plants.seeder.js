@@ -1,7 +1,11 @@
 const { prisma } = require("../../config/prisma.config");
 const { PRODUCT_TYPES } = require("../../constants/general.constant");
 const generateCustomId = require("../../utils/generateCustomId");
-const plants = require("../data/plants.data");
+const {
+    plants,
+    plantSizeProfiles,
+    plantVariants
+} = require("../data/plants.data");
 
 async function seedPlants() {
     try {
@@ -12,78 +16,132 @@ async function seedPlants() {
             throw new Error("❌ No colors found. Please seed colors first.");
         }
 
-        console.log("🌱 Seeding Plants and Variants...");
+        console.log("🌱 Seeding Plants, Size Profiles and Variants...");
 
-        await prisma.$transaction(
-            async (tx) => {
-                for (const plant of plants) {
-                    if (!plant?.name || !Array.isArray(plant.variants)) {
-                        console.warn(`⚠️  Skipping invalid plant data:`, plant);
-                        continue;
-                    }
+        for (const plant of plants) {
+            try {
+                await prisma.$transaction(
+                    async (tx) => {
+                        const existingPlant = await tx.plants.findFirst({
+                            where: { name: plant.name }
+                        });
 
-                    const existingPlant = await tx.plants.findFirst({
-                        where: { name: plant.name }
-                    });
-
-                    if (existingPlant) {
-                        console.log(`⚠️  Plant '${plant.name}' already exists`);
-                        continue;
-                    }
-
-                    const plantId = await generateCustomId(
-                        tx,
-                        PRODUCT_TYPES.PLANT
-                    );
-
-                    const createdPlant = await tx.plants.create({
-                        data: {
-                            plantId,
-                            name: plant.name,
-                            description: plant.description,
-                            isProductActive: plant.isProductActive,
-                            isFeatured: plant.isFeatured,
-                            scientificName: plant.scientificName,
-                            maintenance: plant.maintenance,
-                            placeOfOrigin: plant.placeOfOrigin
+                        if (existingPlant) {
+                            console.log(
+                                `⚠️ Plant '${plant.name}' already exists`
+                            );
+                            return;
                         }
-                    });
 
-                    for (let i = 0; i < plant.variants.length; i++) {
-                        const variant = plant.variants[i];
-                        const color = colors[i % colors.length];
-
-                        const variantId = await generateCustomId(
+                        const plantId = await generateCustomId(
                             tx,
-                            PRODUCT_TYPES.PLANT_VARIANT
+                            PRODUCT_TYPES.PLANT
                         );
 
-                        await tx.plantVariants.create({
+                        const createdPlant = await tx.plants.create({
                             data: {
-                                variantId,
-                                plantId: createdPlant.plantId,
-                                colorId: color.id,
-                                plantSize: variant.plantSize,
-                                height: variant.height,
-                                weight: variant.weight,
-                                sku: variant.sku,
-                                mrp: variant.mrp
+                                plantId,
+                                name: plant.name,
+                                description: plant.description,
+                                isProductActive: plant.isProductActive,
+                                isFeatured: plant.isFeatured,
+                                scientificName: plant.scientificName,
+                                maintenance: plant.maintenance,
+                                placeOfOrigin: plant.placeOfOrigin,
+                                auraType: plant.auraType,
+                                bestForEmotion: plant.bestForEmotion,
+                                bestGiftFor: plant.bestGiftFor,
+                                biodiversityBooster: plant.biodiversityBooster,
+                                carbonAbsorber: plant.carbonAbsorber,
+                                funFacts: plant.funFacts,
+                                godAligned: plant.godAligned,
+                                insideBox: plant.insideBox,
+                                plantSeries: plant.plantSeries,
+                                repotting: plant.repotting,
+                                soil: plant.soil,
+                                spiritualUseCase: plant.spiritualUseCase
                             }
                         });
-                    }
 
-                    console.log(
-                        `✅ Plant '${plant.name}' with ${plant.variants.length} variants created`
-                    );
-                }
-            },
-            {
-                // maxWait: 10000,
-                timeout: 15000
+                        console.log(`🌱 Created Plant '${plant.name}'`);
+
+                        // size profiles
+                        const sizesForPlant = plantSizeProfiles.filter(
+                            (s) => s.plantId === plant.plantId
+                        );
+
+                        const sizeIdMap = {};
+                        for (const sizeProfile of sizesForPlant) {
+                            const plantSizeId = await generateCustomId(
+                                tx,
+                                PRODUCT_TYPES.PLANT_SIZE
+                            );
+
+                            await tx.plantSizeProfile.create({
+                                data: {
+                                    plantSizeId,
+                                    plantId: createdPlant.plantId,
+                                    plantSize: sizeProfile.plantSize,
+                                    height: sizeProfile.height,
+                                    weight: sizeProfile.weight
+                                }
+                            });
+
+                            sizeIdMap[sizeProfile.plantSizeId] = plantSizeId;
+
+                            console.log(
+                                `   ➕ Size Profile (${sizeProfile.plantSize}) added for '${plant.name}'`
+                            );
+                        }
+
+                        // variants
+                        const variantsForPlant = plantVariants.filter(
+                            (v) => v.plantId === plant.plantId
+                        );
+
+                        for (let i = 0; i < variantsForPlant.length; i++) {
+                            const variant = variantsForPlant[i];
+                            const color = colors[i % colors.length];
+
+                            const variantId = await generateCustomId(
+                                tx,
+                                PRODUCT_TYPES.PLANT_VARIANT
+                            );
+
+                            await tx.plantVariants.create({
+                                data: {
+                                    variantId,
+                                    plantId: createdPlant.plantId,
+                                    plantSizeId: sizeIdMap[variant.plantSizeId],
+                                    colorId: color.id,
+                                    sku: variant.sku,
+                                    mrp: variant.mrp,
+                                    isProductActive: variant.isProductActive
+                                }
+                            });
+
+                            console.log(
+                                `   🌿 Variant ${variant.sku} added for '${plant.name}'`
+                            );
+                        }
+
+                        console.log(
+                            `✅ Plant '${plant.name}' seeded with ${sizesForPlant.length} sizes & ${variantsForPlant.length} variants`
+                        );
+                    },
+                    { timeout: 15000 }
+                );
+            } catch (error) {
+                console.error(
+                    `❌ Failed seeding '${plant.name}':`,
+                    error.message
+                );
             }
-        );
+        }
 
-        console.log("🎉 All plants and their variants seeding completed.");
+        console.log(
+            "🎉 All plants, size profiles and variants seeding completed."
+        );
     } catch (error) {
         console.error("❌ Error seeding plants:", error.stack || error);
     }

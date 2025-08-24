@@ -1,95 +1,161 @@
-module.exports = [
+const { v4: uuid } = require("uuid");
+
+const plants = [
     {
+        plantId: uuid(),
         name: "Areca Palm",
         description: "Elegant air-purifying palm for indoor spaces.",
-        dateAdded: new Date(),
+        scientificName: "Dypsis lutescens",
         isProductActive: true,
         isFeatured: true,
-        scientificName: "Dypsis lutescens",
         maintenance: "Low",
-        plantSize: "Medium",
         placeOfOrigin: "Madagascar",
-        variants: Array.from({ length: 5 }).map((_, i) => ({
-            plantSize: ["S", "M", "L", "XL", "XXL"][i],
-            height: 30 + i * 20,
-            weight: 0.5 + i * 0.7,
-            sku: `ARECA-${i + 1}`,
-            mrp: 349 + i * 100
-        }))
+        auraType: "Positive Energy",
+        bestForEmotion: "Stress Relief",
+        createdAt: new Date(),
+        updatedAt: new Date()
     },
     {
+        plantId: uuid(),
         name: "Snake Plant",
         description: "Hardy and great for air purification.",
-        dateAdded: new Date(),
+        scientificName: "Sansevieria trifasciata",
         isProductActive: true,
         isFeatured: false,
-        scientificName: "Sansevieria trifasciata",
         maintenance: "Very Low",
-        plantSize: "Small",
         placeOfOrigin: "West Africa",
-        variants: Array.from({ length: 5 }).map((_, i) => ({
-            plantSize: ["Small", "Medium", "Tall", "Compact", "Mini"][i],
-            height: 20 + i * 10,
-            weight: 0.4 + i * 0.3,
-            sku: `SNAKE-${i + 1}`,
-            mrp: 299 + i * 100
-        }))
+        auraType: "Protection",
+        bestForEmotion: "Focus",
+        createdAt: new Date(),
+        updatedAt: new Date()
     },
     {
+        plantId: uuid(),
         name: "ZZ Plant",
         description: "Glossy leaves and great for low-light.",
-        dateAdded: new Date(),
+        scientificName: "Zamioculcas zamiifolia",
         isProductActive: true,
         isFeatured: true,
-        scientificName: "Zamioculcas zamiifolia",
         maintenance: "Low",
         placeOfOrigin: "East Africa",
-        variants: Array.from({ length: 5 }).map((_, i) => ({
-            plantSize: ["Compact", "Small", "Medium", "Tall", "XL"][i],
-            height: 25 + i * 10,
-            weight: 0.5 + i * 0.4,
-            sku: `ZZ-${i + 1}`,
-            mrp: 399 + i * 120
-        }))
+        auraType: "Good Luck",
+        bestForEmotion: "Calmness",
+        createdAt: new Date(),
+        updatedAt: new Date()
     },
     {
+        plantId: uuid(),
         name: "Peace Lily",
         description: "Flowering indoor plant, excellent for bedrooms.",
-        dateAdded: new Date(),
+        scientificName: "Spathiphyllum",
         isProductActive: true,
         isFeatured: false,
-        scientificName: "Spathiphyllum",
         maintenance: "Medium",
         placeOfOrigin: "Tropical Americas",
-        variants: Array.from({ length: 5 }).map((_, i) => ({
-            plantSize: ["Small", "Petite", "Blooming", "XL", "Decor"][i],
-            height: 20 + i * 12,
-            weight: 0.4 + i * 0.5,
-            sku: `LILY-${i + 1}`,
-            mrp: 499 + i * 110
-        }))
+        auraType: "Purity",
+        bestForEmotion: "Relaxation",
+        createdAt: new Date(),
+        updatedAt: new Date()
     },
     {
+        plantId: uuid(),
         name: "Money Plant",
         description: "Easy-to-grow and auspicious for homes.",
-        dateAdded: new Date(),
+        scientificName: "Epipremnum aureum",
         isProductActive: true,
         isFeatured: true,
-        scientificName: "Epipremnum aureum",
         maintenance: "Very Low",
         placeOfOrigin: "Southeast Asia",
-        variants: Array.from({ length: 5 }).map((_, i) => ({
-            plantSize: [
-                "Basic",
-                "Hanging",
-                "Water-Grown",
-                "XL Potted",
-                "Table Top"
-            ][i],
-            height: 15 + i * 8,
-            weight: 0.2 + i * 0.25,
-            sku: `MONEY-${i + 1}`,
-            mrp: 199 + i * 90
-        }))
+        auraType: "Prosperity",
+        bestForEmotion: "Positivity",
+        createdAt: new Date(),
+        updatedAt: new Date()
     }
 ];
+
+const plantSizeProfiles = [];
+
+function addSizeProfiles(plant, sizes) {
+    sizes.forEach((s) => {
+        plantSizeProfiles.push({
+            plantSizeId: uuid(),
+            plantId: plant.plantId,
+            plantSize: s.plantSize,
+            height: s.height,
+            weight: s.weight
+        });
+    });
+}
+
+addSizeProfiles(plants[0], [
+    { plantSize: "SMALL", height: 30, weight: 0.5 },
+    { plantSize: "MEDIUM", height: 50, weight: 1.2 },
+    { plantSize: "LARGE", height: 70, weight: 1.9 },
+    { plantSize: "EXTRA_LARGE", height: 90, weight: 2.6 },
+    { plantSize: "EXTRA_SMALL", height: 110, weight: 3.3 }
+]);
+
+addSizeProfiles(plants[1], [
+    { plantSize: "SMALL", height: 20, weight: 0.4 },
+    { plantSize: "MEDIUM", height: 30, weight: 0.7 },
+    { plantSize: "LARGE", height: 40, weight: 1.0 },
+    { plantSize: "EXTRA_LARGE", height: 50, weight: 1.3 },
+    { plantSize: "EXTRA_SMALL", height: 60, weight: 1.6 }
+]);
+
+addSizeProfiles(plants[2], [
+    { plantSize: "SMALL", height: 25, weight: 0.5 },
+    { plantSize: "MEDIUM", height: 35, weight: 0.9 },
+    { plantSize: "LARGE", height: 45, weight: 1.3 },
+    { plantSize: "EXTRA_LARGE", height: 55, weight: 1.7 },
+    { plantSize: "EXTRA_SMALL", height: 65, weight: 2.1 }
+]);
+
+addSizeProfiles(plants[3], [
+    { plantSize: "SMALL", height: 20, weight: 0.4 },
+    { plantSize: "MEDIUM", height: 32, weight: 0.9 },
+    { plantSize: "LARGE", height: 44, weight: 1.4 },
+    { plantSize: "EXTRA_LARGE", height: 56, weight: 1.9 },
+    { plantSize: "EXTRA_SMALL", height: 68, weight: 2.4 }
+]);
+
+addSizeProfiles(plants[4], [
+    { plantSize: "SMALL", height: 15, weight: 0.2 },
+    { plantSize: "MEDIUM", height: 23, weight: 0.45 },
+    { plantSize: "LARGE", height: 31, weight: 0.7 },
+    { plantSize: "EXTRA_LARGE", height: 39, weight: 0.95 },
+    { plantSize: "EXTRA_SMALL", height: 47, weight: 1.2 }
+]);
+
+const plantVariants = [];
+
+function addVariants(plant, prefix, baseMrp) {
+    const profiles = plantSizeProfiles.filter(
+        (p) => p.plantId === plant.plantId
+    );
+    profiles.forEach((profile, i) => {
+        plantVariants.push({
+            variantId: uuid(),
+            plantId: plant.plantId,
+            plantSizeId: profile.plantSizeId,
+            colorId: "default-green",
+            sku: `${prefix}-${i + 1}`,
+            mrp: baseMrp + i * 100,
+            isProductActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        });
+    });
+}
+
+addVariants(plants[0], "ARECA", 349);
+addVariants(plants[1], "SNAKE", 299);
+addVariants(plants[2], "ZZ", 399);
+addVariants(plants[3], "LILY", 499);
+addVariants(plants[4], "MONEY", 199);
+
+module.exports = {
+    plants,
+    plantSizeProfiles,
+    plantVariants
+};

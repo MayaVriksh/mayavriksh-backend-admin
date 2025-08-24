@@ -15,6 +15,7 @@ module.exports = [
     { entityCode: "TSPI", lastSerial: 0 },
     { entityCode: "PLNT", lastSerial: 0 },
     { entityCode: "PLVR", lastSerial: 0 },
+    { entityCode: "PLSZ", lastSerial: 0 },
     { entityCode: "PLCT", lastSerial: 0 },
     { entityCode: "POT", lastSerial: 0 },
     { entityCode: "POVR", lastSerial: 0 },
