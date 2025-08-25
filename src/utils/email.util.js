@@ -1,40 +1,55 @@
 const nodemailer = require("nodemailer");
+const { COMPANY_NAME, SUPPORT_EMAIL } = require("../constants/business.constants"); // adjust path as needed
 
-// IMPORTANT: In production, use a real email service like SendGrid, AWS SES, or Gmail.
-// For testing, we can use a free service like Ethereal.
-// Configure this with your real credentials from .env
+// =============================
+// Transporter Configuration
+// =============================
+// NOTE: For production, configure with a real email provider like SendGrid, AWS SES, Gmail, or any SMTP service.
+// For local/dev testing, you can still use Ethereal.
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST || "smtp.ethereal.email",
     port: parseInt(process.env.EMAIL_PORT, 10) || 587,
-    secure: false, // true for 465, false for other ports
+    secure: process.env.EMAIL_SECURE === "true", // true for 465, false for others
     auth: {
         user: process.env.EMAIL_USER, // Your email username from .env
         pass: process.env.EMAIL_PASS // Your email password from .env
     }
 });
 
+// =============================
+// Generic Send Email Function
+// =============================
 /**
- * A generic function to send an email.
- * @param {object} mailOptions - An object with { to, subject, html }.
+ * Sends an email using nodemailer transporter.
+ * @param {object} options
+ * @param {string} options.to - Recipient email address.
+ * @param {string} options.subject - Email subject line.
+ * @param {string} options.html - HTML body content.
+ * @param {string} [options.from] - Optional custom sender email.
  */
-const sendEmail = async ({ to, subject, html }) => {
+const sendEmail = async ({ to, subject, html, from }) => {
     try {
         const info = await transporter.sendMail({
-            from: '"Maya Vriksh" <maya.vriksh2025@gmail.com>',
-            to: to, // The recipient's email address
-            subject: subject,
-            html: html // The HTML body of the email
+            from: from || `"${COMPANY_NAME}" <${SUPPORT_EMAIL}>`, // Default from constants
+            to,
+            subject,
+            html
         });
 
-        console.log(
-            "✅ Email sent successfully. Preview URL: %s",
-            nodemailer.getTestMessageUrl(info)
-        );
-        return { success: true };
+        // If using Ethereal (dev mode), log preview link
+        if (nodemailer.getTestMessageUrl(info)) {
+            console.log("📧 Preview URL:", nodemailer.getTestMessageUrl(info));
+        }
+
+        console.log(`✅ Email sent to ${to} | Subject: ${subject}`);
+        return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error("❌ Error sending email:", error);
         return { success: false, error };
     }
 };
 
-module.exports = { sendEmail };
+module.exports = sendEmail;
+
+
+

@@ -116,23 +116,7 @@ module.exports = [
                 "Obtain a new access token using the refresh token cookie.",
             notes: "This endpoint does not require an Authorization header. It relies on the 'mv_access_token' HttpOnly cookie that was set during login. The browser will send this cookie automatically.",
             handler: AuthController.issueNewAccessToken,
-            // validate: {
-            //     ...AuthValidator.refreshTokenValidation,
-            //     failAction: (_, h, err) => {
-            //         const customErrorMessages = err.details.map(
-            //             (detail) => detail.message
-            //         );
-            //         console.log("Validation Error: ", customErrorMessages);
-            //         return h
-            //             .response({
-            //                 success: RESPONSE_FLAGS.FAILURE,
-            //                 error: ERROR_MESSAGES.COMMON.BAD_REQUEST,
-            //                 message: customErrorMessages
-            //             })
-            //             .code(RESPONSE_CODES.BAD_REQUEST)
-            //             .takeover();
-            //     }
-            // },
+            // we can add --> validation for --> mv_refresh_token
             plugins: {
                 "hapi-swagger": {
                     responses: {
