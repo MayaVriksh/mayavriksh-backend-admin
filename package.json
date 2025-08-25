@@ -26,6 +26,9 @@
         "seed:pot_materials": "node src/seeder/scripts/potMaterials.seeder.js",
         "seed:pots": "node src/seeder/scripts/pots.seeder.js",
         "seed:purchase_order": "node src/seeder/scripts/purchaseOrder.seeder.js",
+        "seed:variant_images": "node src/seeder/scripts/variantImages.seeder.js",
+        "seed:plant_inventory": "node src/seeder/scripts/plantWarehouseInventory.seeder.js",
+        "seed:pot_inventory": "node src/seeder/scripts/potWarehouseInventory.seeder.js",
         "postinstall": "prisma generate"
     },
     "prisma": {
