@@ -7,39 +7,40 @@ const ERROR_MESSAGES = {
         EMAIL_ALREADY_EXISTS:
             "A blooming email like this is already rooted here 🌼 Try using a different one.",
         PHONE_ALREADY_EXISTS:
-            "This phone number is already sprouting in our system 🌾 Try another one to plant anew.",
+            "This phone number is already sprouting in our system 🌾 Please try another.",
         EMAIL_NOT_EXISTS:
-            "We couldn’t find this email in our garden 🌱 Maybe try a different one or register anew.",
+            "We couldn’t find this email in our garden 🌱 Try a different one or register first.",
         PHONE_NOT_EXISTS:
-            "This phone number hasn’t taken root here yet 🌿 Try checking again or sign up first.",
+            "This phone number hasn’t taken root here yet 🌿 Please check again or sign up first.",
         PASSWORD_WRONG:
-            "That password doesn’t seem to match the garden gate key 🌒 Give it another go.",
+            "The password doesn’t match the garden gate key 🌒 Please try again.",
         INVALID_REGISTRATION:
-            "Looks like something needs a little trimming ✂️ Please check and try again.",
+            "Something seems out of place ✂️ Please check your details and try again.",
         LOGIN_FAILED:
-            "Hmm… we couldn't log you in just yet 🌥️ Please check your details and try again.",
+            "We couldn’t log you in just yet 🌥️ Please review your details and try again.",
         LOGOUT_FAILED:
-            "Oops… logging out didn't go as planned 🌾 Let's try that again in a moment.",
+            "Logging out didn’t go as planned 🌾 Please try again in a moment.",
         PASSWORD_CHANGE_FAILED:
             "We couldn’t update your password right now 🌧️ Please try again later.",
         INVALID_CREDENTIALS:
             "These credentials don’t match our garden records 🌿 Double-check and try again.",
         ACCOUNT_LOCKED:
-            "Too many login attempts 🌒 Let’s take a break and reset your password.",
+            "Too many login attempts 🌒 Please reset your password to continue.",
         ACCOUNT_INACTIVE:
-            "Your account is resting like a seed 🌱 Reach out to support to help it grow again.",
+            "Your account is resting like a seed 🌱 Contact support to help it grow again.",
         ACCOUNT_ALREADY_DEACTIVATED:
-            "This account has already returned to the soil 🌾 You’ll need a fresh start or reach out for help.",
+            "This account has already returned to the soil 🌾 You’ll need a fresh start or contact support.",
         PROFILE_DISPLAY_FAILED:
-            "We couldn’t fetch your profile from the greenhouse 🌫️ Let’s give it another try soon.",
+            "We couldn’t fetch your profile from the greenhouse 🌫️ Please try again soon.",
         TOKEN_EXPIRED:
-            "Looks like the breeze carried you away for too long 🍃 Let's gently start over.",
+            "The breeze carried you away for too long 🍃 Please log in again to continue.",
         INVALID_TOKEN:
-            "Something went wrong with your access 🌾 Please log in again to continue.",
+            "Something went wrong with your access 🌾 Please log in again.",
         SESSION_EXPIRED:
-            "The garden gates rested for a while 🌙 Let's reopen them with a fresh start.",
+            "The garden gates rested for a while 🌙 Please start fresh by logging in again.",
         UNAUTHORIZED_ACCESS:
-            "You don’t have permission to access this garden 🌿"
+            "You don’t have permission to access this garden 🌿",
+        NOT_LOGGED_IN: "You’re not logged in yet 🌱 Please sign in to continue."
     },
     ORDERS: {
         ORDER_FAILED:

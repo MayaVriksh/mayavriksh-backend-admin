@@ -81,7 +81,7 @@ const issueNewAccessToken = async (req, h) => {
     try {
         const incomingRefreshToken = req.state.mv_refresh_token;
         if (!incomingRefreshToken) {
-            return h.response({ error: "Refresh token not found." }).code(401);
+            throw new Error(ERROR_MESSAGES.AUTH.NOT_LOGGED_IN);
         }
         console.log("Incoming Refresh Token: ", incomingRefreshToken);
 
