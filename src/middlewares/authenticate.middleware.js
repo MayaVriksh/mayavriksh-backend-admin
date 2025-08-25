@@ -21,13 +21,17 @@ const verifyAccessTokenMiddleware = {
             // const authHeader = req.headers.authorization;
             const authHeader = req.state.mv_access_token;
 
-            console.log(authHeader);
+            console.log(
+                "Received token (in middleware): ",
+                authHeader,
+                "\n\nrefresh\n\n",
+                req.state.mv_refresh_token
+            );
 
             // 2. Check if the header exists and is correctly formatted. It must start with "Bearer ".
-            if (!authHeader && req.state.mv_refresh_token) {
-                issueNewAccessToken(req, h);
-            } else {
-                throw new Error("Token is missing or malformed.");
+            if (!authHeader) {
+                if (req.state.mv_refresh_token) issueNewAccessToken(req, h);
+                else throw new Error("Token is missing or malformed.");
             }
 
             // 4. THE MOST IMPORTANT STEP: Verify the token's signature.
