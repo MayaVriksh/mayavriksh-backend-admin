@@ -64,7 +64,7 @@ const signin = async (req, h) => {
                 message: SUCCESS_MESSAGES.AUTH.LOGIN_SUCCESS
             })
             .state("mv_refresh_token", refreshToken)
-            .state("mv_access_token", accessToken)
+            .state("mv_access_token", accessToken) // Only meant for login. And once logout, then the state is removed
             .code(RESPONSE_CODES.SUCCESS);
     } catch (error) {
         console.error("Signin Error:", error);
