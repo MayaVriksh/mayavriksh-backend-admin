@@ -11,7 +11,6 @@ const welcomeTemplate = require("../email-templates/users/welcome.template");
 // =============================
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-// sgMail.setApiKey("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");
 // console.log(process.env.SENDGRID_API_KEY);
 
 // =============================
