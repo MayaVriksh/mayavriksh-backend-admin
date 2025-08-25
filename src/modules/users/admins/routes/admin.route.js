@@ -56,7 +56,7 @@ This endpoint provides the summary data for the list. To view the full details o
             },
 
             // --- MODIFIED: Handler now points to the AdminController ---
-            handler: AdminController.listOrderRequests,
+            handler: AdminController.listSupplierOrders,
 
             plugins: {
                 "hapi-swagger": {
@@ -115,7 +115,7 @@ This array contains the full payment history for the order. It will be empty unt
                 failAction: handleValidationFailure
             },
 
-            handler: AdminController.getOrderRequestById,
+            handler: AdminController.getOrderRequestByOrderId,
 
             // --- ADDED: Full Swagger Documentation ---
             plugins: {
@@ -289,7 +289,7 @@ A rejected or cancelled order will have these characteristics:
                 ...AdminValidator.listHistoryValidation,
                 failAction: handleValidationFailure
             },
-            handler: AdminController.listOrderHistory,
+            handler: AdminController.getSupplierOrderHistory,
 
             // --- ADDED: Full Swagger Documentation ---
             plugins: {

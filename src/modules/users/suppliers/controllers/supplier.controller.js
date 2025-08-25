@@ -279,16 +279,17 @@ const updateSupplierProfile = async (req, h) => {
 };
 
 // Supplier Orders
-const listOrderRequests = async (req, h) => {
+const listSupplierOrders = async (req, h) => {
     try {
         const { userId } = req.pre.credentials;
-        const { page, limit, search, sortBy, order } = req.query;
+        const { page, limit, orderStatus, search, sortBy, order } = req.query;
 
         // 1. Call the service. The service does all the complex work.
-        const result = await SupplierService.listOrderRequests({
+        const result = await SupplierService.listSupplierOrders({
             userId,
             page,
             limit,
+            orderStatus,
             search,
             sortBy,
             order
@@ -297,8 +298,8 @@ const listOrderRequests = async (req, h) => {
         //    The controller should not try to access 'purchaseOrderDetails' itself.
         return h.response(result).code(result.code);
     } catch (error) {
-         console.error(
-            "Error in listOrderRequests controllersssss:",
+        console.error(
+            "Error in listSupplierOrders controllersssss:",
             error.message
         );
         return h
@@ -391,18 +392,18 @@ const reviewPurchaseOrder = async (req, h) => {
     }
 };
 
-const getOrderRequestById = async (req, h) => {
+const getOrderRequestByOrderId = async (req, h) => {
     try {
         const { userId } = req.pre.credentials;
         const { orderId } = req.params; // Get the orderId from the URL parameter
 
-        const result = await SupplierService.getOrderRequestById({
+        const result = await SupplierService.getOrderRequestByOrderId({
             userId,
             orderId
         });
         return h.response(result).code(result.code);
     } catch (error) {
-        console.error("Error in getOrderRequestById controller:", error);
+        console.error("Error in getOrderRequestByOrderId controller:", error);
         return h
             .response({
                 success: false,
@@ -435,25 +436,36 @@ const rejectPurchaseOrder = async (req, h) => {
             .code(error.code || 500);
     }
 };
-const listOrderHistory = async (req, h) => {
+
+const getSupplierOrderHistory = async (req, h) => {
     try {
         const { userId } = req.pre.credentials;
-        const { page = 1, limit, search, sortBy, order } = req.query;
+        const {
+            page = 1,
+            limit,
+            orderStatus,
+            search,
+            sortBy,
+            order
+        } = req.query;
         console.log(limit);
-        const result = await SupplierService.listOrderHistory({
+        const result = await SupplierService.getSupplierOrderHistory({
             userId,
             page,
             limit,
+            orderStatus,
             search,
             sortBy,
-            order,
-            search
+            order
         });
 
         return h.response(result).code(result.code);
     } catch (error) {
         // Log the full error for server-side debugging
-        console.error("Error in listOrderHistory controller:", error.message);
+        console.error(
+            "Error in getSupplierOrderHistory controller:",
+            error.message
+        );
 
         // Return a standardized JSON error response to the client
         return h
@@ -500,11 +512,11 @@ module.exports = {
     showSupplierProfile,
     completeSupplierProfile,
     listWarehouses,
-    listOrderRequests,
+    listSupplierOrders,
     uploadQcMedia,
     reviewPurchaseOrder,
-    getOrderRequestById,
+    getOrderRequestByOrderId,
     updateSupplierProfile,
     rejectPurchaseOrder,
-    listOrderHistory
+    getSupplierOrderHistory
 };

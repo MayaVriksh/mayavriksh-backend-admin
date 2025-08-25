@@ -64,6 +64,9 @@ const verifyAccessTokenMiddleware = {
             // This 'catch' block runs if step 4 fails for any reason.
             // We immediately stop the request and send a 401 Unauthorized error.
             // .takeover() tells Hapi to not process anything further.
+
+            console.log("Auth middleware error: ", err);
+
             return h
                 .response({
                     error: "Unauthorized: Session has expired or token is invalid."

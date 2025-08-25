@@ -21,17 +21,16 @@ const findSupplierByUserId = async (userId) => {
  */
 const findPurchaseOrdersBySupplier = async (
     supplierId,
-    { page, limit, search, sortBy, order }
+    { page, limit, orderStatus, search, sortBy, order }
 ) => {
     console.log("findPurchaseOrdersBySupplier: ", page, limit);
+
     const whereClause = {
-        supplierId: supplierId,
-        // Add a NOT clause to exclude all historical orders.
+        supplierId,
+        // Exclude historical orders (DELIVERED && COMPLETELY PAID Purchase Orders)
         NOT: {
             OR: [
-                // Exclude orders that were rejected or cancelled.
                 { status: { in: ["REJECTED", "CANCELLED"] } },
-                // Exclude orders that are both DELIVERED and 100% paid.
                 {
                     AND: [
                         { status: "DELIVERED" },
@@ -41,10 +40,13 @@ const findPurchaseOrdersBySupplier = async (
                 }
             ]
         },
+        // Add the active filter if given
+        ...statusFiltersForActivePurchaseOrders[orderStatus || "ALL ORDERS"],
         ...(search && {
             id: { contains: search, mode: "insensitive" }
         })
     };
+
     const orderBy = {};
     if (sortBy && order) {
         orderBy[sortBy] = order;
@@ -271,6 +273,36 @@ const rejectEntireOrder = async (orderId, tx) => {
     });
 };
 
+const statusFiltersForActivePurchaseOrders = {
+    PENDING: { status: "PENDING" },
+    PROCESSING: { status: "PROCESSING" },
+    DELIVERED: { status: "DELIVERED" }, // This is "active" delivered, not yet fully paid
+    ALL: {} // no extra filter → includes all active ones
+};
+
+const statusFiltersForPurchaseOrderHistory = {
+    REJECTED: { status: "REJECTED" },
+    DELIVERED: {
+        AND: [
+            { status: "DELIVERED" },
+            { paymentPercentage: 100 },
+            { pendingAmount: 0 }
+        ]
+    },
+    ALL: {
+        OR: [
+            { status: "REJECTED" },
+            {
+                AND: [
+                    { status: "DELIVERED" },
+                    { paymentPercentage: 100 },
+                    { pendingAmount: 0 }
+                ]
+            }
+        ]
+    }
+};
+
 /**
  * Fetches historical (completed or rejected) purchase orders for a given supplier.
  * @param {string} supplierId - The ID of the supplier.
@@ -279,24 +311,20 @@ const rejectEntireOrder = async (orderId, tx) => {
  */
 const findHistoricalPurchaseOrders = async (
     supplierId,
-    { page, limit, search, sortBy, order }
+    { page, limit, orderStatus, search, sortBy, order }
 ) => {
+    const statusFilter =
+        statusFiltersForPurchaseOrderHistory[orderStatus] ||
+        statusFiltersForPurchaseOrderHistory.ALL;
+
     const whereClause = {
-        supplierId: supplierId,
-        OR: [
-            { status: { in: ["REJECTED"] } },
-            {
-                AND: [
-                    { status: "DELIVERED" },
-                    { paymentPercentage: 100 },
-                    { pendingAmount: 0 }
-                ]
-            }
-        ],
+        supplierId,
+        ...statusFilter,
         ...(search && {
             id: { contains: search, mode: "insensitive" }
         })
     };
+
     const orderBy = {};
     if (sortBy && order) {
         orderBy[sortBy] = order;
@@ -305,7 +333,7 @@ const findHistoricalPurchaseOrders = async (
         orderBy["requestedAt"] = "desc";
     }
 
-    console.log("vvsdfasd");
+    console.log("Supplier Repository --> findHistoricalPurchaseOrders --> ");
     // The data fetching transaction is identical to the active orders one.
     return await prisma.$transaction([
         prisma.purchaseOrder.count({ where: whereClause }),
@@ -362,10 +390,10 @@ const findHistoricalPurchaseOrders = async (
                         plant: { select: { name: true } },
                         plantVariant: {
                             select: {
-                                size:{
-                                  select:{
-                                      plantSize: true,
-                                  },
+                                size: {
+                                    select: {
+                                        plantSize: true
+                                    }
                                 },
                                 sku: true,
                                 /** mediaUrl:true */

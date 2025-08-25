@@ -1,12 +1,6 @@
 const {
     handleValidationFailure
 } = require("../../../../utils/failActionValidation");
-
-const ERROR_MESSAGES = require("../../../../constants/errorMessages.constant");
-const {
-    RESPONSE_CODES,
-    RESPONSE_FLAGS
-} = require("../../../../constants/responseCodes.constant");
 const SupplierController = require("../controllers/supplier.controller");
 const SupplierValidator = require("../validations/supplierProfile.validations");
 const {
@@ -59,7 +53,7 @@ module.exports = [
                 output: "stream",
                 multipart: true,
                 maxBytes: 25971520,
-                allow: ["multipart/form-data", "application/json"],
+                allow: ["multipart/form-data", "application/json"]
             },
             plugins: {
                 "hapi-swagger": {
@@ -110,6 +104,7 @@ module.exports = [
             }
         }
     },
+
     // Supplier: Update Profile
     {
         method: "PUT",
@@ -143,6 +138,8 @@ module.exports = [
             }
         }
     },
+
+    // Supplier: Get Order Requests
     {
         method: "GET",
         path: "/supplier/order-requests",
@@ -169,7 +166,7 @@ This endpoint intentionally **does not** return the detailed \`PurchaseOrderItem
                 ...SupplierValidator.orderRequestValidation, // Validates query params like ?page=1
                 failAction: handleValidationFailure
             },
-            handler: SupplierController.listOrderRequests,
+            handler: SupplierController.listSupplierOrders,
             plugins: {
                 "hapi-swagger": {
                     responses: {
@@ -190,6 +187,8 @@ This endpoint intentionally **does not** return the detailed \`PurchaseOrderItem
             }
         }
     },
+
+    // Supplier: Upload QC for Purchase Order
     {
         method: "PUT",
         path: "/supplier/purchase-orders/{orderId}/qc-media",
@@ -225,6 +224,8 @@ This endpoint intentionally **does not** return the detailed \`PurchaseOrderItem
             }
         }
     },
+
+    // Supplier: Submit Purchase Order for Review
     {
         method: "PUT",
         path: "/supplier/purchase-orders/{orderId}/review",
@@ -302,6 +303,8 @@ Use this when the supplier cannot fulfill any part of the order.
             }
         }
     },
+
+    // Supplier: Get Order Details by Order ID
     {
         method: "GET",
         path: "/supplier/order-requests/{orderId}",
@@ -339,7 +342,7 @@ This array contains the full payment history for the order. It will be empty unt
                 failAction: handleValidationFailure
             },
 
-            handler: SupplierController.getOrderRequestById,
+            handler: SupplierController.getOrderRequestByOrderId,
 
             // --- ADDED: Full Swagger Documentation ---
             plugins: {
@@ -370,6 +373,8 @@ This array contains the full payment history for the order. It will be empty unt
             }
         }
     },
+
+    // Supplier: Get Details of DELIVERED && COMPLETELY PAID Purchase Orders
     {
         method: "GET",
         path: "/supplier/order-history",
@@ -400,7 +405,7 @@ A rejected or cancelled order will have these characteristics:
                 ...SupplierValidator.listHistoryValidation,
                 failAction: handleValidationFailure
             },
-            handler: SupplierController.listOrderHistory,
+            handler: SupplierController.getSupplierOrderHistory,
 
             // --- ADDED: Full Swagger Documentation ---
             plugins: {

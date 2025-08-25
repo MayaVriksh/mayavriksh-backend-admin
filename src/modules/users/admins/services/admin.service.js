@@ -60,7 +60,7 @@ const showAdminProfile = async (userId) => {
     };
 };
 
-const getOrderRequestById = async ({ userId, orderId }) => {
+const getOrderRequestByOrderId = async ({ userId, orderId }) => {
     // First, find the adminId from the userId.
     const admin = await prisma.admin.findUnique({
         where: { userId: userId },
@@ -115,7 +115,7 @@ const getOrderRequestById = async ({ userId, orderId }) => {
     return { success: true, code: 200, data: order };
 };
 
-const listOrderRequests = async ({
+const listSupplierOrders = async ({
     userId,
     page,
     limit,
@@ -443,7 +443,7 @@ const uploadQcMediaForOrder = async ({ userId, orderId, uploadedMedia }) => {
 /**
  * Retrieves a paginated list of historical purchase orders for a supplier.
  */
-const listOrderHistory = async ({
+const getSupplierOrderHistory = async ({
     userId,
     page,
     limit,
@@ -471,7 +471,7 @@ const listOrderHistory = async ({
             sortBy,
             order
         });
-    // 3. Perform the EXACT SAME data transformation as listOrderRequests.
+    // 3. Perform the EXACT SAME data transformation as listSupplierOrders.
     //    This provides a consistent data structure to the frontend.
     const transformedOrders = rawOrders.map((order) => {
         // --- Object 2: For the "View Payments Modal" ---
@@ -901,9 +901,9 @@ const restockInventory = async ({
 
 module.exports = {
     showAdminProfile,
-    listOrderRequests,
-    listOrderHistory,
-    getOrderRequestById,
+    listSupplierOrders,
+    getSupplierOrderHistory,
+    getOrderRequestByOrderId,
     recordPaymentForOrder,
     uploadQcMediaForOrder,
     restockInventory

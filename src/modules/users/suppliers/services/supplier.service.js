@@ -206,10 +206,11 @@ const listAllWarehouses = async () => {
     };
 };
 
-const listOrderRequests = async ({
+const listSupplierOrders = async ({
     userId,
     page,
     limit,
+    orderStatus,
     search,
     sortBy,
     order
@@ -231,7 +232,7 @@ const listOrderRequests = async ({
     const [totalItems, rawOrders] =
         await supplierRepository.findPurchaseOrdersBySupplier(
             supplier.supplierId,
-            { page, limit, search, sortBy, order }
+            { page, limit, orderStatus, search, sortBy, order }
         );
 
     // --- Transform the raw database results into a clean, generic structure ---
@@ -294,7 +295,7 @@ const listOrderRequests = async ({
         });
         // Return the order with the transformed items array
         console.log(
-            "Supplier-servoce.js --> listOrderRequests: ",
+            "Supplier-service.js --> listSupplierOrders: ",
             paymentHistory,
             orderItems
         );
@@ -619,7 +620,7 @@ const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
     );
 };
 
-const getOrderRequestById = async ({ userId, orderId }) => {
+const getOrderRequestByOrderId = async ({ userId, orderId }) => {
     // First, find the supplierId from the userId.
     const supplier = await prisma.supplier.findUnique({
         where: { userId: userId },
@@ -678,10 +679,11 @@ const getOrderRequestById = async ({ userId, orderId }) => {
 /**
  * Retrieves a paginated list of historical purchase orders for a supplier.
  */
-const listOrderHistory = async ({
+const getSupplierOrderHistory = async ({
     userId,
     page,
     limit,
+    orderStatus,
     search,
     sortBy,
     order
@@ -703,10 +705,10 @@ const listOrderHistory = async ({
     const [totalItems, rawOrders] =
         await supplierRepository.findHistoricalPurchaseOrders(
             supplier.supplierId,
-            { page, limit, search, sortBy, order }
+            { page, limit, orderStatus, search, sortBy, order }
         );
 
-    // 3. Perform the EXACT SAME data transformation as listOrderRequests.
+    // 3. Perform the EXACT SAME data transformation as listSupplierOrders.
     //    This provides a consistent data structure to the frontend.
     const transformedOrders = rawOrders.map((order) => {
         // --- Object 2: For the "View Payments Modal" ---
@@ -881,10 +883,10 @@ module.exports = {
     showSupplierProfile,
     completeSupplierProfile,
     listAllWarehouses,
-    listOrderRequests,
+    listSupplierOrders,
     uploadQcMediaForOrder,
     reviewPurchaseOrder,
-    getOrderRequestById,
+    getOrderRequestByOrderId,
     updateSupplierProfile,
-    listOrderHistory
+    getSupplierOrderHistory
 };

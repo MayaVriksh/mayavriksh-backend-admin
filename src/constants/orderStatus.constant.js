@@ -9,7 +9,7 @@ const PROCESSING = "PROCESSING";
 const REJECTED = "REJECTED";
 const UNDER_REVIEW = "UNDER_REVIEW";
 
-const ORDER_STATUSES = [
+const ORDER_STATUSES = {
     APPROVED,
     PENDING,
     CONFIRMED,
@@ -20,18 +20,6 @@ const ORDER_STATUSES = [
     PROCESSING,
     REJECTED,
     UNDER_REVIEW
-];
-
-module.exports = {
-    APPROVED,
-    PENDING,
-    CONFIRMED,
-    SHIPPED,
-    DELIVERED,
-    CANCELLED,
-    RETURNED,
-    PROCESSING,
-    REJECTED,
-    UNDER_REVIEW,
-    ORDER_STATUSES
 };
+
+module.exports = ORDER_STATUSES;

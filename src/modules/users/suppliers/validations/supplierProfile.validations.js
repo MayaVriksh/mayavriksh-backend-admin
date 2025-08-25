@@ -1,4 +1,5 @@
 const Joi = require("joi");
+const ORDER_STATUSES = require("../../../../constants/orderStatus.constant");
 
 const completeSupplierProfile = {
     payload: Joi.object({
@@ -151,6 +152,15 @@ const orderRequestValidation = {
             .max(100)
             .default(10)
             .description("The number of items to return per page (max 100)"),
+        orderStatus: Joi.string()
+            .valid(
+                ORDER_STATUSES.PENDING,
+                ORDER_STATUSES.PROCESSING,
+                ORDER_STATUSES.DELIVERED,
+                "ALL ORDERS"
+            )
+            .default("ALL ORDERS")
+            .description("Order status"),
 
         // For searching
         search: Joi.string()
@@ -170,11 +180,16 @@ const orderRequestValidation = {
             .description('The sort order ("asc" or "desc")')
     })
 };
+
 const listHistoryValidation = {
     query: Joi.object({
         page: Joi.number().integer().min(1).default(1),
         limit: Joi.number().integer().min(1).max(100).default(10), // Set a max limit for security
         search: Joi.string().allow("").optional(),
+        orderStatus: Joi.string()
+            .valid(ORDER_STATUSES.DELIVERED, ORDER_STATUSES.REJECTED, "ALL ORDERS")
+            .default("ALL ORDERS")
+            .description("Order status"),
         // Whitelist the fields the user is allowed to sort by
         sortBy: Joi.string()
             .valid("requestedAt", "totalCost", "status")
