@@ -1,4 +1,4 @@
-const prisma = require("../../config/prisma.config");
+const { prisma } = require("../../config/prisma.config");
 const serialTrackers = require("../data/serialTracker.data");
 
 async function seedSerialTrackers() {
@@ -45,7 +45,7 @@ async function seedSerialTrackers() {
 
 if (require.main === module) {
     seedSerialTrackers()
-        .catch(error => {
+        .catch((error) => {
             console.error("❌ Seeding failed:", error);
         })
         .finally(async () => {

@@ -1,6 +1,6 @@
 const ffmpeg = require("fluent-ffmpeg");
 
-const getMediaType = mimeType => {
+const getMediaType = (mimeType) => {
     if (!mimeType || typeof mimeType !== "string") return "FILE";
     if (mimeType.startsWith("image/")) return "IMAGE";
     if (mimeType.startsWith("video/")) return "VIDEO";
@@ -46,7 +46,7 @@ const getCloudinaryTransformation = (mimeType, durationInSec = null) => {
     }
 };
 
-const getCloudinaryResourceType = mimeType => {
+const getCloudinaryResourceType = (mimeType) => {
     if (!mimeType) return "auto";
     if (mimeType.startsWith("image/")) return "image";
     if (mimeType.startsWith("video/")) return "video";
@@ -65,7 +65,7 @@ const getCloudinaryResourceType = mimeType => {
     return "auto";
 };
 
-const getVideoDurationInSec = filePath => {
+const getVideoDurationInSec = (filePath) => {
     return new Promise((resolve, reject) => {
         ffmpeg.ffprobe(filePath, (err, metadata) => {
             if (err) return reject(err);

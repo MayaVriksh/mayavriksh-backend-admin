@@ -1,4 +1,4 @@
-const prisma = require("../../config/prisma.config");
+const { prisma } = require("../../config/prisma.config");
 const {
     generatePlantPurchaseOrderData,
     generatePotPurchaseOrderData
@@ -13,33 +13,46 @@ async function seedPurchaseOrders() {
     const potCategories = await prisma.potCategory.findMany();
     const potVariants = await prisma.potVariants.findMany();
     const warehouses = await prisma.warehouse.findMany();
-    const suppliers = await prisma.supplier.findMany();
+    // const suppliers = await prisma.supplier.findMany();
+
+    const supplier = await prisma.supplier.findFirst({
+        where: {
+            contactPerson: {
+                email: "restaurant@gmail.com"
+            }
+        }
+    });
+    const { supplierId } = supplier;    
+
+    // await prisma.purchaseOrderPayment.deleteMany();
+    // await prisma.purchaseOrderItems.deleteMany();
+    // await prisma.purchaseOrder.deleteMany();
 
     if (
         !plants.length ||
         !plantVariants.length ||
         !potCategories.length ||
         !potVariants.length ||
-        !warehouses.length ||
-        !suppliers.length
+        !warehouses.length
+        // || !suppliers.length
     ) {
         throw new Error("❌ Required data missing in DB.");
     }
 
-    const supplier = suppliers.length > 9 ? suppliers[9] : suppliers[0];
+    // const supplier = suppliers.length > 4 ? suppliers[5] : suppliers[0];
 
     const plantOrders = generatePlantPurchaseOrderData(
         plants,
         plantVariants,
         warehouses,
-        supplier.supplierId
+        supplierId
     );
 
     const potOrders = generatePotPurchaseOrderData(
         potCategories,
         potVariants,
         warehouses,
-        supplier.supplierId
+        supplierId
     );
 
     const allOrders = [...plantOrders, ...potOrders];
@@ -47,7 +60,7 @@ async function seedPurchaseOrders() {
     for (const order of allOrders) {
         try {
             await prisma.$transaction(
-                async tx => {
+                async (tx) => {
                     const purchaseOrderId = await generateCustomId(
                         tx,
                         "PURCHASE_ORDER"
@@ -77,7 +90,7 @@ async function seedPurchaseOrders() {
 
                     if (order.items?.length) {
                         await tx.purchaseOrderItems.createMany({
-                            data: order.items.map(item => ({
+                            data: order.items.map((item) => ({
                                 ...item,
                                 purchaseOrderId
                             })),
@@ -117,9 +130,9 @@ async function seedPurchaseOrders() {
                     console.log(`✅ Seeded Purchase Order ${purchaseOrderId}`);
                 },
                 {
-                    maxWait: 99000,
-                    timeout: 100000,
-                    isolationLevel: "ReadCommitted"
+                    // maxWait: 99000,
+                    timeout: 15000
+                    // isolationLevel: "ReadCommitted"
                 }
             );
         } catch (err) {
@@ -132,7 +145,7 @@ async function seedPurchaseOrders() {
 
 if (require.main === module) {
     seedPurchaseOrders()
-        .catch(err => {
+        .catch((err) => {
             console.error("❌ Seeder failed:", err);
         })
         .finally(() => {

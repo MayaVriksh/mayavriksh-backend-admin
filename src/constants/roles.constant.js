@@ -1,6 +1,5 @@
 const ROLES = Object.freeze({
     USER: "USER", // Base platform user
-
     // 🔐 System-level roles
     SYSTEM: "SYSTEM", // Internal system operations
     SUPER_ADMIN: "SUPER_ADMIN", // Full access to the SaaS platform

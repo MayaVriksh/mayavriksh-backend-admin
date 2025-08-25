@@ -21,7 +21,7 @@ async function getUserGroups(userId) {
         where: { userId },
         select: { groupId: true }
     });
-    return groups.map(g => g.groupId);
+    return groups.map((g) => g.groupId);
 }
 
 // Get all roles of the user
@@ -30,7 +30,7 @@ async function getUserRoleIds(userId) {
         where: { userId },
         select: { roleId: true }
     });
-    return roles.map(r => r.roleId);
+    return roles.map((r) => r.roleId);
 }
 
 // Step 1: Check if user has an explicit permission

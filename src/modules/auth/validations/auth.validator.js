@@ -8,29 +8,40 @@ const loginUserValidation = {
                 "📩 Email is required if phone number is not provided.",
             "string.email": "📩 Please enter a valid email address."
         }),
-        phoneNumber: Joi.string()
+        password: Joi.string()
             .trim()
-            .pattern(/^[6-9]\d{9}$/)
+            .min(8)
+            .max(16)
+            .pattern(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]+$/) // <-- COPIED THIS RULE
+            .required()
             .messages({
-                "string.base": "📞 Phone number must be a valid string.",
-                "string.empty":
-                    "📞 Phone number is required if email is not provided.",
+                "string.base": "🔐 Password must be a string.",
+                "string.empty": "🔐 Password is required.",
+                "string.min": "🔐 Password must be at least 8 characters.",
+                "string.max": "🔐 Password must not exceed 16 characters.",
                 "string.pattern.base":
-                    "📞 Phone number must be a valid 10-digit Indian number."
-            }),
-        password: Joi.string().trim().min(8).max(16).required().messages({
-            "string.base": "🔐 Password must be a string.",
-            "string.empty": "🔐 Password is required.",
-            "string.min": "🔐 Password must be at least 8 characters.",
-            "string.max": "🔐 Password must not exceed 16 characters.",
-            "any.required": "🔐 Password is required to log in."
-        })
+                    "🔐 Password must include at least one letter and one number." // <-- ADDED THIS MESSAGE
+            })
     })
         .xor("email", "phoneNumber")
         .messages({
             "object.missing":
                 "🌿 Please provide either email or phone number to log in."
         })
+};
+// --- ADDED: Validation for Refresh Token ---
+// This validation checks the request's cookies (state) instead of the payload.
+const refreshTokenValidation = {
+    state: Joi.object({
+        // We are ensuring that the 'mv_access_token' cookie exists and is a non-empty string.
+        mv_access_token: Joi.string().required().messages({
+            "string.base": "🍪 Refresh token must be a string.",
+            "string.empty":
+                "🍪 Refresh token cookie is missing. Please log in.",
+            "any.required":
+                "🍪 Refresh token cookie is required for this operation. Please log in."
+        })
+    }).unknown(true) // IMPORTANT: This allows other cookies to exist without causing a validation error.
 };
 
 const registerUserValidation = {
@@ -126,6 +137,16 @@ const deactivateProfileValidation = {
     })
 };
 
+// Joi validation for the userId parameter in the URL
+const reactivateUserValidation = {
+    payload: Joi.object({
+        userId: Joi.string().trim().required().messages({
+            "string.empty": "Target User ID is required in the URL.",
+            "any.required": "Target User ID parameter is required."
+        })
+    })
+};
+
 const changePasswordValidation = {
     payload: Joi.object({
         oldPassword: Joi.string().trim().min(8).max(16).required().messages({
@@ -154,7 +175,9 @@ const changePasswordValidation = {
 
 module.exports = {
     loginUserValidation,
+    refreshTokenValidation,
     registerUserValidation,
     deactivateProfileValidation,
+    reactivateUserValidation,
     changePasswordValidation
 };

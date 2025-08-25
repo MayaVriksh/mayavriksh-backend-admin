@@ -1,4 +1,4 @@
-const prisma = require("../../config/prisma.config");
+const { prisma } = require("../../config/prisma.config");
 const materials = require("../data/potMaterials.data");
 const { v4: uuidv4 } = require("uuid");
 
@@ -7,7 +7,7 @@ async function seedPotMaterials() {
         console.log("🔍 Checking existing pot materials...");
 
         await prisma.$transaction(
-            async tx => {
+            async (tx) => {
                 for (const material of materials) {
                     const existing = await tx.potMaterial.findFirst({
                         where: { name: material.name }
@@ -31,8 +31,8 @@ async function seedPotMaterials() {
                 }
             },
             {
-                maxWait: 25000,
-                timeout: 35000
+                // maxWait: 25000,
+                timeout: 15000
             }
         );
 
@@ -45,7 +45,7 @@ async function seedPotMaterials() {
 }
 
 if (require.main === module) {
-    seedPotMaterials().catch(e => {
+    seedPotMaterials().catch((e) => {
         console.error("❌ Seeding failed:", e.stack || e);
     });
 }

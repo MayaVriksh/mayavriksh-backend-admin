@@ -1,4 +1,4 @@
-const prisma = require("../../../config/prisma.config");
+const { prisma } = require("../../../config/prisma.config");
 const { supplierUsers } = require("../../data/users.data");
 const { ROLES } = require("../../../constants/roles.constant");
 const {
@@ -12,7 +12,7 @@ async function seedSupplierUsers() {
     const roleId = await findRoleId(ROLES.SUPPLIER);
 
     for (const entry of supplierUsers) {
-        await prisma.$transaction(async tx => {
+        await prisma.$transaction(async (tx) => {
             const userId = await generateCustomId(ROLES.USER);
             const hashedPassword = await hashPassword(entry.user.password);
 
@@ -41,7 +41,7 @@ async function seedSupplierUsers() {
 
 if (require.main === module) {
     seedSupplierUsers()
-        .catch(err => {
+        .catch((err) => {
             console.error("❌ Supplier seeding failed:", err);
         })
         .finally(async () => {

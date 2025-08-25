@@ -1,4 +1,4 @@
-const prisma = require("../../config/prisma.config");
+const { prisma } = require("../../config/prisma.config");
 const tagGroupsWithTags = require("../data/tags.data");
 const generateCustomId = require("../../utils/generateCustomId");
 
@@ -7,7 +7,7 @@ async function seedTags() {
 
     try {
         await prisma.$transaction(
-            async tx => {
+            async (tx) => {
                 for (const group of tagGroupsWithTags) {
                     if (!group?.groupName || !Array.isArray(group.tags)) {
                         console.warn(`⚠️  Skipping invalid group data:`, group);
@@ -55,8 +55,8 @@ async function seedTags() {
                 }
             },
             {
-                maxWait: 20000,
-                timeout: 30000
+                // maxWait: 20000,
+                timeout: 15000
             }
         );
 
@@ -71,7 +71,7 @@ async function seedTags() {
 
 if (require.main === module) {
     seedTags()
-        .catch(e => {
+        .catch((e) => {
             console.error("❌ Seeding failed:", e.stack || e);
         })
         .finally(async () => {

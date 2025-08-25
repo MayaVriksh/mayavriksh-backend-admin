@@ -5,18 +5,11 @@ const SHIPPED = "SHIPPED";
 const DELIVERED = "DELIVERED";
 const CANCELLED = "CANCELLED";
 const RETURNED = "RETURNED";
+const PROCESSING = "PROCESSING";
+const REJECTED = "REJECTED";
+const UNDER_REVIEW = "UNDER_REVIEW";
 
-const ORDER_STATUSES = [
-    APPROVED,
-    PENDING,
-    CONFIRMED,
-    SHIPPED,
-    DELIVERED,
-    CANCELLED,
-    RETURNED
-];
-
-module.exports = {
+const ORDER_STATUSES = {
     APPROVED,
     PENDING,
     CONFIRMED,
@@ -24,5 +17,9 @@ module.exports = {
     DELIVERED,
     CANCELLED,
     RETURNED,
-    ORDER_STATUSES
+    PROCESSING,
+    REJECTED,
+    UNDER_REVIEW
 };
+
+module.exports = ORDER_STATUSES;

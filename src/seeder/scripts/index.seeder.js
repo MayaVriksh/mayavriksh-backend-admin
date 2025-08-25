@@ -1,5 +1,4 @@
-const prisma = require("../../config/prisma.config");
-
+const { prisma } = require("../../config/prisma.config");
 const seedSerialTrackers = require("./serialtracker.seeder");
 const seedRoles = require("./roles.seeder");
 const seedWarehouses = require("./warehouses.seeder");
@@ -8,11 +7,9 @@ const seedTags = require("./tags.seeder");
 const seedColors = require("./colors.seeder");
 const seedPotMaterials = require("./potMaterials.seeder");
 const seedPlants = require("./plants.seeder");
+const seedPotMaterials = require("./potMaterials.seeder");
 const seedPots = require("./pots.seeder");
-const seedPurchaseOrder = require("./purchaseOrder.seeder");
-const seedVariantImages = require("./variantImages.seeder");
-const seedPlantInventory = require("./plantWarehouseInventory.seeder");
-const seedPotInventory = require("./potWarehouseInventory.seeder");
+const seedPurchaseOrders = require("./purchaseorder.seeder");
 
 async function runSeeder() {
     console.log("🌱 Starting full seeding...");
@@ -26,11 +23,9 @@ async function runSeeder() {
         await seedColors();
         await seedPotMaterials();
         await seedPlants();
+        await seedPotMaterials();
         await seedPots();
-        await seedVariantImages();
-        await seedPurchaseOrder();
-        await seedPlantInventory();
-        await seedPotInventory();
+        await seedPurchaseOrders();
 
         console.log("✅ All seeders executed successfully!");
     } catch (error) {

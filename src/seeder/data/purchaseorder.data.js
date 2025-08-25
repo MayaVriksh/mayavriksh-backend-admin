@@ -97,7 +97,7 @@ function generatePurchaseOrderData(
         }
 
         const totalItemCost = items
-            .filter(item => item.isAccepted)
+            .filter((item) => item.isAccepted)
             .reduce((sum, item) => sum + item.totalCost, 0);
 
         const totalCost = totalItemCost + deliveryCharge;
@@ -130,7 +130,7 @@ function generatePurchaseOrderData(
         }
 
         const totalPaid = payments
-            .filter(p => p.status === "PAID")
+            .filter((p) => p.status === "PAID")
             .reduce((sum, p) => sum + p.amount, 0);
 
         const pendingAmount = totalCost - totalPaid;

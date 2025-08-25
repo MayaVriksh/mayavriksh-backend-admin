@@ -19,11 +19,11 @@
         "seed:serial_trackers": "node src/seeder/scripts/serialtracker.seeder.js",
         "seed:roles": "node src/seeder/scripts/roles.seeder.js",
         "seed:warehouses": "node src/seeder/scripts/warehouses.seeder.js",
-        "seed:users": "node src/seeder/scripts/users.seeder.js",
+        "seed:users": "node src/seeder/scripts/users/users.seeder.js",
         "seed:tags": "node src/seeder/scripts/tags.seeder.js",
         "seed:colors": "node src/seeder/scripts/colors.seeder.js",
-        "seed:pot_materials": "node src/seeder/scripts/potMaterials.seeder.js",
         "seed:plants": "node src/seeder/scripts/plants.seeder.js",
+        "seed:pot_materials": "node src/seeder/scripts/potMaterials.seeder.js",
         "seed:pots": "node src/seeder/scripts/pots.seeder.js",
         "seed:purchase_order": "node src/seeder/scripts/purchaseOrder.seeder.js",
         "seed:variant_images": "node src/seeder/scripts/variantImages.seeder.js",
@@ -35,24 +35,28 @@
         "schema": "src/prisma/schema.prisma"
     },
     "dependencies": {
-        "@hapi/hapi": "^21.4.0",
+        "@hapi/hapi": "^21.4.2",
         "@hapi/inert": "^7.1.0",
         "@hapi/vision": "^7.0.3",
-        "@prisma/client": "^6.12.0",
+        "@prisma/client": "^6.14.0",
+        "@prisma/extension-accelerate": "^2.0.2",
+        "axios": "^1.11.0",
         "bcrypt": "^6.0.0",
         "cloudinary": "^2.7.0",
-        "dotenv": "^17.2.0",
+        "dotenv": "^17.2.1",
         "fluent-ffmpeg": "^2.1.3",
         "hapi-swagger": "^17.3.2",
         "joi": "^17.13.3",
         "jsonwebtoken": "^9.0.2",
-        "multer": "^2.0.2",
-        "mysql2": "^3.14.2",
+        "multer": "^2.0.1",
+        "mysql2": "^3.14.3",
+        "nodemailer": "^7.0.5",
+        "papaparse": "^5.5.3",
         "uuid": "^11.1.0"
     },
     "devDependencies": {
         "nodemon": "^3.1.4",
         "prettier": "^3.6.2",
-        "prisma": "^6.12.0"
+        "prisma": "^6.14.0"
     }
 }

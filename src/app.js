@@ -14,7 +14,10 @@ const createServer = async () => {
         host: process.env.HOST || "localhost",
         routes: {
             cors: {
-                origin: ["*"],
+                origin: [
+                    "https://mayavriksh-ecom-admin-ui.onrender.com",
+                    "http://localhost:8080"
+                ],
                 headers: ["Authorization", "Content-Type", "If-None-Match"],
                 exposedHeaders: ["WWW-Authenticate", "Server-Authorization"],
                 additionalExposedHeaders: ["X-Custom-Header"],
@@ -28,15 +31,33 @@ const createServer = async () => {
         }
     });
 
-    // Cookie for system token
-    server.state("mv_auth_token", {
-        ttl: 7 * 24 * 60 * 60 * 1000,
+    // Log all incoming requests to debug if POST reaches server
+    server.ext("onRequest", (request, h) => {
+        console.log(
+            `Incoming request: ${request.method.toUpperCase()} ${request.path}`
+        );
+        return h.continue;
+    });
+
+    // --- REWRITTEN & SECURED COOKIE CONFIGURATION ---
+
+    server.state("mv_access_token", {
+        ttl: 5 * 1000, // 5 seconds
         isSecure: process.env.NODE_ENV === "production",
-        isHttpOnly: true,
-        isSameSite: "Strict",
-        encoding: "iron",
-        password: process.env.COOKIE_SECRET,
-        path: "/api/"
+        isHttpOnly: false, // allow frontend JS to access
+        isSameSite: process.env.NODE_ENV !== "production" ? "Strict" : "None",
+        path: "/"
+    });
+
+    // This cookie is ONLY for the long-lived Refresh Token.
+    server.state("mv_refresh_token", {
+        ttl: 7 * 24 * 60 * 60 * 1000, // 7 days, matches refresh token expiry
+        isSecure: process.env.NODE_ENV === "production", // MUST be true in production (requires HTTPS)
+        isHttpOnly: true, // CRITICAL: Prevents client-side JS from accessing the cookie (XSS protection)
+        isSameSite: process.env.NODE_ENV !== "production" ? "Strict" : "None", // CRITICAL: Best protection against CSRF attacks for auth tokens in cross-sites, like communication between a.com & b.com
+        path: "/", // Ensure the cookie is accessible across the site
+        encoding: "iron", // Hapi's session encryption is great
+        password: process.env.COOKIE_SECRET // Ensure this is a long, complex secret
     });
 
     await server.register([

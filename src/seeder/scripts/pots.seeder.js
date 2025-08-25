@@ -1,4 +1,4 @@
-const prisma = require("../../config/prisma.config");
+const { prisma } = require("../../config/prisma.config");
 const generateCustomId = require("../../utils/generateCustomId");
 const { PRODUCT_TYPES } = require("../../constants/general.constant");
 const potData = require("../data/pots.data");
@@ -18,7 +18,7 @@ async function seedPots() {
         console.log("🪻 Seeding Pot Categories and Variants...");
 
         await prisma.$transaction(
-            async tx => {
+            async (tx) => {
                 for (const pot of potData) {
                     if (!pot?.name || !Array.isArray(pot.variants)) {
                         console.warn(`⚠️  Skipping invalid pot data:`, pot);
@@ -84,8 +84,8 @@ async function seedPots() {
                 }
             },
             {
-                maxWait: 25000,
-                timeout: 35000
+                // maxWait: 25000,
+                timeout: 15000
             }
         );
 
@@ -98,7 +98,7 @@ async function seedPots() {
 }
 
 if (require.main === module) {
-    seedPots().catch(e => {
+    seedPots().catch((e) => {
         console.error("❌ Seeding failed:", e.stack || e);
     });
 }

@@ -43,7 +43,7 @@ const uploadBufferToCloudinary = async (
     try {
         // Save file to temp disk location
         tempPath = await saveTempFile(buffer, prefix, mimeType);
-
+        console.log(tempPath);
         // Get optimized Cloudinary resource type and transformation
         const { resourceType, transformation } =
             getCloudinaryTransformation(mimeType);
@@ -58,7 +58,8 @@ const uploadBufferToCloudinary = async (
 
         // Cleanup handled inside `uploadToCloudinary`, but you may do extra check if needed
         return response;
-    } catch (error) {
+    } catch (err) {
+        console.log(err);
         // Attempt cleanup
         if (tempPath) {
             try {

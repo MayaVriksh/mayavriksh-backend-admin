@@ -1,4 +1,4 @@
-const prisma = require("../../../config/prisma.config");
+const { prisma } = require("../../../config/prisma.config");
 const { superAdminUsers } = require("../../data/users.data");
 const { ROLES } = require("../../../constants/roles.constant");
 const {
@@ -12,7 +12,7 @@ async function seedSuperAdminUsers() {
     const roleId = await findRoleId(ROLES.SUPER_ADMIN);
 
     for (const entry of superAdminUsers) {
-        await prisma.$transaction(async tx => {
+        await prisma.$transaction(async (tx) => {
             const userId = await generateCustomId(ROLES.USER);
             const hashedPassword = await hashPassword(entry.user.password);
 
@@ -40,7 +40,7 @@ async function seedSuperAdminUsers() {
 
 if (require.main === module) {
     seedSuperAdminUsers()
-        .catch(err => {
+        .catch((err) => {
             console.error("❌ Super Admin seeding failed:", err);
         })
         .finally(async () => {
