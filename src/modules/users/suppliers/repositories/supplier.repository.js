@@ -23,7 +23,7 @@ const findPurchaseOrdersBySupplier = async (
     supplierId,
     { page, limit, search, sortBy, order }
 ) => {
-    console.log(page, limit);
+    console.log("findPurchaseOrdersBySupplier: ", page, limit);
     const whereClause = {
         supplierId: supplierId,
         // Add a NOT clause to exclude all historical orders.
@@ -86,7 +86,11 @@ const findPurchaseOrdersBySupplier = async (
                         },
                         plantVariant: {
                             select: {
-                                plantSize: true,
+                                size: {
+                                    select: {
+                                        plantSize: true
+                                    }
+                                },
                                 sku: true,
                                 /** mediaUrl:true */
                                 color: {
@@ -358,7 +362,11 @@ const findHistoricalPurchaseOrders = async (
                         plant: { select: { name: true } },
                         plantVariant: {
                             select: {
-                                plantSize: true,
+                                size:{
+                                  select:{
+                                      plantSize: true,
+                                  },
+                                },
                                 sku: true,
                                 /** mediaUrl:true */
                                 color: {

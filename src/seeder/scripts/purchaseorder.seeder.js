@@ -15,13 +15,14 @@ async function seedPurchaseOrders() {
     const warehouses = await prisma.warehouse.findMany();
     // const suppliers = await prisma.supplier.findMany();
 
-    const { supplierId } = await prisma.supplier.findFirst({
+    const supplier = await prisma.supplier.findFirst({
         where: {
             contactPerson: {
                 email: "restaurant@gmail.com"
             }
         }
     });
+    const { supplierId } = supplier;    
 
     // await prisma.purchaseOrderPayment.deleteMany();
     // await prisma.purchaseOrderItems.deleteMany();
@@ -129,9 +130,9 @@ async function seedPurchaseOrders() {
                     console.log(`✅ Seeded Purchase Order ${purchaseOrderId}`);
                 },
                 {
-                    maxWait: 99000,
-                    timeout: 100000,
-                    isolationLevel: "ReadCommitted"
+                    // maxWait: 99000,
+                    timeout: 15000
+                    // isolationLevel: "ReadCommitted"
                 }
             );
         } catch (err) {

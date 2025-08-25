@@ -758,16 +758,34 @@ model Plants {
   PlantCartItem                 PlantCartItem[]                 @relation(name: "PlantCartItemToPlant")
   PurchaseOrderItems            PurchaseOrderItems[]            @relation(name: "PlantToPurchaseOrder")
   WarehouseCartItem             WarehouseCartItem[]             @relation(name: "PlantToWarehouseCartItem")
+  PlantSizeProfile              PlantSizeProfile[]              @relation(name: "PlantsToPlantSizeProfile")
+}
+
+model PlantSizeProfile {
+  plantSizeId String @id
+  plantId     String
+
+  plantSize Size // "Small", "Medium", "Large"
+  height    Decimal
+  weight    Decimal
+
+  plant                   Plants                   @relation(name: "PlantsToPlantSizeProfile", fields: [plantId], references: [plantId])
+  PlantVariants           PlantVariants[]          @relation(name: "PlantVariantsToPlantSizeProfile") // One size profile can have many color variants
+  PlantCareGuidelines     PlantCareGuidelines?     @relation(name: "PlantSizeprofileToPlantCareGuidelines")
+  PlantFertilizers        PlantFertilizers?        @relation(name: "PlantSizeprofileToPlantFertilizers")
+  PlantFertilizerSchedule PlantFertilizerSchedule? @relation(name: "PlantSizeprofileToPlantFertilizerSchedule")
+  compatiblePots          PotVariants[]
+
+  @@unique([plantId, plantSize]) // Ensures "Small Peace Lily" is defined only once
 }
 
 model PlantVariants {
-  variantId String @id
-  plantId   String
-  colorId   String
+  variantId   String @id
+  plantId     String
+  plantSizeId String
 
-  plantSize       String
-  height          Decimal
-  weight          Decimal
+  colorId String
+
   sku             String  @unique
   isProductActive Boolean @default(true)
   mrp             Decimal @default(0.0)
@@ -779,12 +797,10 @@ model PlantVariants {
 
   plants                  Plants                    @relation(name: "ProductToVariant", fields: [plantId], references: [plantId])
   color                   Color                     @relation(name: "ColorToPlantVariants", fields: [colorId], references: [id])
+  size                    PlantSizeProfile          @relation(name: "PlantVariantsToPlantSizeProfile", fields: [plantSizeId], references: [plantSizeId])
   promotionProducts       PromotionProduct[]        @relation(name: "PromotionProductToPlantVariant")
   plantVariantImages      PlantVariantImage[]       @relation(name: "VariantToImages")
-  plantCareGuidelines     PlantCareGuidelines[]     @relation(name: "ProductToCare")
-  plantFertilizers        PlantFertilizers[]        @relation(name: "ProductToFertilizer")
   tags                    Tags[]                    @relation(name: "PlantVariantToTags")
-  plantFertilizerSchedule PlantFertilizerSchedule[] @relation(name: "ProductToFertilizerSchedule")
   plantWarehouseInventory PlantWarehouseInventory[] @relation(name: "PlantVariantToWarehouse")
   Review                  Review[]                  @relation(name: "PlantVariantToReview")
   PlantSupplierInventory  PlantSupplierInventory[]  @relation(name: "PlantVariantToSupplierInventory")
@@ -797,9 +813,7 @@ model PlantVariants {
   PlantOrderItem          PlantOrderItem[]          @relation(name: "PlantOrderItemToPlantVariant")
   PurchaseOrderItems      PurchaseOrderItems[]      @relation(name: "PlantVariantToPurchaseOrder")
   PlantRestockEventLog    PlantRestockEventLog[]    @relation(name: "PlantVariantToRestockEvent")
-  compatiblePots          PotVariants[]
   WarehouseCartItem       WarehouseCartItem[]       @relation(name: "PlantVariantToWarehouseCartItem")
-  // compatiblePots          PotVariants[]             @relation(name: "PlantVariantsToPotVariants")
 }
 
 // ---------------------- Plant Care & Fertilizer Data -----------------------
@@ -833,14 +847,14 @@ model HumidityLevel {
 }
 
 model PlantCareGuidelines {
-  careId          String @id
-  plantVariantId  String
+  plantCareId     String @id
+  plantSizeId     String @unique
   sunlightTypeId  String
   humidityLevelId String
 
   season            String
   wateringFrequency String
-  amountMl          Decimal
+  waterAmountMl     Decimal
   wateringMethod    String
   recommendedTime   String
   soilTypes         String
@@ -851,9 +865,9 @@ model PlantCareGuidelines {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  plantVariants PlantVariants @relation(name: "ProductToCare", fields: [plantVariantId], references: [variantId])
-  sunlightType  SunlightTypes @relation(name: "SunlightToPlantCare", fields: [sunlightTypeId], references: [sunlightId])
-  humidityLevel HumidityLevel @relation(name: "HumidityToPlantCare", fields: [humidityLevelId], references: [humidityId])
+  PlantSizeProfile PlantSizeProfile @relation(name: "PlantSizeprofileToPlantCareGuidelines", fields: [plantSizeId], references: [plantSizeId])
+  sunlightType     SunlightTypes    @relation(name: "SunlightToPlantCare", fields: [sunlightTypeId], references: [sunlightId])
+  humidityLevel    HumidityLevel    @relation(name: "HumidityToPlantCare", fields: [humidityLevelId], references: [humidityId])
 }
 
 model Fertilizers {
@@ -875,23 +889,23 @@ model Fertilizers {
 }
 
 model PlantFertilizers {
-  id             String @id
-  plantVariantId String
-  fertilizerId   String
+  id           String @id
+  plantSizeId  String @unique
+  fertilizerId String
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  plants     PlantVariants @relation(name: "ProductToFertilizer", fields: [plantVariantId], references: [variantId])
-  fertilizer Fertilizers   @relation(name: "FertilizerToProduct", fields: [fertilizerId], references: [fertilizerId])
+  PlantSizeProfile PlantSizeProfile @relation(name: "PlantSizeprofileToPlantFertilizers", fields: [plantSizeId], references: [plantSizeId])
+  fertilizer       Fertilizers      @relation(name: "FertilizerToProduct", fields: [fertilizerId], references: [fertilizerId])
 
-  @@unique([plantVariantId, fertilizerId])
+  @@unique([plantSizeId, fertilizerId])
 }
 
 model PlantFertilizerSchedule {
   fertilizerEntryId String @id
-  plantVariantId    String
+  plantSizeId       String @unique
   fertilizerId      String
 
   applicationFrequency String
@@ -906,8 +920,8 @@ model PlantFertilizerSchedule {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  plants     PlantVariants @relation(name: "ProductToFertilizerSchedule", fields: [plantVariantId], references: [variantId])
-  fertilizer Fertilizers   @relation(name: "FertilizerToSchedule", fields: [fertilizerId], references: [fertilizerId])
+  PlantSizeProfile PlantSizeProfile @relation(name: "PlantSizeprofileToPlantFertilizerSchedule", fields: [plantSizeId], references: [plantSizeId])
+  fertilizer       Fertilizers      @relation(name: "FertilizerToSchedule", fields: [fertilizerId], references: [fertilizerId])
 }
 
 model PlantGenericCostComponent {
@@ -1052,8 +1066,7 @@ model PotVariants {
   PotOrderItem          PotOrderItem[]          @relation(name: "PotOrderItemToPotVariant")
   PurchaseOrderItems    PurchaseOrderItems[]    @relation(name: "PotVariantToPurchaseOrder")
   WarehouseCartItem     WarehouseCartItem[]     @relation(name: "PotVariantToWarehouseCartItem")
-  PlantVariants         PlantVariants[]
-  // PlantVariants         PlantVariants[]         @relation(name: "PlantVariantsToPotVariants")
+  PlantSizeProfile      PlantSizeProfile[]
 
   @@unique([categoryId, size, colorId, materialId])
   @@index([categoryId])

@@ -31,8 +31,8 @@ async function seedPotMaterials() {
                 }
             },
             {
-                maxWait: 25000,
-                timeout: 35000
+                // maxWait: 25000,
+                timeout: 15000
             }
         );
 

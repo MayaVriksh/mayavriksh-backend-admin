@@ -13,6 +13,10 @@ const {
     RESPONSE_CODES
 } = require("../../../constants/responseCodes.constant");
 const SUCCESS_MESSAGES = require("../../../constants/successMessages.constant.js");
+const {
+    FIRST_NAME,
+    LAST_NAME
+} = require("../../../constants/general.constant.js");
 
 const register = async (data) => {
     const { firstName, lastName, email, phoneNumber, password, role } = data;
@@ -180,9 +184,12 @@ const _generateAccessTokenAndPayload = (user) => {
 
     const accessTokenPayload = {
         userId: user.userId,
+        fullName: user.fullName,
+        username: user.fullName[FIRST_NAME] || user.fullName[LAST_NAME],
         role: user.role.role,
-        username: user.fullName.FIRST_NAME || user.fullName.LAST_NAME,
-        isVerified: finalIsVerified
+        profileImageUrl: user.profileImageUrl,
+        isVerified: finalIsVerified,
+        isActive: user.isActive
     };
 
     return generateAccessToken(accessTokenPayload);
@@ -213,6 +220,7 @@ const _createUserProfile = (user) => {
     //     isActive: user.isActive
     // };
 };
+
 /**
  * @private - Fetches the complete user profile for authentication purposes.
  * @param {object} whereClause - The Prisma where clause (e.g., { email } or { userId }).
@@ -268,12 +276,12 @@ const login = async (email, password) => {
     const user = await _getAuthenticatedUser({ email }, true);
     await _verifyUserCredentials(user, password);
 
-    const userProfile = _createUserProfile(user);
+    // const userProfile = _createUserProfile(user);
     const accessToken = _generateAccessTokenAndPayload(user);
     const refreshToken = generateRefreshToken({ userId: user.userId });
 
     console.log("Refresh Token:", refreshToken);
-    return { userProfile, accessToken, refreshToken };
+    return { accessToken, refreshToken };
 };
 
 /**
@@ -303,10 +311,10 @@ const refreshUserToken = async (token) => {
             throw new Error("User account is no longer active.");
         }
 
-        const userProfile = _createUserProfile(user);
+        // const userProfile = _createUserProfile(user);
         const accessToken = _generateAccessTokenAndPayload(user);
 
-        return { userProfile, newAccessToken: accessToken };
+        return { newAccessToken: accessToken };
     } catch (error) {
         console.error("Refresh token validation failed:", error.message);
         throw new Error("Invalid refresh token. Please log in again.");

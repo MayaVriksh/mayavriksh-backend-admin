@@ -55,8 +55,8 @@ async function seedTags() {
                 }
             },
             {
-                maxWait: 20000,
-                timeout: 30000
+                // maxWait: 20000,
+                timeout: 15000
             }
         );
 

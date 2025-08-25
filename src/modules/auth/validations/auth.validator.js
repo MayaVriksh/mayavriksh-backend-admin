@@ -33,8 +33,8 @@ const loginUserValidation = {
 // This validation checks the request's cookies (state) instead of the payload.
 const refreshTokenValidation = {
     state: Joi.object({
-        // We are ensuring that the 'mv_refresh_token' cookie exists and is a non-empty string.
-        mv_refresh_token: Joi.string().required().messages({
+        // We are ensuring that the 'mv_access_token' cookie exists and is a non-empty string.
+        mv_access_token: Joi.string().required().messages({
             "string.base": "🍪 Refresh token must be a string.",
             "string.empty":
                 "🍪 Refresh token cookie is missing. Please log in.",

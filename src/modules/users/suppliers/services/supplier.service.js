@@ -176,8 +176,8 @@ const completeSupplierProfile = async (
             };
         },
         {
-            maxWait: 20000,
-            timeout: 30000
+            // maxWait: 20000,
+            timeout: 15000
         }
     );
 };
@@ -233,6 +233,7 @@ const listOrderRequests = async ({
             supplier.supplierId,
             { page, limit, search, sortBy, order }
         );
+
     // --- Transform the raw database results into a clean, generic structure ---
     const transformedOrders = rawOrders.map((order) => {
         // --- Object 2: For the "View Payments Modal" ---
@@ -253,13 +254,16 @@ const listOrderRequests = async ({
                 transactionId: payment.transactionId
             };
         });
+
         // Determine the generic properties based on the productType
         // --- Object 3: For the "Order Items Modal" ---
         const orderItems = order.PurchaseOrderItems.map((item) => {
             const isPlant = item.productType === "PLANT";
-            const productVariantName = isPlant ? item.plant?.name : "";
+            const productVariantName = isPlant
+                ? item.plant?.name
+                : item.potVariant?.potName;
             const productVariantSize = isPlant
-                ? item.plantVariant?.plantSize
+                ? item.plantVariant?.size?.plantSize
                 : item.potVariant?.size;
             const sku = isPlant ? item.plantVariant?.sku : item.potVariant?.sku;
             const productVariantColor = isPlant
@@ -289,7 +293,11 @@ const listOrderRequests = async ({
             };
         });
         // Return the order with the transformed items array
-        console.log(paymentHistory, orderItems);
+        console.log(
+            "Supplier-servoce.js --> listOrderRequests: ",
+            paymentHistory,
+            orderItems
+        );
         return {
             // All top-level fields from the PurchaseOrder
             id: order.id,
@@ -604,7 +612,7 @@ const reviewPurchaseOrder = async ({ userId, orderId, reviewData }) => {
         },
         {
             // Sets the maximum time Prisma will wait for a connection from the pool.
-            maxWait: 10000, // 10 seconds (default is 2s)
+            // maxWait: 10000, // 10 seconds (default is 2s)
             // Sets the maximum time the entire transaction is allowed to run.
             timeout: 15000 // 15 seconds (default is 5s)
         }
@@ -722,9 +730,11 @@ const listOrderHistory = async ({
         });
         const orderItems = order.PurchaseOrderItems.map((item) => {
             const isPlant = item.productType === "PLANT";
-            const productVariantName = isPlant ? item.plant?.name : "";
+            const productVariantName = isPlant
+                ? item.plant?.name
+                : item.potVariant?.potName;
             const productVariantSize = isPlant
-                ? item.plantVariant?.plantSize
+                ? item.plantVariant?.size?.plantSize
                 : item.potVariant?.size;
             const sku = isPlant ? item.plantVariant?.sku : item.potVariant?.sku;
             const productVariantColor = isPlant

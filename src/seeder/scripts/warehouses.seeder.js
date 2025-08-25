@@ -46,7 +46,10 @@ async function seedWarehouses() {
                     );
                 }
             },
-            { maxWait: 20000, timeout: 25000 }
+            {
+                // maxWait: 20000,
+                timeout: 15000
+            }
         );
 
         console.log("🎉 All Warehouses successfully seeded.");

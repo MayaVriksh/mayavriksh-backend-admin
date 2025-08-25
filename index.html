@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Email Verification - MAYAVRIKSH</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                background-color: #dbdbdb;
+                font-family: Arial, sans-serif;
+            }
+            .wrapper {
+                padding: 40px 0;
+                width: 100%;
+            }
+            .container {
+                width: 600px;
+                background: #ffffff;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+                margin: 0 auto;
+            }
+            .header {
+                background: #013220;
+                padding: 20px;
+            }
+            .header table {
+                width: 100%;
+            }
+            .header td {
+                vertical-align: middle;
+            }
+            .header img {
+                max-height: 50px;
+                display: block;
+            }
+            .header h1 {
+                margin: 0;
+                font-size: 22px;
+                color: #ffffff;
+                font-weight: bold;
+            }
+            .header p {
+                margin: 2px 0 0;
+                font-size: 13px;
+                color: #d4e8d4;
+                letter-spacing: 0.5px;
+            }
+            .body {
+                padding: 32px;
+                color: #333333;
+            }
+            .body h2 {
+                margin-top: 0;
+                font-size: 18px;
+                color: #0f4106;
+            }
+            .body p {
+                font-size: 15px;
+                line-height: 1.6;
+                margin: 0 0 16px;
+            }
+            .otp {
+                margin: 24px 0;
+                text-align: center;
+            }
+            .otp span {
+                display: inline-block;
+                padding: 12px 24px;
+                font-size: 20px;
+                font-weight: bold;
+                color: #ffffff;
+                background: #0f4106;
+                border-radius: 6px;
+                letter-spacing: 3px;
+            }
+            .small-text {
+                font-size: 14px;
+                color: #555;
+                line-height: 1.6;
+                margin: 16px 0;
+            }
+            .small-text a {
+                color: #0f4106;
+                text-decoration: none;
+                font-weight: bold;
+            }
+            .closing {
+                margin: 32px 0 0;
+                font-size: 14px;
+                color: #333;
+            }
+            .footer {
+                background: #cecaca;
+                padding: 14px;
+                text-align: center;
+                font-size: 12px;
+                color: #636060;
+            }
+            .footer a {
+                color: #0f4106;
+                text-decoration: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="wrapper">
+            <div class="container">
+                <div class="header">
+                    <table>
+                        <tr>
+                            <td align="left">
+                                <img
+                                    src="./public/assets/images/mv_logo.png"
+                                    alt="MAYAVRIKSH Logo"
+                                />
+                            </td>
+                            <td align="right">
+                                <h1>MAYAVRIKSH</h1>
+                                <p>From Soil to Soul</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="body">
+                    <h2>Verify Your Email</h2>
+                    <p>Dear [Recipient’s Name],</p>
+                    <p>
+                        To complete your profile setup with
+                        <strong>MAYAVRIKSH</strong>, please confirm your email
+                        address using the One-Time Password (OTP) below.
+                    </p>
+
+                    <div class="otp">
+                        <span>[OTP CODE]</span>
+                    </div>
+
+                    <p class="small-text">
+                        Email: <strong>[recipient@example.com]</strong><br />
+                        Requested at: <strong>[Date & Time]</strong>
+                    </p>
+
+                    <p class="small-text">
+                        This OTP will remain valid for
+                        <strong>10 minutes</strong>.<br />
+                        Do not share this OTP with anyone. Our team will never
+                        ask for it.
+                    </p>
+
+                    <p class="small-text">
+                        If you did not request this verification, please
+                        <strong>report this activity</strong> immediately by
+                        contacting us at
+                        <a href="mailto:support@mayavriksh.com"
+                            >support@mayavriksh.com</a
+                        >.
+                    </p>
+
+                    <p class="closing">
+                        Sincerely,<br />
+                        <strong>Team MAYAVRIKSH</strong>
+                    </p>
+                </div>
+
+                <div class="footer">
+                    You are receiving this email because you registered with
+                    MAYAVRIKSH.<br />
+                    For assistance, contact us at
+                    <a href="mailto:support@mayavriksh.com"
+                        >support@mayavriksh.com</a
+                    >.<br />
+                    <a href="[PrivacyPolicyURL]">Privacy Policy</a> |
+                    <a href="[HelpCenterURL]">Help Center</a><br /><br />
+                    © MAYAVRIKSH. All rights reserved.
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

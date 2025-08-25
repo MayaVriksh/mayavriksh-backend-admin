@@ -40,7 +40,10 @@ async function seedRoles() {
                     }
                 }
             },
-            { maxWait: 20000, timeout: 20000 }
+            {
+                // maxWait: 15000,
+                timeout: 15000
+            }
         );
 
         console.log("✅ Role seeding completed.");
