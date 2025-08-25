@@ -42,7 +42,7 @@ const createServer = async () => {
     // --- REWRITTEN & SECURED COOKIE CONFIGURATION ---
 
     server.state("mv_access_token", {
-        ttl: 15 * 60 * 1000, // 15 minutes
+        ttl: 5 * 1000, // 5 seconds
         isSecure: process.env.NODE_ENV === "production",
         isHttpOnly: false, // allow frontend JS to access
         isSameSite: process.env.NODE_ENV !== "production" ? "Strict" : "None",
